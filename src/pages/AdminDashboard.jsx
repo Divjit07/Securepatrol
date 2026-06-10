@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Building2, Plus, ChevronRight, Users } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
+import PageHeader from '../components/PageHeader.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { fetchSitesForAdmin } from '../lib/scans.js'
 import { fetchGuardsWithSites, formatSiteLabel } from '../lib/guards.js'
@@ -99,47 +100,43 @@ export default function AdminDashboard() {
 
   return (
     <Layout variant="admin">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Admin Overview</h1>
-          <p className="text-slate-600">All sites and guard assignments at a glance</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowNewSite(true)}
-          className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
-        >
-          <Plus className="h-4 w-4" /> New Site
-        </button>
-      </div>
+      <PageHeader
+        title="Admin Overview"
+        description="Sites, guard assignments, and today's compliance at a glance."
+        action={
+          <button type="button" onClick={() => setShowNewSite(true)} className="sp-btn-primary">
+            <Plus className="h-4 w-4" /> New Site
+          </button>
+        }
+      />
 
       {showNewSite && (
-        <form onSubmit={createSite} className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
-          <h3 className="font-semibold">Create Site</h3>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <input
-              placeholder="Site name"
-              value={newSite.name}
-              onChange={(e) => setNewSite({ ...newSite, name: e.target.value })}
-              required
-              className="rounded-lg border border-slate-300 px-3 py-2"
-            />
-            <input
-              placeholder="Address"
-              value={newSite.address}
-              onChange={(e) => setNewSite({ ...newSite, address: e.target.value })}
-              className="rounded-lg border border-slate-300 px-3 py-2"
-            />
+        <form onSubmit={createSite} className="sp-card mb-8 p-6">
+          <h3 className="font-display text-lg font-semibold">Create Site</h3>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="sp-label">Site name</label>
+              <input
+                placeholder="e.g. 800 Bathurst St"
+                value={newSite.name}
+                onChange={(e) => setNewSite({ ...newSite, name: e.target.value })}
+                required
+                className="sp-input"
+              />
+            </div>
+            <div>
+              <label className="sp-label">Address</label>
+              <input
+                placeholder="Full street address"
+                value={newSite.address}
+                onChange={(e) => setNewSite({ ...newSite, address: e.target.value })}
+                className="sp-input"
+              />
+            </div>
           </div>
-          <div className="mt-3 flex gap-2">
-            <button type="submit" className="rounded-lg bg-brand-600 px-4 py-2 text-sm text-white">
-              Create
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowNewSite(false)}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm"
-            >
+          <div className="mt-5 flex gap-3">
+            <button type="submit" className="sp-btn-primary">Create site</button>
+            <button type="button" onClick={() => setShowNewSite(false)} className="sp-btn-secondary">
               Cancel
             </button>
           </div>
@@ -148,8 +145,8 @@ export default function AdminDashboard() {
 
       {/* Guard roster — who is assigned where */}
       {!loading && guards.length > 0 && (
-        <div className="mb-6 rounded-xl border border-slate-200 bg-white">
-          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+        <div className="sp-card mb-8 overflow-hidden">
+          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5 text-brand-600" />
               <h2 className="font-semibold">Guard Assignments</h2>
@@ -216,7 +213,7 @@ export default function AdminDashboard() {
               <Link
                 key={site.id}
                 to={`/admin/site/${site.id}`}
-                className="group rounded-xl border border-slate-200 bg-white p-5 hover:border-brand-300 hover:shadow-md"
+                className="group sp-card block p-6 transition hover:border-brand-200 hover:shadow-lg hover:shadow-brand-500/5"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">

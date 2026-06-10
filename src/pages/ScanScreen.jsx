@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { isIOS, preferredScanMode } from '../lib/device.js'
 import { useNavigate } from 'react-router-dom'
 import { Loader2, MapPin } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
@@ -12,7 +13,7 @@ export default function ScanScreen() {
   const navigate = useNavigate()
   const [processing, setProcessing] = useState(false)
   const [error, setError] = useState(null)
-  const [mode, setMode] = useState('nfc')
+  const [mode, setMode] = useState(preferredScanMode)
 
   const handleScan = async (checkpointId) => {
     if (!user || processing) return
@@ -49,6 +50,12 @@ export default function ScanScreen() {
           GPS will be captured at scan time
         </p>
       </div>
+
+      {isIOS() && (
+        <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+          <strong>iPhone:</strong> Use <strong>QR Code</strong> to scan checkpoints. Apple does not allow NFC scanning in web apps — only Android supports tap-to-scan.
+        </div>
+      )}
 
       <div className="mb-4 flex rounded-lg border border-slate-200 bg-white p-1">
         {['nfc', 'qr'].map((m) => (

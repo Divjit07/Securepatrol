@@ -66,17 +66,25 @@ SecurePatrol reads both formats.
 
 ## Step 5 — Test the scan
 
-### On guard phone (iPhone)
+### On guard phone (iPhone) — use QR Code
+
+**Important:** Apple does **not** support Web NFC in Safari or any iPhone browser. iPhone guards must use **QR Code** scanning.
 
 1. Open **Safari** → go to your SecurePatrol URL
 2. **Share → Add to Home Screen** (install as PWA)
 3. Log in as a guard
-4. Go to **Scan**
-5. Tap **Start NFC Scan**
-6. Hold phone near the tag
+4. Go to **Scan** → tap **QR Code** tab
+5. Tap **Open QR Scanner** and allow camera access
+6. Point at the printed QR code on the checkpoint
 7. You should see **Scan Verified** (green) if you're within 20 metres of the checkpoint GPS
 
-> **Note:** Web NFC on iPhone requires Safari and the app added to home screen in iOS 13+. If NFC doesn't work, use the **QR Code** tab instead — print the QR from the Checkpoints page.
+> Print QR codes from **Admin → Checkpoints** (QR icon next to each checkpoint) and stick them beside the NFC tag.
+
+### On guard phone (Android) — NFC or QR
+
+1. Open **Chrome** on Android
+2. Log in as guard → **Scan** → **NFC Tag**
+3. Tap **Start NFC Scan** and hold phone on the tag
 
 ---
 

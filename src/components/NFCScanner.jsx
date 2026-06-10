@@ -70,7 +70,8 @@ export default function NFCScanner({ onScan, disabled }) {
       <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
         <Nfc className="mx-auto h-10 w-10 text-slate-400" />
         <p className="mt-2 text-sm text-slate-500">
-          Web NFC is not supported on this browser. Use QR scan instead (Chrome on Android / Safari on iPhone with NFC).
+          Web NFC is not available on this device. iPhone does not support NFC in browsers — tap <strong>QR Code</strong> above.
+          Android users: use Chrome for NFC tap-to-scan.
         </p>
       </div>
     )

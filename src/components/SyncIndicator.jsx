@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { CloudOff, RefreshCw } from 'lucide-react'
 import { getPendingScanCount, flushOfflineQueue } from '../lib/offlineQueue.js'
 
-export default function SyncIndicator() {
+export default function SyncIndicator({ dark = false }) {
   const [pending, setPending] = useState(0)
   const [syncing, setSyncing] = useState(false)
 
@@ -27,12 +27,16 @@ export default function SyncIndicator() {
 
   if (pending === 0 && navigator.onLine) return null
 
+  const baseClass = dark
+    ? 'bg-amber-500/15 text-amber-300 ring-amber-500/20'
+    : 'bg-amber-100 text-amber-800'
+
   return (
     <button
       type="button"
       onClick={handleSync}
       disabled={syncing || !navigator.onLine}
-      className="flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800"
+      className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ring-1 ${baseClass}`}
       title="Pending offline scans"
     >
       {!navigator.onLine ? (

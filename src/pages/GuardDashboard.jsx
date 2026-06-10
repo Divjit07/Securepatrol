@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ScanLine, Building2 } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
+import PageHeader from '../components/PageHeader.jsx'
 import CheckpointCard from '../components/CheckpointCard.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { fetchCheckpointsForSite, fetchTodayScansForGuard, getCheckpointStatus } from '../lib/scans.js'
@@ -47,35 +48,32 @@ export default function GuardDashboard() {
 
   return (
     <Layout variant="guard">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Guard Dashboard</h1>
-        <p className="mt-1 text-slate-600">Welcome, {profile?.name}</p>
-      </div>
+      <PageHeader
+        title="Patrol Dashboard"
+        description={`Good shift, ${profile?.name || 'Guard'}. Track today's checkpoint progress below.`}
+      />
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-slate-200 bg-white p-4">
+      <div className="mb-8 grid gap-4 sm:grid-cols-3">
+        <div className="sp-stat-card">
           <div className="flex items-center gap-2 text-slate-500">
             <Building2 className="h-4 w-4" />
-            <span className="text-sm">Assigned Site</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">Assigned site</span>
           </div>
-          <p className="mt-1 font-semibold">{profile?.sites?.name || 'Not assigned'}</p>
+          <p className="mt-2 font-display text-lg font-semibold">{profile?.sites?.name || 'Not assigned'}</p>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-4">
-          <p className="text-sm text-slate-500">Today&apos;s Progress</p>
-          <p className="mt-1 text-2xl font-bold text-brand-600">
-            {passed}/{total}
+        <div className="sp-stat-card">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Today&apos;s progress</p>
+          <p className="mt-2 font-display text-3xl font-bold text-brand-600">
+            {passed}<span className="text-lg font-medium text-slate-400">/{total}</span>
           </p>
         </div>
-        <Link
-          to="/guard/scan"
-          className="flex items-center justify-center gap-2 rounded-xl bg-brand-600 p-4 font-semibold text-white hover:bg-brand-700"
-        >
+        <Link to="/guard/scan" className="sp-btn-primary h-full min-h-[5.5rem] text-base">
           <ScanLine className="h-5 w-5" />
-          Scan Checkpoint
+          Scan checkpoint
         </Link>
       </div>
 
-      <h2 className="mb-3 text-lg font-semibold">Checkpoints</h2>
+      <h2 className="mb-4 font-display text-lg font-semibold">Checkpoints</h2>
 
       {loading ? (
         <div className="flex justify-center py-12">
