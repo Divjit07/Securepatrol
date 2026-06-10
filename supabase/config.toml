@@ -1,0 +1,7 @@
+project_id = "vktxadadhnrcuxtubzxr"
+
+[functions.create-guard]
+verify_jwt = true
+
+[functions.delete-guard]
+verify_jwt = true
