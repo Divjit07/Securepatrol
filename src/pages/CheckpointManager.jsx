@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Plus, QrCode, Trash2, Copy, Check } from 'lucide-react'
-import QRCode from 'qrcode'
+import { Plus, QrCode, Trash2, Copy, Check, Printer } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
+import PageHeader from '../components/PageHeader.jsx'
+import QrPrintModal from '../components/QrPrintModal.jsx'
 import { supabase } from '../lib/supabase.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { fetchSitesForAdmin } from '../lib/scans.js'
@@ -22,13 +23,40 @@ export default function CheckpointManager() {
     radius_metres: 20,
   })
   const [floorForm, setFloorForm] = useState({ floor_name: '', floor_number: 1 })
+  const [generateQrAfterSave, setGenerateQrAfterSave] = useState(true)
   const [qrModal, setQrModal] = useState(null)
   const [copiedId, setCopiedId] = useState(null)
+
+  const selectedSiteName = sites.find((s) => s.id === selectedSite)?.name || ''
 
   const copyCheckpointId = async (id) => {
     await navigator.clipboard.writeText(id)
     setCopiedId(id)
     setTimeout(() => setCopiedId(null), 2000)
+  }
+
+  const loadFloors = async (siteId) => {
+    const { data } = await supabase
+      .from('floors')
+      .select('*')
+      .eq('site_id', siteId)
+      .order('floor_number')
+    setFloors(data || [])
+    return data || []
+  }
+
+  const loadCheckpoints = async (floorList) => {
+    if (!floorList.length) {
+      setCheckpoints([])
+      return []
+    }
+    const { data } = await supabase
+      .from('checkpoints')
+      .select('*, floors(floor_name)')
+      .in('floor_id', floorList.map((f) => f.id))
+      .order('name')
+    setCheckpoints(data || [])
+    return data || []
   }
 
   useEffect(() => {
@@ -41,56 +69,68 @@ export default function CheckpointManager() {
 
   useEffect(() => {
     if (!selectedSite) return
-    supabase
-      .from('floors')
-      .select('*')
-      .eq('site_id', selectedSite)
-      .order('floor_number')
-      .then(({ data }) => setFloors(data || []))
+    loadFloors(selectedSite)
   }, [selectedSite])
 
   useEffect(() => {
-    if (!floors.length) {
-      setCheckpoints([])
-      return
-    }
-    supabase
-      .from('checkpoints')
-      .select('*, floors(floor_name)')
-      .in('floor_id', floors.map((f) => f.id))
-      .order('name')
-      .then(({ data }) => setCheckpoints(data || []))
+    loadCheckpoints(floors)
   }, [floors])
+
+  const openQrModal = (items, title) => {
+    setQrModal({
+      checkpoints: Array.isArray(items) ? items : [items],
+      title,
+    })
+  }
 
   const createFloor = async (e) => {
     e.preventDefault()
-    await supabase.from('floors').insert({
-      site_id: selectedSite,
-      ...floorForm,
-      floor_number: Number(floorForm.floor_number),
-    })
+    const { data, error } = await supabase
+      .from('floors')
+      .insert({
+        site_id: selectedSite,
+        ...floorForm,
+        floor_number: Number(floorForm.floor_number),
+      })
+      .select('*')
+      .single()
+
+    if (error) {
+      alert(error.message)
+      return
+    }
+
     setFloorForm({ floor_name: '', floor_number: 1 })
     setShowFloorForm(false)
-    const { data } = await supabase.from('floors').select('*').eq('site_id', selectedSite).order('floor_number')
-    setFloors(data || [])
+    await loadFloors(selectedSite)
   }
 
   const createCheckpoint = async (e) => {
     e.preventDefault()
-    await supabase.from('checkpoints').insert({
-      name: form.name,
-      floor_id: form.floor_id,
-      latitude: parseFloat(form.latitude),
-      longitude: parseFloat(form.longitude),
-      radius_metres: parseInt(form.radius_metres, 10) || 20,
-    })
+    const { data, error } = await supabase
+      .from('checkpoints')
+      .insert({
+        name: form.name,
+        floor_id: form.floor_id,
+        latitude: parseFloat(form.latitude),
+        longitude: parseFloat(form.longitude),
+        radius_metres: parseInt(form.radius_metres, 10) || 20,
+      })
+      .select('*, floors(floor_name)')
+      .single()
+
+    if (error) {
+      alert(error.message)
+      return
+    }
+
     setForm({ name: '', floor_id: '', latitude: '', longitude: '', radius_metres: 20 })
     setShowForm(false)
-    const { data } = await supabase
-      .from('checkpoints')
-      .select('*, floors(floor_name)')
-      .in('floor_id', floors.map((f) => f.id))
-    setCheckpoints(data || [])
+    await loadCheckpoints(floors)
+
+    if (generateQrAfterSave) {
+      openQrModal(data, `${data.name} — QR label`)
+    }
   }
 
   const deleteCheckpoint = async (id) => {
@@ -99,10 +139,33 @@ export default function CheckpointManager() {
     setCheckpoints((prev) => prev.filter((c) => c.id !== id))
   }
 
-  const showQr = async (checkpoint) => {
-    const url = `${window.location.origin}/checkpoint/${checkpoint.id}`
-    const dataUrl = await QRCode.toDataURL(url, { width: 300, margin: 2 })
-    setQrModal({ ...checkpoint, dataUrl, url })
+  const deleteFloor = async (floor) => {
+    const count = checkpoints.filter((cp) => cp.floor_id === floor.id).length
+    const message =
+      count > 0
+        ? `Delete "${floor.floor_name}" and its ${count} checkpoint${count === 1 ? '' : 's'}? Scan history for those checkpoints will also be removed. This cannot be undone.`
+        : `Delete floor "${floor.floor_name}"? This cannot be undone.`
+
+    if (!confirm(message)) return
+
+    const { error } = await supabase.from('floors').delete().eq('id', floor.id)
+    if (error) {
+      alert(error.message)
+      return
+    }
+
+    const nextFloors = floors.filter((f) => f.id !== floor.id)
+    setFloors(nextFloors)
+    setCheckpoints((prev) => prev.filter((cp) => cp.floor_id !== floor.id))
+  }
+
+  const printFloorLabels = (floor) => {
+    const floorCheckpoints = checkpoints.filter((cp) => cp.floor_id === floor.id)
+    if (!floorCheckpoints.length) {
+      alert(`No checkpoints on ${floor.floor_name} yet. Add a checkpoint first, then print its QR label.`)
+      return
+    }
+    openQrModal(floorCheckpoints, `${floor.floor_name} — all checkpoint labels`)
   }
 
   const useCurrentLocation = () => {
@@ -121,31 +184,26 @@ export default function CheckpointManager() {
 
   return (
     <Layout variant="admin">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold">Checkpoint Manager</h1>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setShowFloorForm(true)}
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50"
-          >
-            Add Floor
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
-          >
-            <Plus className="h-4 w-4" /> Add Checkpoint
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Checkpoints"
+        description="Add floors and checkpoints, then print QR labels to stick on site."
+        action={
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => setShowFloorForm(true)} className="sp-btn-secondary">
+              Add floor
+            </button>
+            <button type="button" onClick={() => setShowForm(true)} className="sp-btn-primary">
+              <Plus className="h-4 w-4" /> Add checkpoint
+            </button>
+          </div>
+        }
+      />
 
       {sites.length > 1 && (
         <select
           value={selectedSite}
           onChange={(e) => setSelectedSite(e.target.value)}
-          className="mb-4 rounded-lg border border-slate-300 px-3 py-2"
+          className="sp-input mb-6 max-w-xs"
         >
           {sites.map((s) => (
             <option key={s.id} value={s.id}>{s.name}</option>
@@ -154,94 +212,196 @@ export default function CheckpointManager() {
       )}
 
       {showFloorForm && (
-        <form onSubmit={createFloor} className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
-          <h3 className="font-semibold">New Floor</h3>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <input
-              placeholder="Floor name (e.g. Lobby)"
-              value={floorForm.floor_name}
-              onChange={(e) => setFloorForm({ ...floorForm, floor_name: e.target.value })}
-              required
-              className="rounded-lg border border-slate-300 px-3 py-2"
-            />
-            <input
-              type="number"
-              placeholder="Floor number"
-              value={floorForm.floor_number}
-              onChange={(e) => setFloorForm({ ...floorForm, floor_number: e.target.value })}
-              required
-              className="rounded-lg border border-slate-300 px-3 py-2"
-            />
+        <form onSubmit={createFloor} className="sp-card mb-6 p-6">
+          <h3 className="font-display text-lg font-semibold">New floor</h3>
+          <p className="mt-1 text-sm text-slate-500">
+            Floors group checkpoints. QR labels are generated per checkpoint after you add them.
+          </p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="sp-label">Floor name</label>
+              <input
+                placeholder="e.g. Lobby"
+                value={floorForm.floor_name}
+                onChange={(e) => setFloorForm({ ...floorForm, floor_name: e.target.value })}
+                required
+                className="sp-input"
+              />
+            </div>
+            <div>
+              <label className="sp-label">Floor number</label>
+              <input
+                type="number"
+                value={floorForm.floor_number}
+                onChange={(e) => setFloorForm({ ...floorForm, floor_number: e.target.value })}
+                required
+                className="sp-input"
+              />
+            </div>
           </div>
-          <div className="mt-3 flex gap-2">
-            <button type="submit" className="rounded-lg bg-brand-600 px-4 py-2 text-sm text-white">Create</button>
-            <button type="button" onClick={() => setShowFloorForm(false)} className="rounded-lg border px-4 py-2 text-sm">Cancel</button>
+          <div className="mt-5 flex gap-3">
+            <button type="submit" className="sp-btn-primary">Create floor</button>
+            <button type="button" onClick={() => setShowFloorForm(false)} className="sp-btn-secondary">
+              Cancel
+            </button>
           </div>
         </form>
       )}
 
       {showForm && (
-        <form onSubmit={createCheckpoint} className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
-          <h3 className="font-semibold">New Checkpoint</h3>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <input
-              placeholder="Checkpoint name"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
-              className="rounded-lg border border-slate-300 px-3 py-2 sm:col-span-2"
-            />
-            <select
-              value={form.floor_id}
-              onChange={(e) => setForm({ ...form, floor_id: e.target.value })}
-              required
-              className="rounded-lg border border-slate-300 px-3 py-2"
-            >
-              <option value="">Select floor</option>
-              {floors.map((f) => (
-                <option key={f.id} value={f.id}>{f.floor_name}</option>
-              ))}
-            </select>
-            <input
-              type="number"
-              placeholder="Radius (metres)"
-              value={form.radius_metres}
-              onChange={(e) => setForm({ ...form, radius_metres: e.target.value })}
-              className="rounded-lg border border-slate-300 px-3 py-2"
-            />
-            <input
-              placeholder="Latitude"
-              value={form.latitude}
-              onChange={(e) => setForm({ ...form, latitude: e.target.value })}
-              required
-              className="rounded-lg border border-slate-300 px-3 py-2"
-            />
-            <input
-              placeholder="Longitude"
-              value={form.longitude}
-              onChange={(e) => setForm({ ...form, longitude: e.target.value })}
-              required
-              className="rounded-lg border border-slate-300 px-3 py-2"
-            />
+        <form onSubmit={createCheckpoint} className="sp-card mb-6 p-6">
+          <h3 className="font-display text-lg font-semibold">New checkpoint</h3>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label className="sp-label">Checkpoint name</label>
+              <input
+                placeholder="e.g. Main entrance"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                required
+                className="sp-input"
+              />
+            </div>
+            <div>
+              <label className="sp-label">Floor</label>
+              <select
+                value={form.floor_id}
+                onChange={(e) => setForm({ ...form, floor_id: e.target.value })}
+                required
+                className="sp-input"
+              >
+                <option value="">Select floor</option>
+                {floors.map((f) => (
+                  <option key={f.id} value={f.id}>{f.floor_name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="sp-label">GPS radius (metres)</label>
+              <input
+                type="number"
+                value={form.radius_metres}
+                onChange={(e) => setForm({ ...form, radius_metres: e.target.value })}
+                className="sp-input"
+              />
+            </div>
+            <div>
+              <label className="sp-label">Latitude</label>
+              <input
+                value={form.latitude}
+                onChange={(e) => setForm({ ...form, latitude: e.target.value })}
+                required
+                className="sp-input"
+              />
+            </div>
+            <div>
+              <label className="sp-label">Longitude</label>
+              <input
+                value={form.longitude}
+                onChange={(e) => setForm({ ...form, longitude: e.target.value })}
+                required
+                className="sp-input"
+              />
+            </div>
           </div>
           <button
             type="button"
             onClick={useCurrentLocation}
-            className="mt-3 text-sm text-brand-600 hover:underline"
+            className="mt-3 text-sm font-medium text-brand-600 hover:underline"
           >
             Use my current GPS location
           </button>
-          <p className="mt-1 text-xs text-slate-500">
-            Write the checkpoint UUID to the NFC tag using NFC Tools app after creation.
+          <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={generateQrAfterSave}
+              onChange={(e) => setGenerateQrAfterSave(e.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 text-brand-600"
+            />
+            Generate printable QR label after saving
+          </label>
+          <p className="mt-2 text-xs text-slate-500">
+            Also copy the checkpoint UUID to write NFC tags with NFC Tools.
           </p>
-          <div className="mt-3 flex gap-2">
-            <button type="submit" className="rounded-lg bg-brand-600 px-4 py-2 text-sm text-white">Create</button>
-            <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border px-4 py-2 text-sm">Cancel</button>
+          <div className="mt-5 flex gap-3">
+            <button type="submit" className="sp-btn-primary">Create checkpoint</button>
+            <button type="button" onClick={() => setShowForm(false)} className="sp-btn-secondary">
+              Cancel
+            </button>
           </div>
         </form>
       )}
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="sp-card mb-6 overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+          <div>
+            <h2 className="font-display font-semibold">Floors</h2>
+            <p className="text-sm text-slate-500">
+              Manage floors, print QR labels, or remove a floor added by mistake.
+            </p>
+          </div>
+          <button type="button" onClick={() => setShowFloorForm(true)} className="sp-btn-secondary py-2 text-xs">
+            <Plus className="h-3.5 w-3.5" /> Add floor
+          </button>
+        </div>
+
+        {floors.length === 0 ? (
+          <p className="px-5 py-8 text-center text-sm text-slate-500">
+            No floors yet. Click <strong>Add floor</strong> above to get started.
+          </p>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-left text-slate-600">
+              <tr>
+                <th className="px-5 py-3 font-medium">Floor</th>
+                <th className="px-5 py-3 font-medium">Checkpoints</th>
+                <th className="px-5 py-3 font-medium text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {floors.map((floor) => {
+                const count = checkpoints.filter((cp) => cp.floor_id === floor.id).length
+                return (
+                  <tr key={floor.id}>
+                    <td className="px-5 py-3">
+                      <p className="font-medium">{floor.floor_name}</p>
+                      <p className="text-xs text-slate-500">Level {floor.floor_number}</p>
+                    </td>
+                    <td className="px-5 py-3 text-slate-600">
+                      {count} checkpoint{count === 1 ? '' : 's'}
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => printFloorLabels(floor)}
+                          className="sp-btn-secondary py-2 text-xs"
+                        >
+                          <Printer className="h-3.5 w-3.5" />
+                          Print QRs
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteFloor(floor)}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Delete floor
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <div className="sp-card overflow-hidden">
+        <div className="border-b border-slate-100 px-5 py-4">
+          <h2 className="font-display font-semibold">Checkpoints</h2>
+        </div>
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-left text-slate-600">
             <tr>
@@ -275,10 +435,19 @@ export default function CheckpointManager() {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex gap-2">
-                    <button type="button" onClick={() => showQr(cp)} className="text-brand-600 hover:text-brand-700">
+                    <button
+                      type="button"
+                      onClick={() => openQrModal(cp, `${cp.name} — QR label`)}
+                      className="rounded-lg p-1.5 text-brand-600 hover:bg-brand-50"
+                      title="Generate & print QR label"
+                    >
                       <QrCode className="h-4 w-4" />
                     </button>
-                    <button type="button" onClick={() => deleteCheckpoint(cp.id)} className="text-red-500 hover:text-red-700">
+                    <button
+                      type="button"
+                      onClick={() => deleteCheckpoint(cp.id)}
+                      className="rounded-lg p-1.5 text-red-500 hover:bg-red-50"
+                    >
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
@@ -288,20 +457,17 @@ export default function CheckpointManager() {
           </tbody>
         </table>
         {checkpoints.length === 0 && (
-          <p className="p-8 text-center text-slate-500">No checkpoints yet.</p>
+          <p className="p-8 text-center text-slate-500">No checkpoints yet. Add a floor, then add checkpoints.</p>
         )}
       </div>
 
       {qrModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setQrModal(null)}>
-          <div className="rounded-xl bg-white p-6 text-center" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-semibold">{qrModal.name}</h3>
-            <img src={qrModal.dataUrl} alt="QR Code" className="mx-auto mt-4" />
-            <p className="mt-2 font-mono text-xs text-slate-500 break-all">{qrModal.id}</p>
-            <p className="mt-1 text-xs text-slate-400">Print and place as QR fallback</p>
-            <button type="button" onClick={() => setQrModal(null)} className="mt-4 rounded-lg bg-slate-100 px-4 py-2 text-sm">Close</button>
-          </div>
-        </div>
+        <QrPrintModal
+          checkpoints={qrModal.checkpoints}
+          siteName={selectedSiteName}
+          title={qrModal.title}
+          onClose={() => setQrModal(null)}
+        />
       )}
     </Layout>
   )
