@@ -53,7 +53,8 @@ export default function CheckpointCard({ checkpoint, status, lastScan, onClick }
             <Clock className="h-3.5 w-3.5" />
             {new Date(lastScan.scanned_at).toLocaleString()}
           </span>
-          {lastScan.guards?.name && <span>{lastScan.guards.name}</span>}
+          {lastScan.profiles?.name && <span>{lastScan.profiles.name}</span>}
+          {!lastScan.profiles?.name && lastScan.guards?.name && <span>{lastScan.guards.name}</span>}
           <span className="flex items-center gap-1.5">
             <MapPin className="h-3.5 w-3.5" />
             {lastScan.distance_metres?.toFixed(0)}m from tag

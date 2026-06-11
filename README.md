@@ -26,7 +26,8 @@ UPDATE profiles SET role = 'super_admin', name = 'Your Name' WHERE id = '<your-u
 
 5. Copy your project URL and anon key from **Settings → API**
 6. Run `supabase/migrations/002_security_hardening.sql` in the SQL Editor (server-side GPS verification)
-7. **Authentication → Sign In / Providers → Email** — disable public signup if available; only admins should create guard accounts
+7. Run `supabase/migrations/005_checkpoint_delete_and_realtime.sql` (fix checkpoint delete + scan joins)
+8. **Authentication → Sign In / Providers → Email** — disable public signup if available; only admins should create guard accounts
 
 ### Deploy guard creation (Edge Function)
 

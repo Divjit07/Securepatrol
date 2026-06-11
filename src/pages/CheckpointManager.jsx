@@ -54,6 +54,7 @@ export default function CheckpointManager() {
       .from('checkpoints')
       .select('*, floors(floor_name)')
       .in('floor_id', floorList.map((f) => f.id))
+      .eq('active', true)
       .order('name')
     setCheckpoints(data || [])
     return data || []
@@ -134,8 +135,14 @@ export default function CheckpointManager() {
   }
 
   const deleteCheckpoint = async (id) => {
-    if (!confirm('Delete this checkpoint?')) return
-    await supabase.from('checkpoints').delete().eq('id', id)
+    if (!confirm('Delete this checkpoint? It will be removed from patrol routes. Scan history is kept.')) return
+
+    const { error } = await supabase.from('checkpoints').update({ active: false }).eq('id', id)
+    if (error) {
+      alert(`Could not delete checkpoint: ${error.message}`)
+      return
+    }
+
     setCheckpoints((prev) => prev.filter((c) => c.id !== id))
   }
 
@@ -143,14 +150,26 @@ export default function CheckpointManager() {
     const count = checkpoints.filter((cp) => cp.floor_id === floor.id).length
     const message =
       count > 0
-        ? `Delete "${floor.floor_name}" and its ${count} checkpoint${count === 1 ? '' : 's'}? Scan history for those checkpoints will also be removed. This cannot be undone.`
+        ? `Delete "${floor.floor_name}" and its ${count} checkpoint${count === 1 ? '' : 's'}? Scan history is kept but checkpoints will be removed from patrol routes.`
         : `Delete floor "${floor.floor_name}"? This cannot be undone.`
 
     if (!confirm(message)) return
 
+    if (count > 0) {
+      const { error: deactivateError } = await supabase
+        .from('checkpoints')
+        .update({ active: false })
+        .eq('floor_id', floor.id)
+
+      if (deactivateError) {
+        alert(`Could not remove checkpoints: ${deactivateError.message}`)
+        return
+      }
+    }
+
     const { error } = await supabase.from('floors').delete().eq('id', floor.id)
     if (error) {
-      alert(error.message)
+      alert(`Could not delete floor: ${error.message}`)
       return
     }
 

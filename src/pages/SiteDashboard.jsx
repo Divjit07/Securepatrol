@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, Radio, Users } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
@@ -16,56 +16,92 @@ export default function SiteDashboard() {
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState('floors')
   const [siteGuards, setSiteGuards] = useState([])
+  const checkpointIdsRef = useRef(new Set())
 
-  useEffect(() => {
+  const loadSiteData = useCallback(async () => {
     if (!id) return
 
-    const load = async () => {
-      setLoading(true)
-      const [{ data: siteData }, { data: floorData }] = await Promise.all([
-        supabase.from('sites').select('*').eq('id', id).single(),
-        supabase.from('floors').select('*').eq('site_id', id).order('floor_number'),
-      ])
+    setLoading(true)
+    const [{ data: siteData }, { data: floorData }] = await Promise.all([
+      supabase.from('sites').select('*').eq('id', id).single(),
+      supabase.from('floors').select('*').eq('site_id', id).order('floor_number'),
+    ])
 
-      setSite(siteData)
-      setFloors(floorData || [])
+    setSite(siteData)
+    setFloors(floorData || [])
 
-      const { data: guards } = await supabase
-        .from('guards')
-        .select('id, name, email, active')
-        .eq('site_id', id)
-        .order('name')
-      setSiteGuards(guards || [])
+    const { data: guards } = await supabase
+      .from('guards')
+      .select('id, name, email, active')
+      .eq('site_id', id)
+      .order('name')
+    setSiteGuards(guards || [])
 
-      if (floorData?.length) {
-        const { data: cps } = await supabase
-          .from('checkpoints')
-          .select('*')
-          .in('floor_id', floorData.map((f) => f.id))
-          .eq('active', true)
+    if (floorData?.length) {
+      const { data: cps } = await supabase
+        .from('checkpoints')
+        .select('*')
+        .in('floor_id', floorData.map((f) => f.id))
+        .eq('active', true)
 
-        const floorMap = Object.fromEntries(floorData.map((f) => [f.id, f]))
-        setCheckpoints(
-          (cps || []).map((cp) => ({ ...cp, floor: floorMap[cp.floor_id] })),
-        )
+      const floorMap = Object.fromEntries(floorData.map((f) => [f.id, f]))
+      const checkpointList = (cps || []).map((cp) => ({ ...cp, floor: floorMap[cp.floor_id] }))
+      setCheckpoints(checkpointList)
+      checkpointIdsRef.current = new Set(checkpointList.map((cp) => cp.id))
 
-        if (cps?.length) {
-          const startOfDay = new Date()
-          startOfDay.setHours(0, 0, 0, 0)
-          const { data: scanData } = await supabase
-            .from('scans')
-            .select('*, guards:guard_id(name)')
-            .in('checkpoint_id', cps.map((c) => c.id))
-            .gte('scanned_at', startOfDay.toISOString())
-            .order('scanned_at', { ascending: false })
+      if (cps?.length) {
+        const startOfDay = new Date()
+        startOfDay.setHours(0, 0, 0, 0)
+        const { data: scanData } = await supabase
+          .from('scans')
+          .select('*, profiles:guard_id(name)')
+          .in('checkpoint_id', cps.map((c) => c.id))
+          .gte('scanned_at', startOfDay.toISOString())
+          .order('scanned_at', { ascending: false })
 
-          setScans(scanData || [])
-        }
+        setScans(scanData || [])
+      } else {
+        setScans([])
       }
-      setLoading(false)
+    } else {
+      setCheckpoints([])
+      setScans([])
+      checkpointIdsRef.current = new Set()
     }
+    setLoading(false)
+  }, [id])
 
-    load()
+  useEffect(() => {
+    loadSiteData()
+  }, [loadSiteData])
+
+  useEffect(() => {
+    if (!id) return undefined
+
+    const channel = supabase
+      .channel(`site-dashboard_${id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'scans' }, async (payload) => {
+        const checkpointId = payload.new.checkpoint_id
+        if (!checkpointIdsRef.current.has(checkpointId)) return
+
+        const { data } = await supabase
+          .from('scans')
+          .select('*, profiles:guard_id(name)')
+          .eq('id', payload.new.id)
+          .single()
+
+        if (!data) return
+
+        setScans((prev) => {
+          const withoutDup = prev.filter((s) => s.id !== data.id)
+          return [data, ...withoutDup]
+        })
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [id])
 
   const scansByCheckpoint = scans.reduce((acc, scan) => {

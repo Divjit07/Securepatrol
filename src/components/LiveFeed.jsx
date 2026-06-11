@@ -1,26 +1,57 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { Radio } from 'lucide-react'
 import { supabase } from '../lib/supabase.js'
+
+async function fetchScanDetails(scanId) {
+  const { data } = await supabase
+    .from('scans')
+    .select('*, checkpoints(name), profiles:guard_id(name)')
+    .eq('id', scanId)
+    .single()
+  return data
+}
+
+async function checkpointBelongsToSite(checkpointId, siteId) {
+  const { data } = await supabase
+    .from('checkpoints')
+    .select('id, floors!inner(site_id)')
+    .eq('id', checkpointId)
+    .eq('floors.site_id', siteId)
+    .maybeSingle()
+  return Boolean(data)
+}
 
 export default function LiveFeed({ siteId, limit = 20 }) {
   const [scans, setScans] = useState([])
   const [connected, setConnected] = useState(false)
+  const checkpointIdsRef = useRef(new Set())
 
   const loadRecent = useCallback(async () => {
     const { data: floors } = await supabase.from('floors').select('id').eq('site_id', siteId)
-    if (!floors?.length) return
+    if (!floors?.length) {
+      setScans([])
+      checkpointIdsRef.current = new Set()
+      return
+    }
 
     const { data: checkpoints } = await supabase
       .from('checkpoints')
       .select('id')
       .in('floor_id', floors.map((f) => f.id))
+      .eq('active', true)
 
-    if (!checkpoints?.length) return
+    if (!checkpoints?.length) {
+      setScans([])
+      checkpointIdsRef.current = new Set()
+      return
+    }
 
     const cpIds = checkpoints.map((c) => c.id)
+    checkpointIdsRef.current = new Set(cpIds)
+
     const { data } = await supabase
       .from('scans')
-      .select('*, checkpoints(name), guards:guard_id(name)')
+      .select('*, checkpoints(name), profiles:guard_id(name)')
       .in('checkpoint_id', cpIds)
       .order('scanned_at', { ascending: false })
       .limit(limit)
@@ -33,16 +64,18 @@ export default function LiveFeed({ siteId, limit = 20 }) {
     loadRecent()
 
     const channel = supabase
-      .channel(`live-feed-${siteId}`)
+      .channel(`live-feed_${siteId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'scans' }, async (payload) => {
-        const { data } = await supabase
-          .from('scans')
-          .select('*, checkpoints(name), guards:guard_id(name)')
-          .eq('id', payload.new.id)
-          .single()
+        const checkpointId = payload.new.checkpoint_id
+        if (!checkpointIdsRef.current.has(checkpointId)) {
+          const belongs = await checkpointBelongsToSite(checkpointId, siteId)
+          if (!belongs) return
+          checkpointIdsRef.current.add(checkpointId)
+        }
 
+        const data = await fetchScanDetails(payload.new.id)
         if (data) {
-          setScans((prev) => [data, ...prev].slice(0, limit))
+          setScans((prev) => [data, ...prev.filter((s) => s.id !== data.id)].slice(0, limit))
         }
       })
       .subscribe((status) => setConnected(status === 'SUBSCRIBED'))
@@ -71,7 +104,7 @@ export default function LiveFeed({ siteId, limit = 20 }) {
               <div>
                 <p className="font-medium text-sm">{scan.checkpoints?.name || 'Checkpoint'}</p>
                 <p className="text-xs text-slate-500">
-                  {scan.guards?.name} · {new Date(scan.scanned_at).toLocaleTimeString()}
+                  {scan.profiles?.name || 'Guard'} · {new Date(scan.scanned_at).toLocaleString()}
                 </p>
               </div>
               <span

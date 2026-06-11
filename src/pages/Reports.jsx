@@ -7,6 +7,16 @@ import { supabase } from '../lib/supabase.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { fetchSitesForAdmin } from '../lib/scans.js'
 
+function localDayStart(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(y, m - 1, d, 0, 0, 0, 0)
+}
+
+function localDayEnd(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(y, m - 1, d, 23, 59, 59, 999)
+}
+
 export default function Reports() {
   const { user, isSuperAdmin } = useAuth()
   const [sites, setSites] = useState([])
@@ -39,22 +49,38 @@ export default function Reports() {
       return
     }
 
-    const { data: checkpoints } = await supabase.from('checkpoints').select('id, name, floors(floor_name)').in('floor_id', floorIds)
+    const { data: checkpoints } = await supabase
+      .from('checkpoints')
+      .select('id, name, floors(floor_name)')
+      .in('floor_id', floorIds)
+
     const cpIds = checkpoints?.map((c) => c.id) || []
     const cpMap = Object.fromEntries((checkpoints || []).map((c) => [c.id, c]))
 
-    const from = new Date(filters.fromDate)
-    from.setHours(0, 0, 0, 0)
-    const to = new Date(filters.toDate)
-    to.setHours(23, 59, 59, 999)
+    if (!cpIds.length) {
+      setScans([])
+      setLoading(false)
+      return
+    }
 
-    const { data } = await supabase
+    const from = localDayStart(filters.fromDate)
+    const to = localDayEnd(filters.toDate)
+
+    const { data, error } = await supabase
       .from('scans')
-      .select('*, guards:guard_id(name, email)')
+      .select('*, profiles:guard_id(name, email)')
       .in('checkpoint_id', cpIds)
       .gte('scanned_at', from.toISOString())
       .lte('scanned_at', to.toISOString())
       .order('scanned_at', { ascending: false })
+
+    if (error) {
+      console.error('Failed to load scans:', error)
+      alert(`Could not load scans: ${error.message}`)
+      setScans([])
+      setLoading(false)
+      return
+    }
 
     setScans(
       (data || []).map((s) => ({
@@ -75,7 +101,7 @@ export default function Reports() {
       new Date(s.scanned_at).toLocaleString(),
       s.checkpoint?.name || '',
       s.checkpoint?.floors?.floor_name || '',
-      s.guards?.name || '',
+      s.profiles?.name || s.guards?.name || '',
       s.distance_metres,
       s.status,
       s.sync_method,
@@ -110,7 +136,7 @@ export default function Reports() {
         new Date(s.scanned_at).toLocaleString(),
         s.checkpoint?.name || '',
         s.checkpoint?.floors?.floor_name || '',
-        s.guards?.name || '',
+        s.profiles?.name || s.guards?.name || '',
         s.distance_metres?.toFixed(0),
         s.status.toUpperCase(),
       ]),
@@ -205,7 +231,7 @@ export default function Reports() {
                 <tr key={scan.id}>
                   <td className="px-4 py-3">{new Date(scan.scanned_at).toLocaleString()}</td>
                   <td className="px-4 py-3 font-medium">{scan.checkpoint?.name}</td>
-                  <td className="px-4 py-3">{scan.guards?.name}</td>
+                  <td className="px-4 py-3">{scan.profiles?.name || scan.guards?.name}</td>
                   <td className="px-4 py-3">{scan.distance_metres?.toFixed(0)}m</td>
                   <td className="px-4 py-3">
                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${scan.status === 'pass' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>

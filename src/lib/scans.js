@@ -90,7 +90,7 @@ export async function fetchScansWithDetails(filters = {}) {
     .select(`
       *,
       checkpoints(name, latitude, longitude, floors(floor_name, site_id, sites(name))),
-      guards:guard_id(name, email)
+      profiles:guard_id(name, email)
     `)
     .order('scanned_at', { ascending: false })
 
