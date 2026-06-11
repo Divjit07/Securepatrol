@@ -29,7 +29,9 @@ export default function Layout({ children, variant = 'admin' }) {
     { to: '/guard/history', label: 'History' },
   ]
 
-  const links = variant === 'admin' ? adminLinks : guardLinks
+  const clientLinks = [{ to: '/client', label: 'Patrol Overview', end: true }]
+
+  const links = variant === 'admin' ? adminLinks : variant === 'client' ? clientLinks : guardLinks
 
   const navClass = ({ isActive }) =>
     `sp-nav-link ${isActive ? 'sp-nav-link-active' : ''}`
@@ -38,7 +40,7 @@ export default function Layout({ children, variant = 'admin' }) {
     <div className="min-h-dvh bg-slate-100">
       <header className="sticky top-0 z-40 border-b border-navy-800 bg-navy-900 shadow-lg shadow-navy-950/30">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <Link to={variant === 'admin' ? '/admin' : '/guard'} className="shrink-0">
+          <Link to={variant === 'admin' ? '/admin' : variant === 'client' ? '/client' : '/guard'} className="shrink-0">
             <Logo size="lg" showText variant="light" framed />
           </Link>
 
@@ -56,7 +58,7 @@ export default function Layout({ children, variant = 'admin' }) {
             <div className="hidden text-right sm:block">
               <p className="text-sm font-medium text-white">{profile?.name}</p>
               <p className="text-[10px] uppercase tracking-wider text-slate-500">
-                {variant === 'admin' ? 'Administrator' : 'Field Guard'}
+                {variant === 'admin' ? 'Administrator' : variant === 'client' ? 'Client' : 'Field Guard'}
               </p>
             </div>
             <button

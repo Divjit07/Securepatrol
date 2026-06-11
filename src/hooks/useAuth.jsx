@@ -62,11 +62,12 @@ export function AuthProvider({ children }) {
 
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin'
   const isGuard = profile?.role === 'guard'
+  const isClient = profile?.role === 'client'
   const isSuperAdmin = profile?.role === 'super_admin'
 
   return (
     <AuthContext.Provider
-      value={{ user, profile, loading, signIn, signOut, isAdmin, isGuard, isSuperAdmin, refreshProfile: () => loadProfile(user?.id).then(setProfile) }}
+      value={{ user, profile, loading, signIn, signOut, isAdmin, isGuard, isClient, isSuperAdmin, refreshProfile: () => loadProfile(user?.id).then(setProfile) }}
     >
       {children}
     </AuthContext.Provider>

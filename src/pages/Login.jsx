@@ -28,6 +28,8 @@ export default function Login() {
       const { profile } = await signIn(email, password)
       if (profile?.role === 'guard') {
         navigate('/guard')
+      } else if (profile?.role === 'client') {
+        navigate('/client')
       } else if (profile?.role === 'admin' || profile?.role === 'super_admin') {
         navigate('/admin')
       } else {

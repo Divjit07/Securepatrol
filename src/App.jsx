@@ -13,12 +13,15 @@ import CheckpointManager from './pages/CheckpointManager.jsx'
 import GuardManager from './pages/GuardManager.jsx'
 import Reports from './pages/Reports.jsx'
 import Alerts from './pages/Alerts.jsx'
+import ClientDashboard from './pages/ClientDashboard.jsx'
 
 function HomeRedirect() {
-  const { user, isAdmin, loading } = useAuth()
+  const { user, isAdmin, isClient, loading } = useAuth()
   if (loading) return null
   if (!user) return <Navigate to="/login" replace />
-  return <Navigate to={isAdmin ? '/admin' : '/guard'} replace />
+  if (isAdmin) return <Navigate to="/admin" replace />
+  if (isClient) return <Navigate to="/client" replace />
+  return <Navigate to="/guard" replace />
 }
 
 export default function App() {
@@ -113,6 +116,15 @@ export default function App() {
         element={
           <ProtectedRoute requireAdmin>
             <Alerts />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/client"
+        element={
+          <ProtectedRoute requireClient>
+            <ClientDashboard />
           </ProtectedRoute>
         }
       />

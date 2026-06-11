@@ -27,7 +27,8 @@ UPDATE profiles SET role = 'super_admin', name = 'Your Name' WHERE id = '<your-u
 5. Copy your project URL and anon key from **Settings → API**
 6. Run `supabase/migrations/002_security_hardening.sql` in the SQL Editor (server-side GPS verification)
 7. Run `supabase/migrations/005_checkpoint_delete_and_realtime.sql` (fix checkpoint delete + scan joins)
-8. **Authentication → Sign In / Providers → Email** — disable public signup if available; only admins should create guard accounts
+8. Run `supabase/migrations/006_client_role.sql` (client read-only portal)
+9. **Authentication → Sign In / Providers → Email** — disable public signup if available; only admins should create guard accounts
 
 ### Deploy guard creation (Edge Function)
 
@@ -81,6 +82,30 @@ Open http://localhost:5173 and sign in with your admin account.
 6. **Add Guards** — Guard Manager → create accounts (requires Edge Function deployed)
 7. **Guards scan** — Guards log in on their phone, tap NFC tags, GPS is verified server-side
 
+### Add a client login (read-only patrol view)
+
+Clients see scan compliance for one site — which checkpoints were scanned during a shift (e.g. 11am–8pm), live feed, and scan history. They cannot edit anything.
+
+1. **Authentication → Users → Add user** — create the client account (enable Auto Confirm)
+2. Get your site ID from **Table Editor → sites**, or run:
+
+```sql
+SELECT id, name FROM sites;
+```
+
+3. Promote and link the client to their site:
+
+```sql
+INSERT INTO profiles (id, name, role, site_id)
+SELECT id, 'Client Name', 'client', '<site-uuid>'
+FROM auth.users
+WHERE email = 'client@company.com'
+ON CONFLICT (id) DO UPDATE
+SET role = 'client', name = EXCLUDED.name, site_id = EXCLUDED.site_id;
+```
+
+4. Client signs in at your app URL → lands on **Patrol Overview**
+
 ## Security
 
 - **Server-side GPS verification** — Database trigger recalculates distance and sets pass/fail; guards cannot fake scans via browser devtools
@@ -107,6 +132,7 @@ Quick version:
 | Super Admin | All sites, full management |
 | Admin | Own sites only |
 | Guard | Scan checkpoints at assigned site |
+| Client | Read-only patrol compliance for assigned site (shift view + live feed) |
 
 ## PWA Installation (Guards)
 
