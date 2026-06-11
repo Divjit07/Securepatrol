@@ -68,7 +68,7 @@ export default function Reports() {
 
     const { data, error } = await supabase
       .from('scans')
-      .select('*, profiles:guard_id(name, email)')
+      .select('*, profiles:guard_id(name)')
       .in('checkpoint_id', cpIds)
       .gte('scanned_at', from.toISOString())
       .lte('scanned_at', to.toISOString())
