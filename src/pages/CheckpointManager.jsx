@@ -9,6 +9,7 @@ import {
   minDistanceToCheckpoints,
   parseCoordinatePaste,
   MIN_FLOOR_COORD_SEPARATION,
+  getBestPosition,
 } from '../lib/gps.js'
 import { supabase } from '../lib/supabase.js'
 import { useAuth } from '../hooks/useAuth.jsx'
@@ -35,6 +36,8 @@ export default function CheckpointManager() {
   const [generateQrAfterSave, setGenerateQrAfterSave] = useState(true)
   const [qrModal, setQrModal] = useState(null)
   const [copiedId, setCopiedId] = useState(null)
+  const [gpsLoading, setGpsLoading] = useState(false)
+  const [gpsMessage, setGpsMessage] = useState(null)
 
   const selectedSiteName = sites.find((s) => s.id === selectedSite)?.name || ''
 
@@ -226,20 +229,46 @@ export default function CheckpointManager() {
     openQrModal(floorCheckpoints, `${floor.floor_name} — all checkpoint labels`)
   }
 
-  const useCurrentLocation = () => {
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setForm((f) => ({
-          ...f,
-          latitude: pos.coords.latitude.toFixed(6),
-          longitude: pos.coords.longitude.toFixed(6),
-          altitude_metres:
-            pos.coords.altitude != null ? pos.coords.altitude.toFixed(1) : f.altitude_metres,
-        }))
-      },
-      () => alert('Could not get GPS location'),
-      { enableHighAccuracy: true },
-    )
+  const useCurrentLocation = async () => {
+    if (!navigator.geolocation) {
+      setGpsMessage({ type: 'error', text: 'This browser does not support GPS. Paste coordinates instead.' })
+      return
+    }
+
+    setGpsLoading(true)
+    setGpsMessage({ type: 'info', text: 'Getting location… allow access if your browser asks.' })
+
+    try {
+      const pos = await getBestPosition(2)
+      setForm((f) => ({
+        ...f,
+        latitude: pos.latitude.toFixed(6),
+        longitude: pos.longitude.toFixed(6),
+        altitude_metres:
+          pos.altitude != null ? pos.altitude.toFixed(1) : f.altitude_metres,
+      }))
+      setGpsMessage({
+        type: 'success',
+        text: `Location captured (±${Math.round(pos.accuracy ?? 0)}m accuracy).`,
+      })
+    } catch (err) {
+      const code = err?.code
+      let text = 'Could not get GPS. Paste coordinates manually instead.'
+
+      if (code === 1 || err.message?.includes('denied')) {
+        text =
+          'Location blocked. Click the lock icon in your browser address bar → allow Location for this site, then try again.'
+      } else if (code === 3 || err.message?.includes('Timeout')) {
+        text =
+          'GPS timed out. On a laptop, Wi‑Fi location is weak — paste coordinates from Maps or try on your phone.'
+      } else if (code === 2 || err.message?.includes('unavailable')) {
+        text = 'GPS unavailable on this device. Paste coordinates instead.'
+      }
+
+      setGpsMessage({ type: 'error', text })
+    } finally {
+      setGpsLoading(false)
+    }
   }
 
   const applyCoordPaste = () => {
@@ -333,16 +362,10 @@ export default function CheckpointManager() {
       {showForm && (
         <form onSubmit={createCheckpoint} className="sp-card mb-6 p-6">
           <h3 className="font-display text-lg font-semibold">New checkpoint</h3>
-          <div className="mb-4 rounded-lg border border-brand-100 bg-brand-50 p-4 text-sm text-brand-900">
-            <p className="font-semibold">Recommended: enter coordinates from Google Maps</p>
-            <ol className="mt-2 list-decimal space-y-1 pl-5 text-brand-800">
-              <li>Open Google Maps → find 800 Bathurst</li>
-              <li>Switch to <strong>Satellite</strong> view</li>
-              <li>Long-press the exact spot where the label will be stuck</li>
-              <li>Tap the coordinates at the bottom to copy them</li>
-              <li>Paste below — for floor 2+, pick a window/far corner <strong>not</strong> above the lobby</li>
-            </ol>
-          </div>
+          <p className="mb-4 text-sm text-slate-600">
+            Stand at the tag location, tap <strong>Use my GPS</strong>, or paste coordinates from any maps app.
+            Upper floors: use a spot away from the lobby.
+          </p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label className="sp-label">Checkpoint name</label>
@@ -387,7 +410,7 @@ export default function CheckpointManager() {
           <p className="mt-1 text-xs text-slate-500">Default 20m + indoor GPS tolerance.</p>
             </div>
             <div className="sm:col-span-2">
-              <label className="sp-label">Paste coordinates from Google Maps</label>
+              <label className="sp-label">Paste coordinates (optional)</label>
               <div className="flex gap-2">
                 <input
                   value={form.coordPaste}
@@ -443,10 +466,24 @@ export default function CheckpointManager() {
           <button
             type="button"
             onClick={useCurrentLocation}
-            className="mt-3 text-sm font-medium text-slate-500 hover:underline"
+            disabled={gpsLoading}
+            className="mt-3 rounded-lg border border-brand-200 bg-brand-50 px-4 py-2 text-sm font-medium text-brand-800 hover:bg-brand-100 disabled:opacity-60"
           >
-            Or use phone GPS (less reliable indoors)
+            {gpsLoading ? 'Getting GPS…' : 'Use my current GPS location'}
           </button>
+          {gpsMessage && (
+            <p
+              className={`mt-2 text-sm ${
+                gpsMessage.type === 'error'
+                  ? 'text-red-700'
+                  : gpsMessage.type === 'success'
+                    ? 'text-green-700'
+                    : 'text-slate-600'
+              }`}
+            >
+              {gpsMessage.text}
+            </p>
+          )}
           <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm text-slate-700">
             <input
               type="checkbox"

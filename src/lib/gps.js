@@ -112,7 +112,7 @@ export function verifyGpsProximity(guardLat, guardLng, checkpointLat, checkpoint
   }
 }
 
-function readPosition() {
+function readPosition(options = { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }) {
   return new Promise((resolve, reject) => {
     navigator.geolocation.getCurrentPosition(
       (pos) =>
@@ -123,8 +123,12 @@ function readPosition() {
           altitude: pos.coords.altitude,
           altitudeAccuracy: pos.coords.altitudeAccuracy,
         }),
-      (err) => reject(new Error(err.message || 'Unable to get GPS location')),
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 },
+      (err) => {
+        const error = new Error(err.message || 'Unable to get GPS location')
+        error.code = err.code
+        reject(error)
+      },
+      options,
     )
   })
 }
@@ -134,20 +138,31 @@ export async function getBestPosition(samples = 3) {
     throw new Error('Geolocation is not supported on this device')
   }
 
+  const attempts = [
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    { enableHighAccuracy: false, timeout: 20000, maximumAge: 120000 },
+  ]
+
   const readings = []
-  for (let i = 0; i < samples; i += 1) {
-    try {
-      readings.push(await readPosition())
-    } catch {
-      // keep trying remaining samples
+
+  for (const options of attempts) {
+    for (let i = 0; i < samples; i += 1) {
+      try {
+        readings.push(await readPosition(options))
+      } catch (err) {
+        if (i === 0 && options.enableHighAccuracy && err.code === 1) throw err
+      }
+      if (i < samples - 1) {
+        await new Promise((r) => setTimeout(r, 600))
+      }
     }
-    if (i < samples - 1) {
-      await new Promise((r) => setTimeout(r, 800))
-    }
+    if (readings.length > 0) break
   }
 
   if (readings.length === 0) {
-    throw new Error('Unable to get GPS location — move near a window or doorway')
+    const error = new Error('Unable to get GPS location — allow location access or paste coordinates')
+    error.code = 2
+    throw error
   }
 
   return readings.reduce((best, current) =>
