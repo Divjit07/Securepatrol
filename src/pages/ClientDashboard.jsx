@@ -5,7 +5,7 @@ import CheckpointCard from '../components/CheckpointCard.jsx'
 import LiveFeed from '../components/LiveFeed.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { supabase } from '../lib/supabase.js'
-import { getCheckpointStatus, isHistoricalShiftView } from '../lib/scans.js'
+import { getClientCheckpointStatus } from '../lib/scans.js'
 
 const DEFAULT_SHIFT = { start: '11:00', end: '20:00' }
 
@@ -138,8 +138,6 @@ export default function ClientDashboard() {
     checkpoints: checkpoints.filter((cp) => cp.floor_id === floor.id),
   }))
 
-  const historicalView = isHistoricalShiftView(date, shift.end)
-
   if (!siteId) {
     return (
       <Layout variant="client">
@@ -238,14 +236,12 @@ export default function ClientDashboard() {
                   <div className="grid gap-3 sm:grid-cols-2">
                     {cps.map((cp) => {
                       const latestScan = scansByCheckpoint[cp.id]
-                      const status = latestScan
-                        ? getCheckpointStatus(cp, latestScan, 60, { historical: historicalView })
-                        : 'missed'
+                      const status = getClientCheckpointStatus(latestScan)
                       return (
                         <CheckpointCard
                           key={cp.id}
                           checkpoint={cp}
-                          status={latestScan ? status : 'missed'}
+                          status={status}
                           lastScan={latestScan}
                         />
                       )
@@ -306,9 +302,8 @@ export default function ClientDashboard() {
               <div className="flex items-start gap-2">
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
                 <p>
-                  Green checkpoints were scanned during your selected shift ({shift.start}–{shift.end}).
-                  Red means not yet scanned. Yellow only appears on today&apos;s live shift when a
-                  checkpoint was scanned over an hour ago.
+                  Green checkpoints were scanned and passed during your selected shift ({shift.start}–{shift.end}).
+                  Red means not yet scanned or the scan failed.
                 </p>
               </div>
             </div>

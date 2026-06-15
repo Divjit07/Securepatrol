@@ -53,6 +53,13 @@ export function isHistoricalShiftView(dateStr, shiftEnd) {
   return Date.now() > shiftEndTime.getTime()
 }
 
+/** Client portal: green when a checkpoint passed during the selected shift window. */
+export function getClientCheckpointStatus(latestScan) {
+  if (!latestScan) return 'missed'
+  if (latestScan.status === 'fail') return 'failed'
+  return 'on_time'
+}
+
 export function getCheckpointStatus(checkpoint, latestScan, alertMinutes = 60, { historical = false } = {}) {
   if (!latestScan) {
     const hoursSinceMidnight = (Date.now() - new Date().setHours(0, 0, 0, 0)) / 60000
