@@ -32,7 +32,8 @@ UPDATE profiles SET role = 'super_admin', name = 'Your Name' WHERE id = '<your-u
 10. Run `supabase/migrations/008_gps_indoor_tolerance.sql` (indoor GPS tolerance — run after 007)
 11. Run `supabase/migrations/009_upper_floor_altitude_fix.sql` (fix upper-floor iPhone scans — run after 008)
 12. Run `supabase/migrations/010_lobby_stack_detection.sql` (block ground-floor scans of upper-floor checkpoints — run after 009)
-13. **Authentication → Sign In / Providers → Email** — disable public signup if available; only admins should create guard accounts
+13. Run `supabase/migrations/011_fix_lobby_detection.sql` (fix false failures on upper floors — run after 010)
+14. **Authentication → Sign In / Providers → Email** — disable public signup if available; only admins should create guard accounts
 
 ### Deploy guard creation (Edge Function)
 

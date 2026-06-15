@@ -97,19 +97,24 @@ export function validateScanProximity({
     }
   }
 
-  if (floorNumber > 1 && lobbyCheckpoints.length > 0) {
+  if (floorNumber > 1 && lobbyCheckpoints.length > 0 && !isAltitudeConfirmed(guardAltitude, expectedAltitude)) {
     const lobbyDist = minDistanceToLobbyCheckpoints(guardLat, guardLng, lobbyCheckpoints)
-    if (
-      lobbyDist != null &&
-      lobbyDist <= LOBBY_STACK_RADIUS_METRES &&
-      distance <= allowedRadius &&
-      !isAltitudeConfirmed(guardAltitude, expectedAltitude)
-    ) {
-      return {
-        passed: false,
-        distance,
-        reason: 'lobby_stack',
-        message: `Ground-floor GPS detected. Go to floor ${floorNumber} to scan — or place this checkpoint away from the lobby stack (near a window at the far end of the hall).`,
+
+    if (lobbyDist != null && lobbyDist > distance * 1.5) {
+      // Guard is clearly closer to this checkpoint than the lobby — allow
+    } else if (lobbyDist != null) {
+      const insideLobbyBubble = lobbyCheckpoints.some((cp) => {
+        const lobbyRadius = effectiveRadiusMetres(cp.radius_metres ?? DEFAULT_RADIUS_METRES, gpsAccuracy)
+        return haversineDistance(guardLat, guardLng, cp.latitude, cp.longitude) <= lobbyRadius
+      })
+
+      if (insideLobbyBubble && distance <= allowedRadius && lobbyDist <= distance + 5) {
+        return {
+          passed: false,
+          distance,
+          reason: 'lobby_stack',
+          message: `Ground-floor GPS detected. Go to floor ${floorNumber} to scan. If you are on floor ${floorNumber}, re-capture this checkpoint GPS away from the lobby (far end of hall, near a window).`,
+        }
       }
     }
   }
