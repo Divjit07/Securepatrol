@@ -318,9 +318,9 @@ export default function CheckpointManager() {
                 onChange={(e) => setForm({ ...form, radius_metres: e.target.value })}
                 className="sp-input"
               />
-              <p className="mt-1 text-xs text-slate-500">
-                Lobby/ground: 15m. Upper floors: 12m + altitude check. Indoor GPS may add extra tolerance automatically.
-              </p>
+          <p className="mt-1 text-xs text-slate-500">
+            Default 15m for all floors. Indoor GPS automatically adds extra tolerance.
+          </p>
             </div>
             <div>
               <label className="sp-label">Latitude</label>
@@ -358,8 +358,7 @@ export default function CheckpointManager() {
             Use my current GPS location
           </button>
           <p className="mt-2 text-xs text-amber-700">
-            Multi-floor sites: stand at the exact tag spot and capture GPS. For floors above ground,
-            stand near a window so altitude is recorded — this stops scanning from other floors.
+            Stand at the exact tag spot when capturing GPS. Hold still a few seconds for best accuracy.
           </p>
           <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm text-slate-700">
             <input

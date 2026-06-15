@@ -1,5 +1,5 @@
 import { supabase } from './supabase.js'
-import { getCurrentPosition, validateScanProximity, defaultRadiusForFloor } from './gps.js'
+import { getBestPosition, validateScanProximity, defaultRadiusForFloor } from './gps.js'
 
 const QUEUE_KEY = 'securepatrol_offline_scans'
 
@@ -130,7 +130,7 @@ export async function flushOfflineQueue() {
 }
 
 export async function submitScanWithGps(checkpointId, guardId) {
-  const position = await getCurrentPosition()
+  const position = await getBestPosition(3)
   return submitScan({
     checkpointId,
     guardId,

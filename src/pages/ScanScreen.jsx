@@ -80,7 +80,7 @@ export default function ScanScreen() {
       {processing ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-slate-200 bg-white py-16">
           <Loader2 className="h-10 w-10 animate-spin text-brand-600" />
-          <p className="mt-4 font-medium">Getting GPS & verifying…</p>
+          <p className="mt-4 font-medium">Getting GPS fix (hold still)…</p>
         </div>
       ) : mode === 'nfc' ? (
         <NFCScanner onScan={handleScan} disabled={processing} />
