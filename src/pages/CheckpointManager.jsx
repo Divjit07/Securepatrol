@@ -3,7 +3,7 @@ import { Plus, QrCode, Trash2, Copy, Check, Printer } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import QrPrintModal from '../components/QrPrintModal.jsx'
-import { floorElevationMetres } from '../lib/gps.js'
+import { floorElevationMetres, defaultRadiusForFloor } from '../lib/gps.js'
 import { supabase } from '../lib/supabase.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { fetchSitesForAdmin } from '../lib/scans.js'
@@ -21,7 +21,7 @@ export default function CheckpointManager() {
     floor_id: '',
     latitude: '',
     longitude: '',
-    radius_metres: 8,
+    radius_metres: 15,
     altitude_metres: '',
   })
   const [floorForm, setFloorForm] = useState({ floor_name: '', floor_number: 1 })
@@ -119,7 +119,9 @@ export default function CheckpointManager() {
         latitude: parseFloat(form.latitude),
         longitude: parseFloat(form.longitude),
         altitude_metres: form.altitude_metres !== '' ? parseFloat(form.altitude_metres) : null,
-        radius_metres: parseInt(form.radius_metres, 10) || 8,
+        radius_metres: parseInt(form.radius_metres, 10) || defaultRadiusForFloor(
+          floors.find((f) => f.id === form.floor_id)?.floor_number ?? 1,
+        ),
       })
       .select('*, floors(floor_name)')
       .single()
@@ -129,7 +131,7 @@ export default function CheckpointManager() {
       return
     }
 
-    setForm({ name: '', floor_id: '', latitude: '', longitude: '', altitude_metres: '', radius_metres: 8 })
+    setForm({ name: '', floor_id: '', latitude: '', longitude: '', altitude_metres: '', radius_metres: 15 })
     setShowForm(false)
     await loadCheckpoints(floors)
 
@@ -291,7 +293,14 @@ export default function CheckpointManager() {
               <label className="sp-label">Floor</label>
               <select
                 value={form.floor_id}
-                onChange={(e) => setForm({ ...form, floor_id: e.target.value })}
+                onChange={(e) => {
+                  const floor = floors.find((f) => f.id === e.target.value)
+                  setForm({
+                    ...form,
+                    floor_id: e.target.value,
+                    radius_metres: floor ? defaultRadiusForFloor(floor.floor_number) : 15,
+                  })
+                }}
                 required
                 className="sp-input"
               >
@@ -309,7 +318,9 @@ export default function CheckpointManager() {
                 onChange={(e) => setForm({ ...form, radius_metres: e.target.value })}
                 className="sp-input"
               />
-              <p className="mt-1 text-xs text-slate-500">Default 8m. Use 5m for tight indoor spots.</p>
+              <p className="mt-1 text-xs text-slate-500">
+                Lobby/ground: 15m. Upper floors: 12m + altitude check. Indoor GPS may add extra tolerance automatically.
+              </p>
             </div>
             <div>
               <label className="sp-label">Latitude</label>

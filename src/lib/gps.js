@@ -1,8 +1,10 @@
 const EARTH_RADIUS_METRES = 6371000
-export const DEFAULT_RADIUS_METRES = 8
-export const MAX_GPS_ACCURACY_METRES = 15
-export const VERTICAL_TOLERANCE_METRES = 5
+export const DEFAULT_RADIUS_METRES = 15
+export const UPPER_FLOOR_RADIUS_METRES = 12
+export const MAX_GPS_ACCURACY_REJECT = 50
+export const VERTICAL_TOLERANCE_METRES = 8
 export const FLOOR_HEIGHT_METRES = 3.5
+export const ACCURACY_RADIUS_BONUS_CAP = 20
 
 function toRadians(degrees) {
   return (degrees * Math.PI) / 180
@@ -24,6 +26,18 @@ export function floorElevationMetres(floorNumber) {
   return Math.max(0, (floorNumber - 1) * FLOOR_HEIGHT_METRES)
 }
 
+export function defaultRadiusForFloor(floorNumber) {
+  return floorNumber > 1 ? UPPER_FLOOR_RADIUS_METRES : DEFAULT_RADIUS_METRES
+}
+
+/** Expand allowed distance when the device reports poor indoor GPS accuracy. */
+export function effectiveRadiusMetres(radiusMetres, gpsAccuracy, floorNumber = 1) {
+  const base = radiusMetres ?? defaultRadiusForFloor(floorNumber)
+  const bonus =
+    gpsAccuracy != null ? Math.min(gpsAccuracy * 0.5, ACCURACY_RADIUS_BONUS_CAP) : 0
+  return base + bonus
+}
+
 export function validateScanProximity({
   guardLat,
   guardLng,
@@ -36,24 +50,24 @@ export function validateScanProximity({
   radiusMetres = DEFAULT_RADIUS_METRES,
 }) {
   const distance = haversineDistance(guardLat, guardLng, checkpointLat, checkpointLng)
-  const maxAccuracy = Math.min(radiusMetres, MAX_GPS_ACCURACY_METRES)
+  const allowedRadius = effectiveRadiusMetres(radiusMetres, gpsAccuracy, floorNumber)
   const expectedAltitude = checkpointAltitude ?? (floorNumber > 1 ? floorElevationMetres(floorNumber) : null)
 
-  if (gpsAccuracy != null && gpsAccuracy > maxAccuracy) {
+  if (gpsAccuracy != null && gpsAccuracy > MAX_GPS_ACCURACY_REJECT) {
     return {
       passed: false,
       distance,
       reason: 'gps_accuracy',
-      message: `GPS signal too weak (±${Math.round(gpsAccuracy)}m). Move near a window and try again.`,
+      message: `GPS signal too weak (±${Math.round(gpsAccuracy)}m). Move near a window or doorway and try again.`,
     }
   }
 
-  if (distance > radiusMetres) {
+  if (distance > allowedRadius) {
     return {
       passed: false,
       distance,
       reason: 'too_far',
-      message: `You are ${distance.toFixed(0)}m away (max ${radiusMetres}m). Move closer to the checkpoint.`,
+      message: `You are ${distance.toFixed(0)}m away (allowed ~${Math.round(allowedRadius)}m with current GPS). Stand at the tag and try again.`,
     }
   }
 
@@ -105,7 +119,7 @@ export function getCurrentPosition() {
           altitudeAccuracy: pos.coords.altitudeAccuracy,
         }),
       (err) => reject(new Error(err.message || 'Unable to get GPS location')),
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
     )
   })
 }

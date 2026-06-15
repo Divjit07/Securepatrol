@@ -29,7 +29,8 @@ UPDATE profiles SET role = 'super_admin', name = 'Your Name' WHERE id = '<your-u
 7. Run `supabase/migrations/005_checkpoint_delete_and_realtime.sql` (fix checkpoint delete + scan joins)
 8. Run `supabase/migrations/006_client_role.sql` (client read-only portal)
 9. Run `supabase/migrations/007_gps_floor_hardening.sql` (multi-floor altitude + tighter GPS radius)
-10. **Authentication → Sign In / Providers → Email** — disable public signup if available; only admins should create guard accounts
+10. Run `supabase/migrations/008_gps_indoor_tolerance.sql` (indoor GPS tolerance — run after 007)
+11. **Authentication → Sign In / Providers → Email** — disable public signup if available; only admins should create guard accounts
 
 ### Deploy guard creation (Edge Function)
 
