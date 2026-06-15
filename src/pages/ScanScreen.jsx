@@ -31,7 +31,7 @@ export default function ScanScreen() {
           scannedAt: result.scanned_at,
           offline: result.offline,
           serverValidated: result.serverValidated,
-          radius: result.checkpoint?.radius_metres ?? 15,
+          radius: result.checkpoint?.radius_metres ?? 20,
           failureMessage: result.failureMessage,
         },
       })

@@ -1,60 +1,65 @@
-# Multi-Floor Buildings (800 Bathurst etc.)
+# Multi-Floor GPS — The Real Fix
 
-GPS patrol apps cannot perfectly detect floors indoors. SecurePatrol uses a **layered approach**.
+## The honest truth
 
-## What the app checks
+**100% floor-proof verification with software-only GPS is not possible** inside concrete high-rises. iPhones do not reliably report altitude indoors.
 
-1. **Horizontal distance** — are you near the checkpoint coordinates?
-2. **GPS accuracy** — is the phone giving a usable signal?
-3. **Altitude** — when the phone reports it, is it the right floor?
-4. **Lobby stack detection** — if you scan an upper-floor checkpoint while your GPS matches the **lobby/ground-floor zone**, the scan fails.
+| Approach | Reliability | Cost |
+|----------|-------------|------|
+| Phone GPS indoors | 60–80% | Free |
+| **Manual Google Maps coordinates** | **85–95%** | Free |
+| NFC tap (Android) | ~99% | ~$10/30 tags |
+| Bluetooth beacon per floor | ~99% | ~$20/floor |
 
-## Critical setup rule for floors 2+
+## The best free fix: Manual map coordinates
 
-**Do not place upper-floor checkpoints directly above the lobby or elevator.**
+GPS only measures **horizontal position on a map**. Floors fail when lobby and floor 2 share the same map pin.
 
-| Bad placement | Good placement |
-|---------------|----------------|
-| Above main entrance | Far end of hallway |
-| Next to elevator on floor 5 | Near exterior window |
-| Same GPS as lobby | 25m+ away from lobby checkpoints |
+### The solution
 
-When creating a floor 5 checkpoint:
-1. Walk to the **far end** of the floor near a **window**
-2. Stand where the QR label will be stuck
-3. Tap **Use my current GPS location**
-4. Confirm the app warns you if you're too close to lobby GPS
+Give each checkpoint **different map coordinates** from Google Maps satellite view:
 
-## Why ground-floor scanning was passing
+| Floor | Where to pin on Google Maps |
+|-------|----------------------------|
+| Lobby | Main entrance |
+| Floor 2 | Window or far corner of floor 2 — **not** above the lobby |
+| Floor 5 | Window or far corner of floor 5 |
 
-Indoor phones report the **same latitude/longitude** for the lobby and floor 5 when you're in the vertical stack of the building. QR codes only encode the checkpoint ID — a guard with a printed label can scan from anywhere unless GPS rules block it.
+### Why this works
 
-Migration `010_lobby_stack_detection.sql` blocks upper-floor scans when GPS matches the lobby zone.
+- Guard on **ground floor** → phone GPS near lobby pin → floor 2 checkpoint pin is 30–50m away → **FAIL (too far)** ✓
+- Guard on **floor 2 at tag** → phone GPS near floor 2 pin → **PASS** ✓
 
-## If floor 5 scans fail for real guards
+No lobby heuristics. No altitude required. Just **distinct map pins**.
 
-The checkpoint GPS is probably still in the lobby stack. **Re-capture GPS** at the window end of the hall.
+## Setup steps (per checkpoint)
 
-## Techniques beyond GPS (for your boss)
+1. Open **Google Maps** → find 800 Bathurst
+2. Switch to **Satellite** view
+3. Long-press the exact spot where the QR label will be stuck
+4. Copy the coordinates (tap the numbers at the bottom)
+5. In SecurePatrol **Admin → Checkpoints → Add checkpoint**:
+   - Paste coordinates
+   - Set altitude: floor 1 = `0`, floor 2 = `3.5`, floor 5 = `14` (or tap **Floor default**)
+   - Radius: `20` metres
+6. Print QR and stick label at that exact physical spot
 
-| Technique | Cost | Works indoors? | Notes |
-|-----------|------|----------------|-------|
-| **QR at physical location only** | Free | Partial | Policy: never give guards loose printed QRs |
-| **Lobby stack detection** (current) | Free | Good | Requires correct checkpoint placement |
-| **GPS altitude** | Free | Poor on iPhone | Used when available |
-| **NFC tags** | ~$10/30 tags | Good | Android guards only; iPhone needs QR |
-| **Bluetooth beacons** | ~$20–40/floor | Excellent | Industry standard for indoor patrol |
-| **Supervisor spot checks** | Staff time | Good | Random physical audits |
+## Rules
 
-### Recommended long-term for high-rises
+- Floor 2+ pins must be **at least 20m** from lobby pins on the map
+- Stick QR labels **on the wall only** — never give guards loose prints
+- If scans fail: re-pin on Maps at the exact label location
 
-1. **Short term:** Lobby stack detection + checkpoint placement at window ends
-2. **Medium term:** NFC stickers for Android guard phones
-3. **Production grade:** One BLE beacon per floor (e.g. Minew i3, ~$15 each)
+## If you need 100%
 
-## Test procedure
+Add **Bluetooth beacons** (~$20 per floor). Guards must be in range of the floor beacon to complete a scan. Contact your developer when ready — this is a small hardware add-on.
 
-1. Create lobby checkpoint first (floor 1)
-2. Create floor 5 checkpoint at **window end of hall**
-3. Scan floor 5 QR **from ground floor** → must **FAIL**
-4. Scan floor 5 QR **on floor 5 at tag** → must **PASS**
+## Run migration
+
+After code deploy, run in Supabase SQL Editor:
+
+```
+supabase/migrations/012_manual_coords_validation.sql
+```
+
+This removes lobby heuristics and uses simple distance-to-checkpoint validation.

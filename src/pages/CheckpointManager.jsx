@@ -3,7 +3,13 @@ import { Plus, QrCode, Trash2, Copy, Check, Printer } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import QrPrintModal from '../components/QrPrintModal.jsx'
-import { floorElevationMetres, defaultRadiusForFloor, distanceFromLobbyZone, MIN_UPPER_FLOOR_LOBBY_SEPARATION } from '../lib/gps.js'
+import {
+  floorElevationMetres,
+  defaultRadiusForFloor,
+  minDistanceToCheckpoints,
+  parseCoordinatePaste,
+  MIN_FLOOR_COORD_SEPARATION,
+} from '../lib/gps.js'
 import { supabase } from '../lib/supabase.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { fetchSitesForAdmin } from '../lib/scans.js'
@@ -21,8 +27,9 @@ export default function CheckpointManager() {
     floor_id: '',
     latitude: '',
     longitude: '',
-    radius_metres: 15,
+    radius_metres: 20,
     altitude_metres: '',
+    coordPaste: '',
   })
   const [floorForm, setFloorForm] = useState({ floor_name: '', floor_number: 1 })
   const [generateQrAfterSave, setGenerateQrAfterSave] = useState(true)
@@ -121,16 +128,23 @@ export default function CheckpointManager() {
         const cpFloor = floors.find((f) => f.id === cp.floor_id)
         return cpFloor?.floor_number === 1
       })
-      const lobbySeparation = distanceFromLobbyZone(lat, lng, lobbyCheckpoints)
-      if (lobbySeparation != null && lobbySeparation < MIN_UPPER_FLOOR_LOBBY_SEPARATION) {
+      const separation = minDistanceToCheckpoints(lat, lng, lobbyCheckpoints)
+      if (separation != null && separation < MIN_FLOOR_COORD_SEPARATION) {
         const proceed = confirm(
-          `This GPS is only ${lobbySeparation.toFixed(0)}m from the lobby zone. ` +
-            `Guards on floor ${floor.floor_number} may not be able to scan here, and ground-floor spoofing is harder to block. ` +
-            `Stand at the far end of the hall near a window instead. Create this checkpoint anyway?`,
+          `These coordinates are only ${separation.toFixed(0)}m from the lobby checkpoint on the map. ` +
+            `Guards on floor ${floor.floor_number} may fail scans, and ground-floor spoofing may still work. ` +
+            `Use Google Maps to pin a spot on floor ${floor.floor_number} that is at least ${MIN_FLOOR_COORD_SEPARATION}m away from the lobby (window / far corner). Save anyway?`,
         )
         if (!proceed) return
       }
     }
+
+    const altitudeValue =
+      form.altitude_metres !== ''
+        ? parseFloat(form.altitude_metres)
+        : floor
+          ? floorElevationMetres(floor.floor_number)
+          : null
 
     const { data, error } = await supabase
       .from('checkpoints')
@@ -139,10 +153,8 @@ export default function CheckpointManager() {
         floor_id: form.floor_id,
         latitude: parseFloat(form.latitude),
         longitude: parseFloat(form.longitude),
-        altitude_metres: form.altitude_metres !== '' ? parseFloat(form.altitude_metres) : null,
-        radius_metres: parseInt(form.radius_metres, 10) || defaultRadiusForFloor(
-          floors.find((f) => f.id === form.floor_id)?.floor_number ?? 1,
-        ),
+        altitude_metres: altitudeValue,
+        radius_metres: parseInt(form.radius_metres, 10) || defaultRadiusForFloor(),
       })
       .select('*, floors(floor_name)')
       .single()
@@ -152,7 +164,7 @@ export default function CheckpointManager() {
       return
     }
 
-    setForm({ name: '', floor_id: '', latitude: '', longitude: '', altitude_metres: '', radius_metres: 15 })
+    setForm({ name: '', floor_id: '', latitude: '', longitude: '', altitude_metres: '', radius_metres: 20, coordPaste: '' })
     setShowForm(false)
     await loadCheckpoints(floors)
 
@@ -230,6 +242,28 @@ export default function CheckpointManager() {
     )
   }
 
+  const applyCoordPaste = () => {
+    const parsed = parseCoordinatePaste(form.coordPaste)
+    if (!parsed) {
+      alert('Paste coordinates like: 43.6532, -79.3832')
+      return
+    }
+    setForm((f) => ({
+      ...f,
+      latitude: parsed.lat.toFixed(6),
+      longitude: parsed.lng.toFixed(6),
+    }))
+  }
+
+  const applyFloorAltitude = (floorId) => {
+    const floor = floors.find((f) => f.id === floorId)
+    if (!floor) return
+    setForm((f) => ({
+      ...f,
+      altitude_metres: String(floorElevationMetres(floor.floor_number)),
+    }))
+  }
+
   return (
     <Layout variant="admin">
       <PageHeader
@@ -299,6 +333,16 @@ export default function CheckpointManager() {
       {showForm && (
         <form onSubmit={createCheckpoint} className="sp-card mb-6 p-6">
           <h3 className="font-display text-lg font-semibold">New checkpoint</h3>
+          <div className="mb-4 rounded-lg border border-brand-100 bg-brand-50 p-4 text-sm text-brand-900">
+            <p className="font-semibold">Recommended: enter coordinates from Google Maps</p>
+            <ol className="mt-2 list-decimal space-y-1 pl-5 text-brand-800">
+              <li>Open Google Maps → find 800 Bathurst</li>
+              <li>Switch to <strong>Satellite</strong> view</li>
+              <li>Long-press the exact spot where the label will be stuck</li>
+              <li>Tap the coordinates at the bottom to copy them</li>
+              <li>Paste below — for floor 2+, pick a window/far corner <strong>not</strong> above the lobby</li>
+            </ol>
+          </div>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label className="sp-label">Checkpoint name</label>
@@ -319,7 +363,8 @@ export default function CheckpointManager() {
                   setForm({
                     ...form,
                     floor_id: e.target.value,
-                    radius_metres: floor ? defaultRadiusForFloor(floor.floor_number) : 15,
+                    radius_metres: 20,
+                    altitude_metres: floor ? String(floorElevationMetres(floor.floor_number)) : '',
                   })
                 }}
                 required
@@ -339,9 +384,21 @@ export default function CheckpointManager() {
                 onChange={(e) => setForm({ ...form, radius_metres: e.target.value })}
                 className="sp-input"
               />
-          <p className="mt-1 text-xs text-slate-500">
-            Default 15m for all floors. Indoor GPS automatically adds extra tolerance.
-          </p>
+          <p className="mt-1 text-xs text-slate-500">Default 20m + indoor GPS tolerance.</p>
+            </div>
+            <div className="sm:col-span-2">
+              <label className="sp-label">Paste coordinates from Google Maps</label>
+              <div className="flex gap-2">
+                <input
+                  value={form.coordPaste}
+                  onChange={(e) => setForm({ ...form, coordPaste: e.target.value })}
+                  placeholder="43.653226, -79.383184"
+                  className="sp-input flex-1"
+                />
+                <button type="button" onClick={applyCoordPaste} className="sp-btn-secondary shrink-0">
+                  Apply
+                </button>
+              </div>
             </div>
             <div>
               <label className="sp-label">Latitude</label>
@@ -362,26 +419,34 @@ export default function CheckpointManager() {
               />
             </div>
             <div>
-              <label className="sp-label">Altitude (metres, optional)</label>
-              <input
-                value={form.altitude_metres}
-                onChange={(e) => setForm({ ...form, altitude_metres: e.target.value })}
-                placeholder="Captured from GPS near a window"
-                className="sp-input"
-              />
+              <label className="sp-label">Altitude (metres)</label>
+              <div className="flex gap-2">
+                <input
+                  value={form.altitude_metres}
+                  onChange={(e) => setForm({ ...form, altitude_metres: e.target.value })}
+                  placeholder="Auto from floor number"
+                  className="sp-input flex-1"
+                />
+                {form.floor_id && (
+                  <button
+                    type="button"
+                    onClick={() => applyFloorAltitude(form.floor_id)}
+                    className="sp-btn-secondary shrink-0 text-xs"
+                  >
+                    Floor default
+                  </button>
+                )}
+              </div>
+              <p className="mt-1 text-xs text-slate-500">Floor 1 = 0m, floor 2 = 3.5m, floor 5 = 14m, etc.</p>
             </div>
           </div>
           <button
             type="button"
             onClick={useCurrentLocation}
-            className="mt-3 text-sm font-medium text-brand-600 hover:underline"
+            className="mt-3 text-sm font-medium text-slate-500 hover:underline"
           >
-            Use my current GPS location
+            Or use phone GPS (less reliable indoors)
           </button>
-          <p className="mt-2 text-xs text-amber-700">
-            <strong>Upper floors:</strong> capture GPS at the far end of the hall near a window — not above the lobby/elevator.
-            This stops guards scanning from the ground floor.
-          </p>
           <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm text-slate-700">
             <input
               type="checkbox"

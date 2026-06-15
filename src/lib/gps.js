@@ -1,11 +1,10 @@
 const EARTH_RADIUS_METRES = 6371000
-export const DEFAULT_RADIUS_METRES = 15
+export const DEFAULT_RADIUS_METRES = 20
 export const MAX_GPS_ACCURACY_REJECT = 65
 export const VERTICAL_TOLERANCE_METRES = 10
 export const FLOOR_HEIGHT_METRES = 3.5
 export const ACCURACY_RADIUS_BONUS_CAP = 25
-export const LOBBY_STACK_RADIUS_METRES = 25
-export const MIN_UPPER_FLOOR_LOBBY_SEPARATION = 25
+export const MIN_FLOOR_COORD_SEPARATION = 20
 
 function toRadians(degrees) {
   return (degrees * Math.PI) / 180
@@ -35,20 +34,26 @@ export function effectiveRadiusMetres(radiusMetres, gpsAccuracy) {
   return base + bonus
 }
 
-export function minDistanceToLobbyCheckpoints(guardLat, guardLng, lobbyCheckpoints = []) {
-  if (!lobbyCheckpoints.length) return null
+export function minDistanceToCheckpoints(lat, lng, checkpoints = []) {
+  if (!checkpoints.length) return null
   return Math.min(
-    ...lobbyCheckpoints.map((cp) => haversineDistance(guardLat, guardLng, cp.latitude, cp.longitude)),
+    ...checkpoints.map((cp) => haversineDistance(lat, lng, cp.latitude, cp.longitude)),
   )
 }
 
+/** @deprecated use minDistanceToCheckpoints */
 export function distanceFromLobbyZone(lat, lng, lobbyCheckpoints = []) {
-  return minDistanceToLobbyCheckpoints(lat, lng, lobbyCheckpoints)
+  return minDistanceToCheckpoints(lat, lng, lobbyCheckpoints)
 }
 
-function isAltitudeConfirmed(guardAltitude, expectedAltitude) {
-  if (guardAltitude == null || expectedAltitude == null) return false
-  return Math.abs(guardAltitude - expectedAltitude) <= VERTICAL_TOLERANCE_METRES
+export function parseCoordinatePaste(text) {
+  const cleaned = text.trim().replace(/[()]/g, '')
+  const parts = cleaned.split(/[,\s]+/).filter(Boolean)
+  if (parts.length < 2) return null
+  const lat = parseFloat(parts[0])
+  const lng = parseFloat(parts[1])
+  if (Number.isNaN(lat) || Number.isNaN(lng)) return null
+  return { lat, lng }
 }
 
 export function validateScanProximity({
@@ -61,7 +66,6 @@ export function validateScanProximity({
   checkpointAltitude,
   floorNumber = 1,
   radiusMetres = DEFAULT_RADIUS_METRES,
-  lobbyCheckpoints = [],
 }) {
   const distance = haversineDistance(guardLat, guardLng, checkpointLat, checkpointLng)
   const allowedRadius = effectiveRadiusMetres(radiusMetres, gpsAccuracy)
@@ -81,7 +85,7 @@ export function validateScanProximity({
       passed: false,
       distance,
       reason: 'too_far',
-      message: `You are ${distance.toFixed(0)}m away (allowed ~${Math.round(allowedRadius)}m with current GPS). Stand at the tag and try again.`,
+      message: `You are ${distance.toFixed(0)}m from this checkpoint (allowed ~${Math.round(allowedRadius)}m). Stand at the tag and try again.`,
     }
   }
 
@@ -92,29 +96,7 @@ export function validateScanProximity({
         passed: false,
         distance,
         reason: 'wrong_floor',
-        message: `Wrong floor detected. This checkpoint is on floor ${floorNumber} — go to that floor to scan.`,
-      }
-    }
-  }
-
-  if (floorNumber > 1 && lobbyCheckpoints.length > 0 && !isAltitudeConfirmed(guardAltitude, expectedAltitude)) {
-    const lobbyDist = minDistanceToLobbyCheckpoints(guardLat, guardLng, lobbyCheckpoints)
-
-    if (lobbyDist != null && lobbyDist > distance * 1.5) {
-      // Guard is clearly closer to this checkpoint than the lobby — allow
-    } else if (lobbyDist != null) {
-      const insideLobbyBubble = lobbyCheckpoints.some((cp) => {
-        const lobbyRadius = effectiveRadiusMetres(cp.radius_metres ?? DEFAULT_RADIUS_METRES, gpsAccuracy)
-        return haversineDistance(guardLat, guardLng, cp.latitude, cp.longitude) <= lobbyRadius
-      })
-
-      if (insideLobbyBubble && distance <= allowedRadius && lobbyDist <= distance + 5) {
-        return {
-          passed: false,
-          distance,
-          reason: 'lobby_stack',
-          message: `Ground-floor GPS detected. Go to floor ${floorNumber} to scan. If you are on floor ${floorNumber}, re-capture this checkpoint GPS away from the lobby (far end of hall, near a window).`,
-        }
+        message: `Wrong floor detected. This checkpoint is on floor ${floorNumber}.`,
       }
     }
   }
