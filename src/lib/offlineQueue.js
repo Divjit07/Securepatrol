@@ -34,7 +34,7 @@ export async function submitScan({
 }) {
   const { data: checkpoint, error: cpError } = await supabase
     .from('checkpoints')
-    .select('id, latitude, longitude, radius_metres, altitude_metres, name, floors(floor_number, elevation_metres)')
+    .select('id, latitude, longitude, radius_metres, altitude_metres, name, floors(floor_number, elevation_metres, site_id)')
     .eq('id', checkpointId)
     .single()
 
@@ -43,8 +43,20 @@ export async function submitScan({
   }
 
   const floorNumber = checkpoint.floors?.floor_number ?? 1
+  const siteId = checkpoint.floors?.site_id
   const checkpointAltitude =
     checkpoint.altitude_metres ?? checkpoint.floors?.elevation_metres ?? null
+
+  let lobbyCheckpoints = []
+  if (siteId && floorNumber > 1) {
+    const { data: lobbyData } = await supabase
+      .from('checkpoints')
+      .select('latitude, longitude, floors!inner(site_id, floor_number)')
+      .eq('floors.site_id', siteId)
+      .eq('floors.floor_number', 1)
+      .eq('active', true)
+    lobbyCheckpoints = lobbyData || []
+  }
 
   const scanRecord = {
     checkpoint_id: checkpointId,
@@ -82,6 +94,7 @@ export async function submitScan({
     checkpointAltitude,
     floorNumber,
     radiusMetres: checkpoint.radius_metres ?? defaultRadiusForFloor(floorNumber),
+    lobbyCheckpoints,
   })
 
   return {

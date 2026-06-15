@@ -3,7 +3,7 @@ import { Plus, QrCode, Trash2, Copy, Check, Printer } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import QrPrintModal from '../components/QrPrintModal.jsx'
-import { floorElevationMetres, defaultRadiusForFloor } from '../lib/gps.js'
+import { floorElevationMetres, defaultRadiusForFloor, distanceFromLobbyZone, MIN_UPPER_FLOOR_LOBBY_SEPARATION } from '../lib/gps.js'
 import { supabase } from '../lib/supabase.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { fetchSitesForAdmin } from '../lib/scans.js'
@@ -111,6 +111,27 @@ export default function CheckpointManager() {
 
   const createCheckpoint = async (e) => {
     e.preventDefault()
+
+    const floor = floors.find((f) => f.id === form.floor_id)
+    const lat = parseFloat(form.latitude)
+    const lng = parseFloat(form.longitude)
+
+    if (floor?.floor_number > 1 && !Number.isNaN(lat) && !Number.isNaN(lng)) {
+      const lobbyCheckpoints = checkpoints.filter((cp) => {
+        const cpFloor = floors.find((f) => f.id === cp.floor_id)
+        return cpFloor?.floor_number === 1
+      })
+      const lobbySeparation = distanceFromLobbyZone(lat, lng, lobbyCheckpoints)
+      if (lobbySeparation != null && lobbySeparation < MIN_UPPER_FLOOR_LOBBY_SEPARATION) {
+        const proceed = confirm(
+          `This GPS is only ${lobbySeparation.toFixed(0)}m from the lobby zone. ` +
+            `Guards on floor ${floor.floor_number} may not be able to scan here, and ground-floor spoofing is harder to block. ` +
+            `Stand at the far end of the hall near a window instead. Create this checkpoint anyway?`,
+        )
+        if (!proceed) return
+      }
+    }
+
     const { data, error } = await supabase
       .from('checkpoints')
       .insert({
@@ -358,7 +379,8 @@ export default function CheckpointManager() {
             Use my current GPS location
           </button>
           <p className="mt-2 text-xs text-amber-700">
-            Stand at the exact tag spot when capturing GPS. Hold still a few seconds for best accuracy.
+            <strong>Upper floors:</strong> capture GPS at the far end of the hall near a window — not above the lobby/elevator.
+            This stops guards scanning from the ground floor.
           </p>
           <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm text-slate-700">
             <input

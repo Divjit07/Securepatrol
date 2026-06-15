@@ -31,7 +31,8 @@ UPDATE profiles SET role = 'super_admin', name = 'Your Name' WHERE id = '<your-u
 9. Run `supabase/migrations/007_gps_floor_hardening.sql` (multi-floor altitude + tighter GPS radius)
 10. Run `supabase/migrations/008_gps_indoor_tolerance.sql` (indoor GPS tolerance — run after 007)
 11. Run `supabase/migrations/009_upper_floor_altitude_fix.sql` (fix upper-floor iPhone scans — run after 008)
-12. **Authentication → Sign In / Providers → Email** — disable public signup if available; only admins should create guard accounts
+12. Run `supabase/migrations/010_lobby_stack_detection.sql` (block ground-floor scans of upper-floor checkpoints — run after 009)
+13. **Authentication → Sign In / Providers → Email** — disable public signup if available; only admins should create guard accounts
 
 ### Deploy guard creation (Edge Function)
 
@@ -80,7 +81,8 @@ Open http://localhost:5173 and sign in with your admin account.
 1. **Create a Site** — Admin dashboard → New Site
 2. **Add Floors** — Checkpoint Manager → Add Floor
 3. **Create Checkpoints** — Set GPS coordinates (use "Use my current GPS" while standing at the tag location)
-4. **Write NFC Tags** — See [docs/NFC_SETUP.md](docs/NFC_SETUP.md) for full iPhone guide
+4. **Write NFC Tags** — See [docs/NFC_SETUP.md](docs/NFC_SETUP.md) for full iPhone guide  
+   **Multi-floor sites:** read [docs/MULTI_FLOOR_SETUP.md](docs/MULTI_FLOOR_SETUP.md) before placing upper-floor labels
 5. **Print QR Codes** — Click the QR icon next to any checkpoint as a fallback
 6. **Add Guards** — Guard Manager → create accounts (requires Edge Function deployed)
 7. **Guards scan** — Guards log in on their phone, tap NFC tags, GPS is verified server-side

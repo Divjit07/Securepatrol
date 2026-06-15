@@ -4,14 +4,13 @@ export const MAX_GPS_ACCURACY_REJECT = 65
 export const VERTICAL_TOLERANCE_METRES = 10
 export const FLOOR_HEIGHT_METRES = 3.5
 export const ACCURACY_RADIUS_BONUS_CAP = 25
+export const LOBBY_STACK_RADIUS_METRES = 25
+export const MIN_UPPER_FLOOR_LOBBY_SEPARATION = 25
 
 function toRadians(degrees) {
   return (degrees * Math.PI) / 180
 }
 
-/**
- * Haversine formula — horizontal distance in metres between two GPS coordinates.
- */
 export function haversineDistance(lat1, lng1, lat2, lng2) {
   const dLat = toRadians(lat2 - lat1)
   const dLng = toRadians(lng2 - lng1)
@@ -29,12 +28,27 @@ export function defaultRadiusForFloor() {
   return DEFAULT_RADIUS_METRES
 }
 
-/** Expand allowed distance when the device reports poor indoor GPS accuracy. */
 export function effectiveRadiusMetres(radiusMetres, gpsAccuracy) {
   const base = radiusMetres ?? DEFAULT_RADIUS_METRES
   const bonus =
     gpsAccuracy != null ? Math.min(gpsAccuracy * 0.75, ACCURACY_RADIUS_BONUS_CAP) : 0
   return base + bonus
+}
+
+export function minDistanceToLobbyCheckpoints(guardLat, guardLng, lobbyCheckpoints = []) {
+  if (!lobbyCheckpoints.length) return null
+  return Math.min(
+    ...lobbyCheckpoints.map((cp) => haversineDistance(guardLat, guardLng, cp.latitude, cp.longitude)),
+  )
+}
+
+export function distanceFromLobbyZone(lat, lng, lobbyCheckpoints = []) {
+  return minDistanceToLobbyCheckpoints(lat, lng, lobbyCheckpoints)
+}
+
+function isAltitudeConfirmed(guardAltitude, expectedAltitude) {
+  if (guardAltitude == null || expectedAltitude == null) return false
+  return Math.abs(guardAltitude - expectedAltitude) <= VERTICAL_TOLERANCE_METRES
 }
 
 export function validateScanProximity({
@@ -47,6 +61,7 @@ export function validateScanProximity({
   checkpointAltitude,
   floorNumber = 1,
   radiusMetres = DEFAULT_RADIUS_METRES,
+  lobbyCheckpoints = [],
 }) {
   const distance = haversineDistance(guardLat, guardLng, checkpointLat, checkpointLng)
   const allowedRadius = effectiveRadiusMetres(radiusMetres, gpsAccuracy)
@@ -70,7 +85,6 @@ export function validateScanProximity({
     }
   }
 
-  // Only check altitude when the phone reports it — iPhones indoors usually don't.
   if (floorNumber > 1 && expectedAltitude != null && guardAltitude != null) {
     const verticalDiff = Math.abs(guardAltitude - expectedAltitude)
     if (verticalDiff > VERTICAL_TOLERANCE_METRES) {
@@ -79,6 +93,23 @@ export function validateScanProximity({
         distance,
         reason: 'wrong_floor',
         message: `Wrong floor detected. This checkpoint is on floor ${floorNumber} — go to that floor to scan.`,
+      }
+    }
+  }
+
+  if (floorNumber > 1 && lobbyCheckpoints.length > 0) {
+    const lobbyDist = minDistanceToLobbyCheckpoints(guardLat, guardLng, lobbyCheckpoints)
+    if (
+      lobbyDist != null &&
+      lobbyDist <= LOBBY_STACK_RADIUS_METRES &&
+      distance <= allowedRadius &&
+      !isAltitudeConfirmed(guardAltitude, expectedAltitude)
+    ) {
+      return {
+        passed: false,
+        distance,
+        reason: 'lobby_stack',
+        message: `Ground-floor GPS detected. Go to floor ${floorNumber} to scan — or place this checkpoint away from the lobby stack (near a window at the far end of the hall).`,
       }
     }
   }
@@ -111,7 +142,6 @@ function readPosition() {
   })
 }
 
-/** Take multiple GPS readings and use the most accurate one (helps indoors). */
 export async function getBestPosition(samples = 3) {
   if (!navigator.geolocation) {
     throw new Error('Geolocation is not supported on this device')
