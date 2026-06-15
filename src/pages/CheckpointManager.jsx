@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, QrCode, Trash2, Copy, Check, Printer } from 'lucide-react'
+import { Plus, QrCode, Trash2, Copy, Check, Printer, Pencil, X } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import QrPrintModal from '../components/QrPrintModal.jsx'
@@ -38,6 +38,8 @@ export default function CheckpointManager() {
   const [copiedId, setCopiedId] = useState(null)
   const [gpsLoading, setGpsLoading] = useState(false)
   const [gpsMessage, setGpsMessage] = useState(null)
+  const [editingId, setEditingId] = useState(null)
+  const [editName, setEditName] = useState('')
 
   const selectedSiteName = sites.find((s) => s.id === selectedSite)?.name || ''
 
@@ -186,6 +188,35 @@ export default function CheckpointManager() {
     }
 
     setCheckpoints((prev) => prev.filter((c) => c.id !== id))
+  }
+
+  const startRename = (cp) => {
+    setEditingId(cp.id)
+    setEditName(cp.name)
+  }
+
+  const cancelRename = () => {
+    setEditingId(null)
+    setEditName('')
+  }
+
+  const saveRename = async (id) => {
+    const trimmed = editName.trim()
+    if (!trimmed) {
+      alert('Checkpoint name cannot be empty.')
+      return
+    }
+
+    const { error } = await supabase.from('checkpoints').update({ name: trimmed }).eq('id', id)
+    if (error) {
+      alert(`Could not rename checkpoint: ${error.message}`)
+      return
+    }
+
+    setCheckpoints((prev) =>
+      prev.map((cp) => (cp.id === id ? { ...cp, name: trimmed } : cp)),
+    )
+    cancelRename()
   }
 
   const deleteFloor = async (floor) => {
@@ -589,7 +620,50 @@ export default function CheckpointManager() {
           <tbody className="divide-y divide-slate-100">
             {checkpoints.map((cp) => (
               <tr key={cp.id}>
-                <td className="px-4 py-3 font-medium">{cp.name}</td>
+                <td className="px-4 py-3">
+                  {editingId === cp.id ? (
+                    <div className="flex min-w-[12rem] items-center gap-2">
+                      <input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveRename(cp.id)
+                          if (e.key === 'Escape') cancelRename()
+                        }}
+                        autoFocus
+                        className="sp-input py-1.5 text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => saveRename(cp.id)}
+                        className="rounded-lg p-1.5 text-green-600 hover:bg-green-50"
+                        title="Save name"
+                      >
+                        <Check className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelRename}
+                        className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"
+                        title="Cancel"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{cp.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => startRename(cp)}
+                        className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-brand-600"
+                        title="Rename checkpoint"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </td>
                 <td className="px-4 py-3">{cp.floors?.floor_name}</td>
                 <td className="px-4 py-3 text-xs">{cp.latitude?.toFixed(4)}, {cp.longitude?.toFixed(4)}</td>
                 <td className="px-4 py-3">{cp.radius_metres}m</td>
