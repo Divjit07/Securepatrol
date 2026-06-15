@@ -3,6 +3,7 @@ import { Plus, QrCode, Trash2, Copy, Check, Printer } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import QrPrintModal from '../components/QrPrintModal.jsx'
+import { floorElevationMetres } from '../lib/gps.js'
 import { supabase } from '../lib/supabase.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { fetchSitesForAdmin } from '../lib/scans.js'
@@ -20,7 +21,8 @@ export default function CheckpointManager() {
     floor_id: '',
     latitude: '',
     longitude: '',
-    radius_metres: 20,
+    radius_metres: 8,
+    altitude_metres: '',
   })
   const [floorForm, setFloorForm] = useState({ floor_name: '', floor_number: 1 })
   const [generateQrAfterSave, setGenerateQrAfterSave] = useState(true)
@@ -92,6 +94,7 @@ export default function CheckpointManager() {
         site_id: selectedSite,
         ...floorForm,
         floor_number: Number(floorForm.floor_number),
+        elevation_metres: floorElevationMetres(Number(floorForm.floor_number)),
       })
       .select('*')
       .single()
@@ -115,7 +118,8 @@ export default function CheckpointManager() {
         floor_id: form.floor_id,
         latitude: parseFloat(form.latitude),
         longitude: parseFloat(form.longitude),
-        radius_metres: parseInt(form.radius_metres, 10) || 20,
+        altitude_metres: form.altitude_metres !== '' ? parseFloat(form.altitude_metres) : null,
+        radius_metres: parseInt(form.radius_metres, 10) || 8,
       })
       .select('*, floors(floor_name)')
       .single()
@@ -125,7 +129,7 @@ export default function CheckpointManager() {
       return
     }
 
-    setForm({ name: '', floor_id: '', latitude: '', longitude: '', radius_metres: 20 })
+    setForm({ name: '', floor_id: '', latitude: '', longitude: '', altitude_metres: '', radius_metres: 8 })
     setShowForm(false)
     await loadCheckpoints(floors)
 
@@ -194,6 +198,8 @@ export default function CheckpointManager() {
           ...f,
           latitude: pos.coords.latitude.toFixed(6),
           longitude: pos.coords.longitude.toFixed(6),
+          altitude_metres:
+            pos.coords.altitude != null ? pos.coords.altitude.toFixed(1) : f.altitude_metres,
         }))
       },
       () => alert('Could not get GPS location'),
@@ -303,6 +309,7 @@ export default function CheckpointManager() {
                 onChange={(e) => setForm({ ...form, radius_metres: e.target.value })}
                 className="sp-input"
               />
+              <p className="mt-1 text-xs text-slate-500">Default 8m. Use 5m for tight indoor spots.</p>
             </div>
             <div>
               <label className="sp-label">Latitude</label>
@@ -322,6 +329,15 @@ export default function CheckpointManager() {
                 className="sp-input"
               />
             </div>
+            <div>
+              <label className="sp-label">Altitude (metres, optional)</label>
+              <input
+                value={form.altitude_metres}
+                onChange={(e) => setForm({ ...form, altitude_metres: e.target.value })}
+                placeholder="Captured from GPS near a window"
+                className="sp-input"
+              />
+            </div>
           </div>
           <button
             type="button"
@@ -330,6 +346,10 @@ export default function CheckpointManager() {
           >
             Use my current GPS location
           </button>
+          <p className="mt-2 text-xs text-amber-700">
+            Multi-floor sites: stand at the exact tag spot and capture GPS. For floors above ground,
+            stand near a window so altitude is recorded — this stops scanning from other floors.
+          </p>
           <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm text-slate-700">
             <input
               type="checkbox"

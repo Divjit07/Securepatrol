@@ -42,7 +42,18 @@ export async function fetchTodayScansForGuard(guardId) {
   return data || []
 }
 
-export function getCheckpointStatus(checkpoint, latestScan, alertMinutes = 60) {
+export function isHistoricalShiftView(dateStr, shiftEnd) {
+  const today = new Date().toISOString().slice(0, 10)
+  if (dateStr < today) return true
+  if (dateStr > today) return false
+
+  const [endH, endM] = shiftEnd.split(':').map(Number)
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const shiftEndTime = new Date(y, m - 1, d, endH, endM, 59, 999)
+  return Date.now() > shiftEndTime.getTime()
+}
+
+export function getCheckpointStatus(checkpoint, latestScan, alertMinutes = 60, { historical = false } = {}) {
   if (!latestScan) {
     const hoursSinceMidnight = (Date.now() - new Date().setHours(0, 0, 0, 0)) / 60000
     if (hoursSinceMidnight > alertMinutes) return 'missed'
@@ -50,6 +61,7 @@ export function getCheckpointStatus(checkpoint, latestScan, alertMinutes = 60) {
   }
 
   if (latestScan.status === 'fail') return 'failed'
+  if (historical) return 'on_time'
 
   const scanTime = new Date(latestScan.scanned_at)
   const minutesSinceScan = (Date.now() - scanTime.getTime()) / 60000

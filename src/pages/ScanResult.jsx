@@ -9,7 +9,7 @@ export default function ScanResult() {
     return <Navigate to="/guard/scan" replace />
   }
 
-  const { passed, checkpointName, distance, scannedAt, offline, radius } = state
+  const { passed, checkpointName, distance, scannedAt, offline, radius, failureMessage } = state
 
   return (
     <Layout variant="guard">
@@ -45,7 +45,8 @@ export default function ScanResult() {
 
         {!passed && (
           <p className="mt-4 text-sm text-slate-600">
-            Move closer to the checkpoint and try again. Failed attempts are logged for admin review.
+            {failureMessage ||
+              'Move closer to the checkpoint and try again. Failed attempts are logged for admin review.'}
           </p>
         )}
 

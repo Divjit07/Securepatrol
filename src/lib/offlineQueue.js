@@ -1,5 +1,5 @@
 import { supabase } from './supabase.js'
-import { getCurrentPosition } from './gps.js'
+import { getCurrentPosition, validateScanProximity } from './gps.js'
 
 const QUEUE_KEY = 'securepatrol_offline_scans'
 
@@ -22,10 +22,19 @@ export function queueOfflineScan(scan) {
   return queue.length
 }
 
-export async function submitScan({ checkpointId, guardId, guardLat, guardLng, scannedAt, syncMethod = 'realtime' }) {
+export async function submitScan({
+  checkpointId,
+  guardId,
+  guardLat,
+  guardLng,
+  guardAltitude = null,
+  gpsAccuracy = null,
+  scannedAt,
+  syncMethod = 'realtime',
+}) {
   const { data: checkpoint, error: cpError } = await supabase
     .from('checkpoints')
-    .select('id, latitude, longitude, radius_metres, name')
+    .select('id, latitude, longitude, radius_metres, altitude_metres, name, floors(floor_number, elevation_metres)')
     .eq('id', checkpointId)
     .single()
 
@@ -33,12 +42,18 @@ export async function submitScan({ checkpointId, guardId, guardLat, guardLng, sc
     throw new Error('Checkpoint not found')
   }
 
+  const floorNumber = checkpoint.floors?.floor_number ?? 1
+  const checkpointAltitude =
+    checkpoint.altitude_metres ?? checkpoint.floors?.elevation_metres ?? null
+
   const scanRecord = {
     checkpoint_id: checkpointId,
     guard_id: guardId,
     scanned_at: scannedAt || new Date().toISOString(),
     guard_lat: guardLat,
     guard_lng: guardLng,
+    guard_altitude: guardAltitude,
+    gps_accuracy: gpsAccuracy,
     distance_metres: 0,
     status: 'fail',
     sync_method: syncMethod,
@@ -57,11 +72,24 @@ export async function submitScan({ checkpointId, guardId, guardLat, guardLng, sc
   const { data, error } = await supabase.from('scans').insert(scanRecord).select().single()
   if (error) throw error
 
+  const clientCheck = validateScanProximity({
+    guardLat,
+    guardLng,
+    guardAltitude,
+    gpsAccuracy,
+    checkpointLat: checkpoint.latitude,
+    checkpointLng: checkpoint.longitude,
+    checkpointAltitude,
+    floorNumber,
+    radiusMetres: checkpoint.radius_metres ?? 8,
+  })
+
   return {
     ...data,
     checkpoint,
     offline: false,
     serverValidated: true,
+    failureMessage: data.status === 'fail' ? clientCheck.message : null,
   }
 }
 
@@ -83,6 +111,8 @@ export async function flushOfflineQueue() {
         scanned_at: scan.scanned_at,
         guard_lat: scan.guard_lat,
         guard_lng: scan.guard_lng,
+        guard_altitude: scan.guard_altitude ?? null,
+        gps_accuracy: scan.gps_accuracy ?? null,
         distance_metres: 0,
         status: 'fail',
         sync_method: 'offline_sync',
@@ -106,6 +136,8 @@ export async function submitScanWithGps(checkpointId, guardId) {
     guardId,
     guardLat: position.latitude,
     guardLng: position.longitude,
+    guardAltitude: position.altitude,
+    gpsAccuracy: position.accuracy,
     scannedAt: new Date().toISOString(),
     syncMethod: navigator.onLine ? 'realtime' : 'offline_sync',
   })
