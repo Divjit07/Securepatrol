@@ -30,7 +30,10 @@ export default function Layout({ children, variant = 'admin' }) {
     { to: '/guard/history', label: 'History' },
   ]
 
-  const clientLinks = [{ to: '/client', label: 'Patrol Overview', end: true }]
+  const clientLinks = [
+    { to: '/client', label: 'Scan History', end: true },
+    { to: '/client/checkpoints', label: 'Checkpoints' },
+  ]
 
   const links = variant === 'admin' ? adminLinks : variant === 'client' ? clientLinks : guardLinks
 

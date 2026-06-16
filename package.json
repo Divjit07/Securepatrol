@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy:client-functions": "supabase functions deploy create-client --project-ref vktxadadhnrcuxtubzxr && supabase functions deploy list-clients --project-ref vktxadadhnrcuxtubzxr && supabase functions deploy delete-client --project-ref vktxadadhnrcuxtubzxr"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.1",
@@ -25,6 +26,7 @@
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "@vitejs/plugin-react": "^6.0.0",
+    "supabase": "^2.106.0",
     "vite": "^8.0.12"
   }
 }

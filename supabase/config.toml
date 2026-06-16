@@ -5,3 +5,12 @@ verify_jwt = true
 
 [functions.delete-guard]
 verify_jwt = true
+
+[functions.create-client]
+verify_jwt = true
+
+[functions.list-clients]
+verify_jwt = true
+
+[functions.delete-client]
+verify_jwt = true
