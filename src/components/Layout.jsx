@@ -19,6 +19,7 @@ export default function Layout({ children, variant = 'admin' }) {
     { to: '/admin', label: 'Overview', end: true },
     { to: '/admin/checkpoints', label: 'Checkpoints' },
     { to: '/admin/guards', label: 'Guards' },
+    { to: '/admin/clients', label: 'Clients' },
     { to: '/admin/reports', label: 'Reports' },
     { to: '/admin/alerts', label: 'Alerts' },
   ]

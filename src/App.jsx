@@ -11,6 +11,7 @@ import SiteDashboard from './pages/SiteDashboard.jsx'
 import LiveFeedPage from './pages/LiveFeedPage.jsx'
 import CheckpointManager from './pages/CheckpointManager.jsx'
 import GuardManager from './pages/GuardManager.jsx'
+import ClientManager from './pages/ClientManager.jsx'
 import Reports from './pages/Reports.jsx'
 import Alerts from './pages/Alerts.jsx'
 import ClientDashboard from './pages/ClientDashboard.jsx'
@@ -100,6 +101,14 @@ export default function App() {
         element={
           <ProtectedRoute requireAdmin>
             <GuardManager />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/clients"
+        element={
+          <ProtectedRoute requireAdmin>
+            <ClientManager />
           </ProtectedRoute>
         }
       />

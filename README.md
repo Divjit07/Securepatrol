@@ -34,17 +34,22 @@ UPDATE profiles SET role = 'super_admin', name = 'Your Name' WHERE id = '<your-u
 12. Run `supabase/migrations/010_lobby_stack_detection.sql` (block ground-floor scans of upper-floor checkpoints — run after 009)
 13. Run `supabase/migrations/011_fix_lobby_detection.sql` (fix false failures on upper floors — run after 010)
 14. Run `supabase/migrations/012_manual_coords_validation.sql` (manual map coords model — run after 011)
-15. **Authentication → Sign In / Providers → Email** — disable public signup if available; only admins should create guard accounts
+15. Run `supabase/migrations/013_client_profile_policies.sql` (client manager — assign/update clients)
+16. **Authentication → Sign In / Providers → Email** — disable public signup if available; only admins should create guard accounts
 
-### Deploy guard creation (Edge Function)
+### Deploy guard & client creation (Edge Functions)
 
-Guard accounts are created server-side so admins stay logged in:
+Guard and client accounts are created server-side so admins stay logged in:
 
 ```bash
 npm install -g supabase
 supabase login
 supabase link --project-ref YOUR_PROJECT_REF
 supabase functions deploy create-guard
+supabase functions deploy delete-guard
+supabase functions deploy create-client
+supabase functions deploy list-clients
+supabase functions deploy delete-client
 ```
 
 Your project ref is the ID in your Supabase URL: `https://YOUR_PROJECT_REF.supabase.co`
@@ -87,11 +92,16 @@ Open http://localhost:5173 and sign in with your admin account.
    **Multi-floor sites:** read [docs/MULTI_FLOOR_SETUP.md](docs/MULTI_FLOOR_SETUP.md) before placing upper-floor labels
 5. **Print QR Codes** — Click the QR icon next to any checkpoint as a fallback
 6. **Add Guards** — Guard Manager → create accounts (requires Edge Function deployed)
-7. **Guards scan** — Guards log in on their phone, tap NFC tags, GPS is verified server-side
+7. **Add Clients** — Client Manager → create read-only client logins (requires `create-client` Edge Function)
+8. **Guards scan** — Guards log in on their phone, tap NFC tags, GPS is verified server-side
 
 ### Add a client login (read-only patrol view)
 
 Clients see scan compliance for one site — which checkpoints were scanned during a shift (e.g. 11am–8pm), live feed, and scan history. They cannot edit anything.
+
+**Recommended:** Admin → **Clients** → **Add Client** (name, email, password, site). Requires Edge Functions `create-client`, `list-clients`, and `delete-client` deployed (same as guards).
+
+**Manual (Supabase):**
 
 1. **Authentication → Users → Add user** — create the client account (enable Auto Confirm)
 2. Get your site ID from **Table Editor → sites**, or run:
@@ -104,9 +114,9 @@ SELECT id, name FROM sites;
 
 ```sql
 INSERT INTO profiles (id, name, role, site_id)
-SELECT id, 'Client Name', 'client', '<site-uuid>'
+SELECT id, 'Ali', 'client', '<site-uuid>'
 FROM auth.users
-WHERE email = 'client@company.com'
+WHERE email = 'ali@company.com'
 ON CONFLICT (id) DO UPDATE
 SET role = 'client', name = EXCLUDED.name, site_id = EXCLUDED.site_id;
 ```
