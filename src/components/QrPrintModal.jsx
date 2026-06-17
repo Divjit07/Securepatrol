@@ -1,21 +1,37 @@
 import { useEffect, useState } from 'react'
-import { Printer, Download, X } from 'lucide-react'
+import { Printer, Download, X, Shield } from 'lucide-react'
 import { buildCheckpointQrDataUrl, getCheckpointQrPayload } from '../lib/qr.js'
 
-function buildPrintHtml({ siteName, labels }) {
-  const cards = labels
-    .map(
-      (label) => `
+const PROVIDER_LINE = 'SecurePatrol · Productive Security Inc.'
+const FOOTER_LINE = 'Protected by Productive Security'
+
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+function labelCardHtml({ siteName, label }) {
+  return `
     <div class="label">
-      <div class="brand">SecurePatrol · Productive Security Inc.</div>
-      ${siteName ? `<div class="site">${escapeHtml(siteName)}</div>` : ''}
-      ${label.floorName ? `<div class="floor">Floor: ${escapeHtml(label.floorName)}</div>` : ''}
+      <div class="label-header">
+        ${siteName ? `<div class="site">${escapeHtml(siteName)}</div>` : ''}
+        <div class="provider">${PROVIDER_LINE}</div>
+      </div>
+      ${label.floorName ? `<div class="floor">${escapeHtml(label.floorName)}</div>` : ''}
       <img src="${label.dataUrl}" alt="QR" width="200" height="200" />
       <div class="checkpoint">${escapeHtml(label.name)}</div>
-      <div class="hint">Scan with SecurePatrol guard app</div>
-    </div>`,
-    )
-    .join('')
+      <div class="label-footer">
+        <div class="protected">${FOOTER_LINE}</div>
+        <div class="hint">Scan with SecurePatrol guard app</div>
+      </div>
+    </div>`
+}
+
+function buildPrintHtml({ siteName, labels }) {
+  const cards = labels.map((label) => labelCardHtml({ siteName, label })).join('')
 
   return `<!DOCTYPE html>
 <html>
@@ -24,23 +40,69 @@ function buildPrintHtml({ siteName, labels }) {
   <title>SecurePatrol QR Labels</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; padding: 16px; color: #0f172a; }
+    body { font-family: Arial, Helvetica, sans-serif; padding: 16px; color: #0f172a; }
     .sheet { display: flex; flex-wrap: wrap; gap: 16px; justify-content: flex-start; }
     .label {
       width: 3.25in;
-      min-height: 4.25in;
+      min-height: 4.5in;
       border: 2px solid #0a1628;
       border-radius: 12px;
-      padding: 16px;
+      overflow: hidden;
       text-align: center;
       page-break-inside: avoid;
+      display: flex;
+      flex-direction: column;
     }
-    .brand { font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #64748b; }
-    .site { margin-top: 8px; font-size: 11px; font-weight: 700; color: #0a1628; }
-    .floor { margin-top: 4px; font-size: 10px; color: #475569; }
-    img { display: block; margin: 12px auto; }
-    .checkpoint { font-size: 14px; font-weight: 700; line-height: 1.3; margin-top: 4px; }
-    .hint { margin-top: 8px; font-size: 9px; color: #64748b; }
+    .label-header {
+      background: #0a1628;
+      color: #fff;
+      padding: 12px 14px 10px;
+    }
+    .site {
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1.25;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+    .provider {
+      margin-top: 6px;
+      font-size: 8px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #94a3b8;
+    }
+    .floor {
+      margin-top: 10px;
+      font-size: 10px;
+      font-weight: 600;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    img { display: block; margin: 10px auto 8px; }
+    .checkpoint {
+      font-size: 15px;
+      font-weight: 800;
+      line-height: 1.25;
+      padding: 0 12px;
+      color: #0a1628;
+    }
+    .label-footer {
+      margin-top: auto;
+      border-top: 1px solid #e2e8f0;
+      padding: 10px 12px 12px;
+      background: #f8fafc;
+    }
+    .protected {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #0a1628;
+    }
+    .hint { margin-top: 5px; font-size: 8px; color: #64748b; }
     @media print {
       body { padding: 0; }
       .label { border-color: #000; }
@@ -54,12 +116,35 @@ function buildPrintHtml({ siteName, labels }) {
 </html>`
 }
 
-function escapeHtml(text) {
-  return String(text)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
+function LabelPreview({ siteName, label }) {
+  return (
+    <div className="mx-auto flex max-w-xs flex-col overflow-hidden rounded-2xl border-2 border-navy-900 text-center">
+      <div className="bg-navy-900 px-4 py-3 text-white">
+        {siteName && (
+          <p className="text-sm font-extrabold uppercase tracking-wide leading-tight">{siteName}</p>
+        )}
+        <p className="mt-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+          {PROVIDER_LINE}
+        </p>
+      </div>
+      <div className="px-4 pb-4 pt-3">
+        {label.floorName && (
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+            {label.floorName}
+          </p>
+        )}
+        <img src={label.dataUrl} alt="QR code" className="mx-auto my-3" width={200} height={200} />
+        <p className="text-base font-extrabold leading-snug text-navy-900">{label.name}</p>
+        <div className="mt-4 border-t border-slate-200 bg-slate-50 px-3 py-3">
+          <p className="flex items-center justify-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-navy-900">
+            <Shield className="h-3.5 w-3.5" />
+            {FOOTER_LINE}
+          </p>
+          <p className="mt-1.5 text-[9px] text-slate-500">Scan with SecurePatrol guard app</p>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export default function QrPrintModal({ checkpoints, siteName, title, onClose }) {
@@ -121,7 +206,9 @@ export default function QrPrintModal({ checkpoints, siteName, title, onClose }) 
         <div className="flex items-start justify-between border-b border-slate-100 px-6 py-4">
           <div>
             <h3 className="font-display text-lg font-semibold">{title || 'QR checkpoint label'}</h3>
-            <p className="mt-1 text-sm text-slate-500">Print and stick at the checkpoint location.</p>
+            <p className="mt-1 text-sm text-slate-500">
+              Labels include site name, checkpoint, and Productive Security branding — ready to print and stick.
+            </p>
           </div>
           <button type="button" onClick={onClose} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100">
             <X className="h-5 w-5" />
@@ -135,31 +222,18 @@ export default function QrPrintModal({ checkpoints, siteName, title, onClose }) 
         ) : (
           <div className="p-6">
             {labels.length === 1 && primary ? (
-              <div className="mx-auto max-w-xs rounded-2xl border-2 border-navy-900 p-5 text-center">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                  SecurePatrol
-                </p>
-                {siteName && <p className="mt-2 text-xs font-bold text-navy-900">{siteName}</p>}
-                {primary.floorName && (
-                  <p className="mt-1 text-xs text-slate-600">Floor: {primary.floorName}</p>
-                )}
-                <img src={primary.dataUrl} alt="QR code" className="mx-auto my-4" />
-                <p className="text-base font-bold text-navy-900">{primary.name}</p>
-                <p className="mt-2 text-[10px] text-slate-500">Scan with SecurePatrol guard app</p>
-              </div>
+              <LabelPreview siteName={siteName} label={primary} />
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
                 {labels.map((label) => (
-                  <div key={label.id} className="rounded-xl border border-slate-200 p-4 text-center">
-                    <img src={label.dataUrl} alt="" className="mx-auto h-32 w-32" />
-                    <p className="mt-2 text-sm font-semibold">{label.name}</p>
-                    {label.floorName && <p className="text-xs text-slate-500">{label.floorName}</p>}
+                  <div key={label.id}>
+                    <LabelPreview siteName={siteName} label={label} />
                     <button
                       type="button"
                       onClick={() => handleDownload(label)}
-                      className="mt-2 text-xs font-medium text-brand-600 hover:underline"
+                      className="mt-2 w-full text-center text-xs font-medium text-brand-600 hover:underline"
                     >
-                      Download PNG
+                      Download QR only (PNG)
                     </button>
                   </div>
                 ))}
@@ -173,7 +247,7 @@ export default function QrPrintModal({ checkpoints, siteName, title, onClose }) 
               </button>
               {labels.length === 1 && primary && (
                 <button type="button" onClick={() => handleDownload(primary)} className="sp-btn-secondary">
-                  <Download className="h-4 w-4" /> Download
+                  <Download className="h-4 w-4" /> QR only
                 </button>
               )}
             </div>
