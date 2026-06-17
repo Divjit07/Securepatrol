@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Printer, Download, X, Shield } from 'lucide-react'
 import { buildCheckpointQrDataUrl, getCheckpointQrPayload } from '../lib/qr.js'
-
-const PROVIDER_LINE = 'SecurePatrol · Productive Security Inc.'
-const FOOTER_LINE = 'Protected by Productive Security'
+import {
+  buildFullLabelPng,
+  downloadDataUrl,
+  FOOTER_LINE,
+  PROVIDER_LINE,
+  slugify,
+} from '../lib/labelExport.js'
 
 function escapeHtml(text) {
   return String(text)
@@ -188,11 +192,13 @@ export default function QrPrintModal({ checkpoints, siteName, title, onClose }) 
     win.document.close()
   }
 
-  const handleDownload = (label) => {
-    const link = document.createElement('a')
-    link.href = label.dataUrl
-    link.download = `securepatrol-${label.name.replace(/\s+/g, '-').toLowerCase()}.png`
-    link.click()
+  const handleDownloadFullLabel = async (label) => {
+    const png = await buildFullLabelPng(siteName, label)
+    downloadDataUrl(png, `securepatrol-label-${slugify(label.name)}.png`)
+  }
+
+  const handleDownloadQrOnly = (label) => {
+    downloadDataUrl(label.dataUrl, `securepatrol-qr-${slugify(label.name)}.png`)
   }
 
   const primary = labels[0]
@@ -230,24 +236,37 @@ export default function QrPrintModal({ checkpoints, siteName, title, onClose }) 
                     <LabelPreview siteName={siteName} label={label} />
                     <button
                       type="button"
-                      onClick={() => handleDownload(label)}
+                      onClick={() => handleDownloadFullLabel(label)}
                       className="mt-2 w-full text-center text-xs font-medium text-brand-600 hover:underline"
                     >
-                      Download QR only (PNG)
+                      Download full label
                     </button>
                   </div>
                 ))}
               </div>
             )}
 
-            <div className="mt-6 flex flex-wrap gap-3">
-              <button type="button" onClick={handlePrint} className="sp-btn-primary flex-1">
+            <div className="mt-6 flex flex-col gap-3">
+              <button type="button" onClick={handlePrint} className="sp-btn-primary w-full">
                 <Printer className="h-4 w-4" />
-                {labels.length === 1 ? 'Print label' : `Print ${labels.length} labels`}
+                {labels.length === 1 ? 'Print full label' : `Print ${labels.length} full labels`}
               </button>
               {labels.length === 1 && primary && (
-                <button type="button" onClick={() => handleDownload(primary)} className="sp-btn-secondary">
-                  <Download className="h-4 w-4" /> QR only
+                <button
+                  type="button"
+                  onClick={() => handleDownloadFullLabel(primary)}
+                  className="sp-btn-secondary w-full"
+                >
+                  <Download className="h-4 w-4" /> Download full label (PNG)
+                </button>
+              )}
+              {labels.length === 1 && primary && (
+                <button
+                  type="button"
+                  onClick={() => handleDownloadQrOnly(primary)}
+                  className="text-center text-xs text-slate-500 hover:text-brand-600 hover:underline"
+                >
+                  QR code only (no branding)
                 </button>
               )}
             </div>
