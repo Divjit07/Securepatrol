@@ -1,4 +1,4 @@
-import { CheckCircle2, XCircle } from 'lucide-react'
+import { CheckCircle2 } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import ClientShiftBar from '../components/ClientShiftBar.jsx'
 import LiveFeed from '../components/LiveFeed.jsx'
@@ -69,13 +69,13 @@ export default function ClientDashboard() {
               <div className="border-b border-slate-100 px-5 py-4">
                 <h2 className="font-display text-lg font-semibold">Scan history</h2>
                 <p className="mt-0.5 text-sm text-slate-500">
-                  All guard check-ins for {date} · {shift.start}–{shift.end}
+                  Successful check-ins for {date} · {shift.start}–{shift.end}
                 </p>
               </div>
 
               {scans.length === 0 ? (
                 <p className="p-10 text-center text-sm text-slate-500">
-                  No scans recorded during this shift yet.
+                  No successful scans during this shift yet.
                 </p>
               ) : (
                 <div className="overflow-x-auto">
@@ -91,7 +91,6 @@ export default function ClientDashboard() {
                     <tbody className="divide-y divide-slate-100">
                       {scans.map((scan) => {
                         const cp = checkpoints.find((c) => c.id === scan.checkpoint_id)
-                        const passed = scan.status === 'pass'
                         return (
                           <tr key={scan.id} className="hover:bg-slate-50/80">
                             <td className="whitespace-nowrap px-5 py-3.5 text-slate-600">
@@ -107,15 +106,9 @@ export default function ClientDashboard() {
                               {scan.profiles?.name || 'Guard'}
                             </td>
                             <td className="px-5 py-3.5">
-                              {passed ? (
-                                <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700 ring-1 ring-green-200">
-                                  <CheckCircle2 className="h-3.5 w-3.5" /> Pass
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200">
-                                  <XCircle className="h-3.5 w-3.5" /> Fail
-                                </span>
-                              )}
+                              <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700 ring-1 ring-green-200">
+                                <CheckCircle2 className="h-3.5 w-3.5" /> Pass
+                              </span>
                             </td>
                           </tr>
                         )
@@ -128,7 +121,7 @@ export default function ClientDashboard() {
           </div>
 
           <div>
-            <LiveFeed siteId={siteId} limit={20} />
+            <LiveFeed siteId={siteId} limit={20} passesOnly />
           </div>
         </div>
       )}

@@ -21,7 +21,7 @@ async function checkpointBelongsToSite(checkpointId, siteId) {
   return Boolean(data)
 }
 
-export default function LiveFeed({ siteId, limit = 20 }) {
+export default function LiveFeed({ siteId, limit = 20, passesOnly = false }) {
   const [scans, setScans] = useState([])
   const [connected, setConnected] = useState(false)
   const checkpointIdsRef = useRef(new Set())
@@ -49,15 +49,21 @@ export default function LiveFeed({ siteId, limit = 20 }) {
     const cpIds = checkpoints.map((c) => c.id)
     checkpointIdsRef.current = new Set(cpIds)
 
-    const { data } = await supabase
+    let query = supabase
       .from('scans')
       .select('*, checkpoints(name), profiles:guard_id(name)')
       .in('checkpoint_id', cpIds)
       .order('scanned_at', { ascending: false })
       .limit(limit)
 
+    if (passesOnly) {
+      query = query.eq('status', 'pass')
+    }
+
+    const { data } = await query
+
     setScans(data || [])
-  }, [siteId, limit])
+  }, [siteId, limit, passesOnly])
 
   useEffect(() => {
     if (!siteId) return undefined
@@ -66,6 +72,8 @@ export default function LiveFeed({ siteId, limit = 20 }) {
     const channel = supabase
       .channel(`live-feed_${siteId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'scans' }, async (payload) => {
+        if (passesOnly && payload.new.status !== 'pass') return
+
         const checkpointId = payload.new.checkpoint_id
         if (!checkpointIdsRef.current.has(checkpointId)) {
           const belongs = await checkpointBelongsToSite(checkpointId, siteId)
@@ -83,7 +91,7 @@ export default function LiveFeed({ siteId, limit = 20 }) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [siteId, limit, loadRecent])
+  }, [siteId, limit, passesOnly, loadRecent])
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white">

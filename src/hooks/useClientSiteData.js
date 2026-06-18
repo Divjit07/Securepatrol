@@ -54,6 +54,7 @@ export function useClientSiteData(siteId, date, shift) {
         .from('scans')
         .select('*, profiles:guard_id(name)')
         .in('checkpoint_id', cps.map((c) => c.id))
+        .eq('status', 'pass')
         .gte('scanned_at', start.toISOString())
         .lte('scanned_at', end.toISOString())
         .order('scanned_at', { ascending: false })
@@ -78,6 +79,7 @@ export function useClientSiteData(siteId, date, shift) {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'scans' }, async (payload) => {
         const checkpointId = payload.new.checkpoint_id
         if (!checkpointIdsRef.current.has(checkpointId)) return
+        if (payload.new.status !== 'pass') return
 
         const { start, end } = shiftBounds(date, shift.start, shift.end)
         const scannedAt = new Date(payload.new.scanned_at)
