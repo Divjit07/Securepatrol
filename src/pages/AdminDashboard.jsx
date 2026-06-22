@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Building2, Plus, ChevronRight, Users } from 'lucide-react'
+import { Building2, Plus, ChevronRight, Users, Trash2 } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { fetchSitesForAdmin } from '../lib/scans.js'
 import { fetchGuardsWithSites, formatSiteLabel } from '../lib/guards.js'
 import { supabase } from '../lib/supabase.js'
+import { deleteSite } from '../lib/sites.js'
 
 export default function AdminDashboard() {
   const { user, isSuperAdmin } = useAuth()
@@ -16,6 +17,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [showNewSite, setShowNewSite] = useState(false)
   const [newSite, setNewSite] = useState({ name: '', address: '' })
+  const [removingId, setRemovingId] = useState(null)
 
   const loadSites = async () => {
     if (!user) return
@@ -89,10 +91,41 @@ export default function AdminDashboard() {
       address: newSite.address,
       admin_id: user.id,
     })
-    if (!error) {
-      setNewSite({ name: '', address: '' })
-      setShowNewSite(false)
-      loadSites()
+    if (error) {
+      alert(`Could not create site: ${error.message}`)
+      return
+    }
+    setNewSite({ name: '', address: '' })
+    setShowNewSite(false)
+    loadSites()
+  }
+
+  const handleDeleteSite = async (site) => {
+    const s = stats[site.id] || {}
+    const guardCount = s.guards?.length || 0
+    const checkpointCount = s.checkpoints || 0
+
+    const message =
+      `Remove "${site.name}"?\n\n` +
+      `This permanently deletes:\n` +
+      `• All floors and checkpoints (${checkpointCount})\n` +
+      `• All scan history for this site\n` +
+      `• Alerts for this site\n\n` +
+      (guardCount > 0
+        ? `${guardCount} guard(s) and any client logins will be unassigned from this site (accounts stay active).\n\n`
+        : '') +
+      `This cannot be undone.`
+
+    if (!confirm(message)) return
+
+    setRemovingId(site.id)
+    try {
+      await deleteSite(site.id)
+      await loadSites()
+    } catch (err) {
+      alert(err.message || 'Could not remove site')
+    } finally {
+      setRemovingId(null)
     }
   }
 
@@ -210,23 +243,41 @@ export default function AdminDashboard() {
           {sites.map((site) => {
             const s = stats[site.id] || {}
             return (
-              <Link
+              <div
                 key={site.id}
-                to={`/admin/site/${site.id}`}
-                className="group sp-card block p-6 transition hover:border-brand-200 hover:shadow-lg hover:shadow-brand-500/5"
+                className="group sp-card p-6 transition hover:border-brand-200 hover:shadow-lg hover:shadow-brand-500/5"
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
+                <div className="flex items-start justify-between gap-3">
+                  <Link to={`/admin/site/${site.id}`} className="flex min-w-0 flex-1 items-center gap-3">
                     <div className="rounded-lg bg-brand-50 p-2">
                       <Building2 className="h-5 w-5 text-brand-600" />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <h3 className="font-semibold group-hover:text-brand-600">{site.name}</h3>
                       <p className="text-sm text-slate-500">{site.address || 'No address'}</p>
                     </div>
+                  </Link>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteSite(site)}
+                      disabled={removingId === site.id}
+                      className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
+                      title="Remove site"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                    <Link
+                      to={`/admin/site/${site.id}`}
+                      className="rounded-lg p-2 text-slate-400 hover:bg-slate-50 hover:text-brand-600"
+                      title="Open site"
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </Link>
                   </div>
-                  <ChevronRight className="h-5 w-5 text-slate-400" />
                 </div>
+
+                <Link to={`/admin/site/${site.id}`} className="block">
 
                 {/* Guards assigned to this site */}
                 <div className="mt-3 rounded-lg bg-slate-50 px-3 py-2">
@@ -262,7 +313,8 @@ export default function AdminDashboard() {
                     <p className="text-xs text-slate-500">Compliance</p>
                   </div>
                 </div>
-              </Link>
+                </Link>
+              </div>
             )
           })}
         </div>

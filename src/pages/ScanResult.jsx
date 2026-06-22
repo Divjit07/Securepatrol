@@ -11,6 +11,13 @@ export default function ScanResult() {
 
   const { passed, checkpointName, distance, scannedAt, offline, radius, failureMessage } = state
 
+  const isWrongFloor = !passed && failureMessage?.startsWith('Wrong floor detected')
+  const heading = passed
+    ? 'Scan Verified'
+    : isWrongFloor
+      ? 'Wrong Floor Detected'
+      : 'Too Far From Checkpoint'
+
   return (
     <Layout variant="guard">
       <div className="mx-auto max-w-md text-center">
@@ -21,7 +28,7 @@ export default function ScanResult() {
         )}
 
         <h1 className={`mt-6 text-2xl font-bold ${passed ? 'text-green-700' : 'text-red-700'}`}>
-          {passed ? 'Scan Verified' : 'Too Far From Checkpoint'}
+          {heading}
         </h1>
 
         <p className="mt-2 text-lg font-medium text-slate-800">{checkpointName}</p>

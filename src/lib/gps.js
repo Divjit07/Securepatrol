@@ -1,7 +1,7 @@
 const EARTH_RADIUS_METRES = 6371000
 export const DEFAULT_RADIUS_METRES = 20
 export const MAX_GPS_ACCURACY_REJECT = 65
-export const VERTICAL_TOLERANCE_METRES = 10
+export const VERTICAL_TOLERANCE_METRES = 18
 export const FLOOR_HEIGHT_METRES = 3.5
 export const ACCURACY_RADIUS_BONUS_CAP = 25
 export const MIN_FLOOR_COORD_SEPARATION = 20
@@ -89,7 +89,13 @@ export function validateScanProximity({
     }
   }
 
-  if (floorNumber > 1 && expectedAltitude != null && guardAltitude != null) {
+  if (
+    floorNumber > 1 &&
+    expectedAltitude != null &&
+    guardAltitude != null &&
+    gpsAccuracy != null &&
+    gpsAccuracy <= 30
+  ) {
     const verticalDiff = Math.abs(guardAltitude - expectedAltitude)
     if (verticalDiff > VERTICAL_TOLERANCE_METRES) {
       return {
