@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase.js'
-import { isScanApprover } from '../lib/scanApproval.js'
+import { isScanApprover, checkScanApproverFromDb } from '../lib/scanApproval.js'
 
 const AuthContext = createContext(null)
 
@@ -8,6 +8,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [canApproveScans, setCanApproveScans] = useState(false)
 
   const loadProfile = useCallback(async (userId) => {
     const { data, error } = await supabase
@@ -65,7 +66,30 @@ export function AuthProvider({ children }) {
   const isGuard = profile?.role === 'guard'
   const isClient = profile?.role === 'client'
   const isSuperAdmin = profile?.role === 'super_admin'
-  const canApproveScans = isAdmin && isScanApprover(user)
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function resolveApproverAccess() {
+      if (!user || !isAdmin) {
+        if (!cancelled) setCanApproveScans(false)
+        return
+      }
+
+      if (isScanApprover(user, profile)) {
+        if (!cancelled) setCanApproveScans(true)
+        return
+      }
+
+      const fromDb = await checkScanApproverFromDb()
+      if (!cancelled) setCanApproveScans(fromDb === true)
+    }
+
+    resolveApproverAccess()
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id, user?.email, profile?.id, profile?.name, profile?.role, profile?.can_approve_scans, isAdmin])
 
   return (
     <AuthContext.Provider

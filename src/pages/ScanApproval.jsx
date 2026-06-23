@@ -10,11 +10,10 @@ import { fetchGuardsWithSites } from '../lib/guards.js'
 import {
   approveCheckpointScan,
   fetchRecentAdminApprovals,
-  isScanApprover,
 } from '../lib/scanApproval.js'
 
 export default function ScanApproval() {
-  const { user, isAdmin, isSuperAdmin } = useAuth()
+  const { user, isSuperAdmin, canApproveScans } = useAuth()
   const [sites, setSites] = useState([])
   const [selectedSite, setSelectedSite] = useState('')
   const [checkpoints, setCheckpoints] = useState([])
@@ -25,8 +24,6 @@ export default function ScanApproval() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState(null)
   const [recent, setRecent] = useState([])
-
-  const canApprove = isAdmin && isScanApprover(user)
 
   const siteGuards = useMemo(
     () => guards.filter((g) => g.site_id === selectedSite && g.active),
@@ -64,7 +61,7 @@ export default function ScanApproval() {
   }
 
   useEffect(() => {
-    if (!user || !canApprove) return
+    if (!user || !canApproveScans) return
 
     const role = isSuperAdmin ? 'super_admin' : 'admin'
     fetchSitesForAdmin(user.id, role).then((siteList) => {
@@ -74,7 +71,7 @@ export default function ScanApproval() {
 
     fetchGuardsWithSites().then(setGuards)
     loadRecent()
-  }, [user?.id, canApprove])
+  }, [user?.id, canApproveScans])
 
   useEffect(() => {
     if (!selectedSite) return
@@ -83,7 +80,7 @@ export default function ScanApproval() {
     loadCheckpoints(selectedSite)
   }, [selectedSite])
 
-  if (!canApprove) {
+  if (!canApproveScans) {
     return <Navigate to="/admin" replace />
   }
 
