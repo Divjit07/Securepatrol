@@ -14,6 +14,7 @@ import GuardManager from './pages/GuardManager.jsx'
 import ClientManager from './pages/ClientManager.jsx'
 import Reports from './pages/Reports.jsx'
 import Alerts from './pages/Alerts.jsx'
+import ScanApproval from './pages/ScanApproval.jsx'
 import ClientDashboard from './pages/ClientDashboard.jsx'
 import ClientCheckpoints from './pages/ClientCheckpoints.jsx'
 
@@ -126,6 +127,14 @@ export default function App() {
         element={
           <ProtectedRoute requireAdmin>
             <Alerts />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/approve-scan"
+        element={
+          <ProtectedRoute requireAdmin>
+            <ScanApproval />
           </ProtectedRoute>
         }
       />

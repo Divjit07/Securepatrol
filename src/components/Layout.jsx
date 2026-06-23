@@ -6,7 +6,7 @@ import { useAuth } from '../hooks/useAuth.jsx'
 import SyncIndicator from './SyncIndicator.jsx'
 
 export default function Layout({ children, variant = 'admin' }) {
-  const { profile, signOut } = useAuth()
+  const { profile, signOut, canApproveScans } = useAuth()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -22,6 +22,7 @@ export default function Layout({ children, variant = 'admin' }) {
     { to: '/admin/clients', label: 'Clients' },
     { to: '/admin/reports', label: 'Reports' },
     { to: '/admin/alerts', label: 'Alerts' },
+    ...(canApproveScans ? [{ to: '/admin/approve-scan', label: 'Approve Scan' }] : []),
   ]
 
   const guardLinks = [

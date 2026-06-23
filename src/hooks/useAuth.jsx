@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase.js'
+import { isScanApprover } from '../lib/scanApproval.js'
 
 const AuthContext = createContext(null)
 
@@ -64,10 +65,23 @@ export function AuthProvider({ children }) {
   const isGuard = profile?.role === 'guard'
   const isClient = profile?.role === 'client'
   const isSuperAdmin = profile?.role === 'super_admin'
+  const canApproveScans = isAdmin && isScanApprover(user)
 
   return (
     <AuthContext.Provider
-      value={{ user, profile, loading, signIn, signOut, isAdmin, isGuard, isClient, isSuperAdmin, refreshProfile: () => loadProfile(user?.id).then(setProfile) }}
+      value={{
+        user,
+        profile,
+        loading,
+        signIn,
+        signOut,
+        isAdmin,
+        isGuard,
+        isClient,
+        isSuperAdmin,
+        canApproveScans,
+        refreshProfile: () => loadProfile(user?.id).then(setProfile),
+      }}
     >
       {children}
     </AuthContext.Provider>
