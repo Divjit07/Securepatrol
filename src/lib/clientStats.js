@@ -1,20 +1,20 @@
 import { getScheduledShiftForDate, shiftBounds } from '../hooks/useClientShift.js'
 
 export function getPatrolCheckpoints(checkpoints = []) {
-  return checkpoints.filter((cp) => (cp.checkpoint_role || 'patrol') === 'patrol')
+  return checkpoints.filter((cp) => (cp.checkpoint_role || 'patrol') !== 'shift_clock_out')
 }
 
 export function countPatrolRounds(scans = [], checkpoints = []) {
-  const patrolCps = getPatrolCheckpoints(checkpoints)
-  if (!patrolCps.length) return { rounds: 0, patrolScanCount: 0, patrolCheckpointCount: 0 }
+  const roundCps = getPatrolCheckpoints(checkpoints)
+  if (!roundCps.length) return { rounds: 0, patrolScanCount: 0, patrolCheckpointCount: 0 }
 
-  const patrolIds = new Set(patrolCps.map((cp) => cp.id))
-  const patrolScans = scans.filter((s) => s.status === 'pass' && patrolIds.has(s.checkpoint_id))
+  const roundIds = new Set(roundCps.map((cp) => cp.id))
+  const roundScans = scans.filter((s) => s.status === 'pass' && roundIds.has(s.checkpoint_id))
 
   return {
-    rounds: Math.floor(patrolScans.length / patrolCps.length),
-    patrolScanCount: patrolScans.length,
-    patrolCheckpointCount: patrolCps.length,
+    rounds: Math.floor(roundScans.length / roundCps.length),
+    patrolScanCount: roundScans.length,
+    patrolCheckpointCount: roundCps.length,
   }
 }
 

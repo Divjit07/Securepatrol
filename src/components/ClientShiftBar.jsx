@@ -31,7 +31,7 @@ export default function ClientShiftBar({ date, setDate, scheduled, stats }) {
             <p className="text-sm text-slate-500">Patrol rounds</p>
             <p className="text-2xl font-bold">{stats.rounds}</p>
             <p className="mt-1 text-xs text-slate-400">
-              {stats.patrolScanCount} scans across {stats.patrolCheckpointCount} checkpoints
+              {stats.scannedCount} of {stats.totalCheckpoints} checkpoints · {stats.patrolScanCount} total scans
             </p>
           </div>
           <div className="rounded-xl border border-green-200 bg-green-50 p-4 shadow-sm">
