@@ -18,18 +18,10 @@ export function countPatrolRounds(scans = [], checkpoints = []) {
   }
 }
 
-function formatDuration(ms) {
-  if (ms <= 0) return '0m'
-  const totalMinutes = Math.round(ms / 60000)
-  const hours = Math.floor(totalMinutes / 60)
-  const minutes = totalMinutes % 60
-  if (hours === 0) return `${minutes}m`
-  if (minutes === 0) return `${hours}h`
-  return `${hours}h ${minutes}m`
-}
-
-function formatHoursDecimal(ms) {
-  return Math.round((ms / 3600000) * 100) / 100
+function scheduledClockInAt(dateStr, shiftStart) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const [startH, startM] = shiftStart.split(':').map(Number)
+  return new Date(y, m - 1, d, startH, startM, 0, 0)
 }
 
 function scheduledClockOutAt(dateStr, shiftEnd) {
@@ -38,11 +30,21 @@ function scheduledClockOutAt(dateStr, shiftEnd) {
   return new Date(y, m - 1, d, endH, endM, 0, 0)
 }
 
+export function fixedShiftHours(dateStr) {
+  const schedule = getScheduledShiftForDate(dateStr)
+  if (schedule.isClosed) return 0
+  return schedule.isSaturday ? 6 : 9
+}
+
+export function formatShiftTime(date) {
+  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+}
+
 export function computeGuardShiftForDay(guardScans, checkpoints, { date }) {
   const schedule = getScheduledShiftForDate(date)
   if (schedule.isClosed) return null
 
-  const { start: shiftStart, end: shiftEnd, endLabel } = schedule
+  const { start: shiftStart, end: shiftEnd } = schedule
   const passScans = [...guardScans]
     .filter((s) => s.status === 'pass')
     .sort((a, b) => new Date(a.scanned_at) - new Date(b.scanned_at))
@@ -64,26 +66,15 @@ export function computeGuardShiftForDay(guardScans, checkpoints, { date }) {
   const clockInScan = inWindow.find((s) => clockInIds.has(s.checkpoint_id))
   if (!clockInScan) return null
 
-  let clockInAt = new Date(clockInScan.scanned_at)
-  if (clockInAt < start) clockInAt = start
-
+  const clockInAt = scheduledClockInAt(date, shiftStart)
   const clockOutAt = scheduledClockOutAt(date, shiftEnd)
-  const now = new Date()
-  const todayStr = now.toISOString().slice(0, 10)
-  const shiftStillActive = date === todayStr && now < clockOutAt
-
-  const durationMs = Math.max(0, clockOutAt - clockInAt)
+  const hoursWorked = fixedShiftHours(date)
 
   return {
     clockInAt,
     clockOutAt,
-    clockOutPending: shiftStillActive,
-    clockOutAuto: true,
     clockInCheckpoint: checkpoints.find((cp) => cp.id === clockInScan.checkpoint_id)?.name,
-    clockOutCheckpoint: `Auto · ${endLabel}`,
-    durationMs,
-    durationLabel: shiftStillActive ? `${formatDuration(durationMs)} (scheduled)` : formatDuration(durationMs),
-    hoursWorked: formatHoursDecimal(durationMs),
+    hoursWorked,
     scanCount: inWindow.length,
   }
 }
@@ -110,9 +101,7 @@ export function computeGuardHoursReport({
         clockIn: dayShift.clockInAt,
         clockOut: dayShift.clockOutAt,
         hoursWorked: dayShift.hoursWorked,
-        durationLabel: dayShift.durationLabel,
         clockInCheckpoint: dayShift.clockInCheckpoint,
-        clockOutCheckpoint: dayShift.clockOutCheckpoint,
       })
     }
   }
@@ -146,5 +135,3 @@ export function defaultPayPeriodStart() {
   d.setDate(d.getDate() - 13)
   return d.toISOString().slice(0, 10)
 }
-
-export { formatDuration, formatHoursDecimal }

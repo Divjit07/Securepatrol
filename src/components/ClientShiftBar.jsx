@@ -40,33 +40,6 @@ export default function ClientShiftBar({ date, setDate, scheduled, stats }) {
           </div>
         </div>
       )}
-
-      {stats?.guardShifts?.length > 0 && !scheduled?.isClosed && (
-        <div className="mb-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-100 px-5 py-3">
-            <h2 className="font-display text-sm font-semibold text-slate-800">Shift clock</h2>
-            <p className="text-xs text-slate-500">
-              Clock in: Main Entrance · Clock out: automatic at {scheduled?.endLabel || '8:00 PM'}
-              {scheduled?.isSaturday ? ' (Saturday)' : ''}
-            </p>
-          </div>
-          <div className="divide-y divide-slate-100">
-            {stats.guardShifts.map((row) => (
-              <div key={row.guardId} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-sm">
-                <div>
-                  <p className="font-medium text-slate-900">{row.guardName}</p>
-                  <p className="text-xs text-slate-500">
-                    In {row.clockIn?.toLocaleTimeString()} · Out {row.clockOut?.toLocaleTimeString()} (auto)
-                  </p>
-                </div>
-                <p className={`text-lg font-bold ${row.clockOutPending ? 'text-brand-600' : 'text-brand-700'}`}>
-                  {row.durationLabel}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </>
   )
 }

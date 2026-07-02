@@ -22,7 +22,7 @@ export function getScheduledShiftForDate(dateStr) {
   const end = day === 6 ? '17:00' : '20:00'
   const endLabel = day === 6 ? '5:00 PM' : '8:00 PM'
   const scheduleLabel =
-    day === 6 ? 'Saturday · 11:00 AM – 5:00 PM' : 'Monday–Friday · 11:00 AM – 8:00 PM (auto clock-out)'
+    day === 6 ? 'Saturday · 11:00 AM – 5:00 PM' : 'Monday–Friday · 11:00 AM – 8:00 PM'
 
   return { start, end, endLabel, scheduleLabel, isSaturday: day === 6, isClosed: false }
 }

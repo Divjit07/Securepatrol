@@ -1,6 +1,5 @@
-import { ShieldCheck } from 'lucide-react'
+import { CheckCircle2, XCircle } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
-import CheckpointCard from '../components/CheckpointCard.jsx'
 import ClientShiftBar from '../components/ClientShiftBar.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { useClientShift } from '../hooks/useClientShift.js'
@@ -11,7 +10,7 @@ export default function ClientCheckpoints() {
   const { profile } = useAuth()
   const siteId = profile?.site_id
   const { date, setDate, shift, scheduled } = useClientShift()
-  const { site, guards, loading, scansByCheckpoint, groupedByFloor, checkpoints, scans, rounds, patrolScanCount, patrolCheckpointCount, guardShifts } =
+  const { site, guards, loading, scansByCheckpoint, groupedByFloor, scans, rounds, patrolScanCount, patrolCheckpointCount } =
     useClientSiteData(siteId, date, shift)
 
   if (!siteId) {
@@ -46,51 +45,63 @@ export default function ClientCheckpoints() {
           patrolScanCount,
           patrolCheckpointCount,
           scanCount: scans.length,
-          guardShifts,
         }}
       />
-
-      <div className="mb-6 rounded-xl border border-brand-100 bg-brand-50 p-4 text-sm text-brand-900">
-        <div className="flex items-start gap-2">
-          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
-          <p>
-            <strong className="text-green-800">Green</strong> = scanned and passed during your shift ({shift.start}–{shift.end}).
-            <strong className="text-red-800"> Red</strong> = not yet scanned or failed.
-          </p>
-        </div>
-      </div>
 
       {loading ? (
         <div className="flex justify-center py-12">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-600 border-t-transparent" />
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-6">
           {groupedByFloor.map(({ floor, checkpoints: cps }) => (
-            <section key={floor.id}>
-              <div className="mb-4 flex items-baseline justify-between gap-3">
-                <h2 className="font-display text-lg font-semibold">{floor.floor_name}</h2>
+            <section key={floor.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+              <div className="flex items-baseline justify-between gap-3 border-b border-slate-100 px-5 py-3">
+                <h2 className="font-display font-semibold">{floor.floor_name}</h2>
                 <p className="text-sm text-slate-500">
                   {cps.filter((cp) => scansByCheckpoint[cp.id]).length} / {cps.length} scanned
                 </p>
               </div>
               {cps.length === 0 ? (
-                <p className="text-sm text-slate-500">No checkpoints on this floor.</p>
+                <p className="p-5 text-sm text-slate-500">No checkpoints on this floor.</p>
               ) : (
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  {cps.map((cp) => {
-                    const latestScan = scansByCheckpoint[cp.id]
-                    const status = getClientCheckpointStatus(latestScan)
-                    return (
-                      <CheckpointCard
-                        key={cp.id}
-                        checkpoint={cp}
-                        status={status}
-                        lastScan={latestScan}
-                      />
-                    )
-                  })}
-                </div>
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 text-left text-slate-600">
+                    <tr>
+                      <th className="px-5 py-2.5 font-medium">Checkpoint</th>
+                      <th className="px-5 py-2.5 font-medium">Status</th>
+                      <th className="px-5 py-2.5 font-medium">Last scan</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {cps.map((cp) => {
+                      const latestScan = scansByCheckpoint[cp.id]
+                      const status = getClientCheckpointStatus(latestScan)
+                      const passed = status === 'on_time'
+                      return (
+                        <tr key={cp.id}>
+                          <td className="px-5 py-3 font-medium text-slate-900">{cp.name}</td>
+                          <td className="px-5 py-3">
+                            {passed ? (
+                              <span className="inline-flex items-center gap-1 text-green-700">
+                                <CheckCircle2 className="h-4 w-4" /> Scanned
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-red-600">
+                                <XCircle className="h-4 w-4" /> Not scanned
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-5 py-3 text-slate-600">
+                            {latestScan
+                              ? new Date(latestScan.scanned_at).toLocaleString()
+                              : '—'}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
               )}
             </section>
           ))}
