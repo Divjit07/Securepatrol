@@ -9,7 +9,7 @@ export default function ClientCheckpoints() {
   const { profile } = useAuth()
   const siteId = profile?.site_id
   const { date, setDate, shift, scheduled } = useClientShift()
-  const { site, guards, loading, scans, rounds, patrolScanCount, patrolCheckpointCount, guardShifts } =
+  const { site, guards, loading, scans, checkpoints, rounds, patrolScanCount, patrolCheckpointCount, scannedCount, guardShifts } =
     useClientSiteData(siteId, date, shift)
 
   if (!siteId) {
@@ -43,7 +43,8 @@ export default function ClientCheckpoints() {
           rounds,
           patrolScanCount,
           patrolCheckpointCount,
-          scanCount: scans.length,
+          scannedCount,
+          totalCheckpoints: checkpoints.length,
         }}
       />
 

@@ -34,9 +34,13 @@ export default function ClientShiftBar({ date, setDate, scheduled, stats }) {
               {stats.patrolScanCount} scans across {stats.patrolCheckpointCount} checkpoints
             </p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-sm text-slate-500">Total scans this shift</p>
-            <p className="text-2xl font-bold">{stats.scanCount}</p>
+          <div className="rounded-xl border border-green-200 bg-green-50 p-4 shadow-sm">
+            <p className="text-sm text-green-800">Checkpoints scanned</p>
+            <p className="text-2xl font-bold text-green-700">
+              {stats.scannedCount}
+              <span className="text-lg font-normal text-green-600"> / {stats.totalCheckpoints}</span>
+            </p>
+            <p className="mt-1 text-xs text-green-700/80">Unique checkpoints passed this shift</p>
           </div>
         </div>
       )}

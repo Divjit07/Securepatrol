@@ -1,4 +1,4 @@
-import { Clock, LogIn, LogOut } from 'lucide-react'
+import { LogIn, LogOut } from 'lucide-react'
 import { formatShiftTime } from '../lib/clientStats.js'
 
 export default function ClientShiftClock({ guardShifts, scheduled, loading }) {
@@ -28,27 +28,21 @@ export default function ClientShiftClock({ guardShifts, scheduled, loading }) {
       ) : (
         <div className="divide-y divide-slate-100">
           {guardShifts.map((row) => (
-            <div key={row.guardId} className="flex flex-wrap items-center justify-between gap-4 px-5 py-4">
-              <div>
-                <p className="font-semibold text-slate-900">{row.guardName}</p>
-                <div className="mt-2 space-y-1 text-sm text-slate-600">
-                  <p className="flex items-center gap-2">
-                    <LogIn className="h-4 w-4 text-green-600" />
-                    Signed in {formatShiftTime(row.signedInAt)}
-                    {row.clockInCheckpoint ? ` · ${row.clockInCheckpoint}` : ''}
-                  </p>
-                  <p className="flex items-center gap-2">
-                    <LogOut className="h-4 w-4 text-brand-600" />
-                    Shift ends {formatShiftTime(row.clockOutAt)}
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="flex items-center justify-end gap-1.5 text-xs font-medium uppercase tracking-wide text-slate-500">
-                  <Clock className="h-3.5 w-3.5" />
-                  {row.onShift ? 'On shift' : 'Shift complete'}
+            <div key={row.guardId} className="px-5 py-4">
+              <p className="font-semibold text-slate-900">{row.guardName}</p>
+              <div className="mt-2 space-y-1 text-sm text-slate-600">
+                <p className="flex items-center gap-2">
+                  <LogIn className="h-4 w-4 text-green-600" />
+                  Signed in {formatShiftTime(row.clockInAt)}
+                  {row.clockInCheckpoint ? ` · ${row.clockInCheckpoint}` : ''}
                 </p>
-                <p className="mt-1 text-2xl font-bold text-brand-700">{row.hoursWorked} hrs</p>
+                <p className="flex items-center gap-2">
+                  <LogOut className="h-4 w-4 text-brand-600" />
+                  Shift ends {formatShiftTime(row.clockOutAt)}
+                </p>
+                {row.onShift && (
+                  <p className="pt-1 text-xs font-medium uppercase tracking-wide text-brand-600">On shift</p>
+                )}
               </div>
             </div>
           ))}

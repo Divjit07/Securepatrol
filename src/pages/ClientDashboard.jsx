@@ -10,7 +10,7 @@ export default function ClientDashboard() {
   const { profile } = useAuth()
   const siteId = profile?.site_id
   const { date, setDate, shift, scheduled } = useClientShift()
-  const { site, guards, scans, checkpoints, loading, rounds, patrolScanCount, patrolCheckpointCount } =
+  const { site, guards, scans, checkpoints, loading, rounds, patrolScanCount, patrolCheckpointCount, scannedCount } =
     useClientSiteData(siteId, date, shift)
 
   if (!siteId) {
@@ -42,7 +42,8 @@ export default function ClientDashboard() {
           rounds,
           patrolScanCount,
           patrolCheckpointCount,
-          scanCount: scans.length,
+          scannedCount,
+          totalCheckpoints: checkpoints.length,
         }}
       />
 

@@ -124,10 +124,9 @@ export function useClientSiteData(siteId, date, shift) {
       return {
         guardId: guard.id,
         guardName: guard.name,
-        signedInAt: dayShift.signedInAt,
+        clockInAt: dayShift.clockInAt,
         clockOutAt: dayShift.clockOutAt,
         clockInCheckpoint: dayShift.clockInCheckpoint,
-        hoursWorked: dayShift.hoursWorked,
         onShift: dayShift.onShift,
       }
     })
