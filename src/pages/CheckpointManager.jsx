@@ -450,11 +450,11 @@ export default function CheckpointManager() {
                 className="sp-input"
               >
                 <option value="patrol">Patrol checkpoint</option>
-                <option value="shift_clock_in">Shift clock-in (Main Entrance)</option>
-                <option value="shift_clock_out">Shift clock-out</option>
+                <option value="shift_clock_in">Shift clock-in (scan at 11am start)</option>
+                <option value="shift_clock_out">Shift clock-out (scan at 8pm when leaving)</option>
               </select>
               <p className="mt-1 text-xs text-slate-500">
-                Clock-in starts the shift timer for client hours reports.
+                Use a separate QR/NFC tag for clock-out — patrol scans do not end the shift.
               </p>
             </div>
             <div className="sm:col-span-2">

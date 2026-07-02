@@ -53,7 +53,7 @@ export default function ClientShiftBar({ date, setDate, shift, setShift, stats }
           <div className="border-b border-slate-100 px-5 py-3">
             <h2 className="font-display text-sm font-semibold text-slate-800">Shift clock</h2>
             <p className="text-xs text-slate-500">
-              Starts at Main Entrance scan · ends at last patrol checkpoint scan
+              Clock in: Main Entrance QR · Clock out: Shift Clock-Out QR (scan when leaving at 8pm)
             </p>
           </div>
           <div className="divide-y divide-slate-100">
@@ -62,10 +62,15 @@ export default function ClientShiftBar({ date, setDate, shift, setShift, stats }
                 <div>
                   <p className="font-medium text-slate-900">{row.guardName}</p>
                   <p className="text-xs text-slate-500">
-                    In {row.clockIn?.toLocaleTimeString()} · Out {row.clockOut?.toLocaleTimeString()}
+                    In {row.clockIn?.toLocaleTimeString()}
+                    {row.clockOutPending
+                      ? ' · Out — scan clock-out QR'
+                      : ` · Out ${row.clockOut?.toLocaleTimeString()}`}
                   </p>
                 </div>
-                <p className="text-lg font-bold text-brand-700">{row.durationLabel}</p>
+                <p className={`text-lg font-bold ${row.clockOutPending ? 'text-amber-600' : 'text-brand-700'}`}>
+                  {row.durationLabel}
+                </p>
               </div>
             ))}
           </div>

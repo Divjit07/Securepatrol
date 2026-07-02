@@ -126,6 +126,7 @@ export function useClientSiteData(siteId, date, shift) {
         guardName: guard.name,
         clockIn: dayShift.clockInAt,
         clockOut: dayShift.clockOutAt,
+        clockOutPending: dayShift.clockOutPending,
         durationLabel: dayShift.durationLabel,
         hoursWorked: dayShift.hoursWorked,
       }

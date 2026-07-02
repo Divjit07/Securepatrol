@@ -1,7 +1,7 @@
 import { shiftBounds } from '../hooks/useClientShift.js'
 
 export function getPatrolCheckpoints(checkpoints = []) {
-  return checkpoints.filter((cp) => cp.checkpoint_role !== 'shift_clock_out')
+  return checkpoints.filter((cp) => (cp.checkpoint_role || 'patrol') === 'patrol')
 }
 
 export function countPatrolRounds(scans = [], checkpoints = []) {
@@ -45,9 +45,6 @@ export function computeGuardShiftForDay(guardScans, checkpoints, { shiftStart, s
   const clockOutIds = new Set(
     checkpoints.filter((cp) => cp.checkpoint_role === 'shift_clock_out').map((cp) => cp.id),
   )
-  const patrolIds = new Set(
-    checkpoints.filter((cp) => cp.checkpoint_role === 'patrol').map((cp) => cp.id),
-  )
 
   const { start, end } = shiftBounds(date, shiftStart, shiftEnd)
   const inWindow = passScans.filter((s) => {
@@ -57,26 +54,38 @@ export function computeGuardShiftForDay(guardScans, checkpoints, { shiftStart, s
 
   if (!inWindow.length) return null
 
-  const clockInScan =
-    inWindow.find((s) => clockInIds.has(s.checkpoint_id)) || inWindow[0]
-
-  const explicitClockOut = [...inWindow].reverse().find((s) => clockOutIds.has(s.checkpoint_id))
-  const patrolScans = inWindow.filter((s) => patrolIds.has(s.checkpoint_id))
-  const clockOutScan =
-    explicitClockOut ||
-    patrolScans[patrolScans.length - 1] ||
-    inWindow[inWindow.length - 1]
-
-  if (!clockInScan || !clockOutScan) return null
+  const clockInScan = inWindow.find((s) => clockInIds.has(s.checkpoint_id))
+  if (!clockInScan) return null
 
   const clockInAt = new Date(clockInScan.scanned_at)
+  const clockInCheckpoint = checkpoints.find((cp) => cp.id === clockInScan.checkpoint_id)?.name
+
+  const clockOutScan = [...inWindow]
+    .reverse()
+    .find((s) => clockOutIds.has(s.checkpoint_id) && new Date(s.scanned_at) > clockInAt)
+
+  if (!clockOutScan) {
+    return {
+      clockInAt,
+      clockOutAt: null,
+      clockOutPending: true,
+      clockInCheckpoint,
+      clockOutCheckpoint: null,
+      durationMs: 0,
+      durationLabel: 'Awaiting clock-out',
+      hoursWorked: 0,
+      scanCount: inWindow.length,
+    }
+  }
+
   const clockOutAt = new Date(clockOutScan.scanned_at)
   const durationMs = Math.max(0, clockOutAt - clockInAt)
 
   return {
     clockInAt,
     clockOutAt,
-    clockInCheckpoint: checkpoints.find((cp) => cp.id === clockInScan.checkpoint_id)?.name,
+    clockOutPending: false,
+    clockInCheckpoint,
     clockOutCheckpoint: checkpoints.find((cp) => cp.id === clockOutScan.checkpoint_id)?.name,
     durationMs,
     durationLabel: formatDuration(durationMs),
@@ -103,7 +112,7 @@ export function computeGuardHoursReport({
         date,
       })
 
-      if (!dayShift) continue
+      if (!dayShift || dayShift.clockOutPending) continue
 
       rows.push({
         date,
