@@ -208,7 +208,7 @@ export default function ClientReports() {
     doc.setFontSize(11)
     doc.text(`Site: ${site?.name || ''}`, 14, 33)
     doc.text(`Pay period: ${hoursFilters.fromDate} to ${hoursFilters.toDate}`, 14, 40)
-    doc.text('Schedule: Mon–Fri & Sun 11am–8pm · Sat 11am–5pm (auto clock-out)', 14, 47)
+    doc.text('Schedule: Mon–Fri 11am–8pm · Sat 11am–5pm · Sun closed', 14, 47)
     doc.text('Clock-in: Main Entrance scan · Clock-out: fixed end time (no scan needed)', 14, 54)
 
     autoTable(doc, {
@@ -344,7 +344,7 @@ export default function ClientReports() {
       ) : (
         <>
           <div className="mb-4 rounded-xl border border-brand-100 bg-brand-50 p-4 text-sm text-brand-900">
-            Two-week pay period. Scan <strong>Main Entrance</strong> when you arrive — you are automatically clocked out at <strong>8:00 PM</strong> (weekdays/Sunday) or <strong>5:00 PM</strong> (Saturday). No clock-out scan needed.
+            Scan <strong>Main Entrance</strong> when you arrive — auto clock-out at <strong>8:00 PM</strong> (Mon–Fri) or <strong>5:00 PM</strong> (Saturday). <strong>Sundays are closed</strong> — no shift hours.
           </div>
 
           <div className="mb-4 flex flex-wrap items-end justify-between gap-4">

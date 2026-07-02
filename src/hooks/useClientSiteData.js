@@ -49,7 +49,7 @@ export function useClientSiteData(siteId, date, shift) {
     setCheckpoints(checkpointList)
     checkpointIdsRef.current = new Set(checkpointList.map((cp) => cp.id))
 
-    if (cps?.length) {
+    if (cps?.length && !shift.isClosed) {
       const { start, end } = shiftBounds(date, shift.start, shift.end)
       const { data: scanData } = await supabase
         .from('scans')
@@ -66,14 +66,14 @@ export function useClientSiteData(siteId, date, shift) {
     }
 
     setLoading(false)
-  }, [siteId, date, shift.start, shift.end])
+  }, [siteId, date, shift.start, shift.end, shift.isClosed])
 
   useEffect(() => {
     loadData()
   }, [loadData])
 
   useEffect(() => {
-    if (!siteId) return undefined
+    if (!siteId || shift.isClosed) return undefined
 
     const channel = supabase
       .channel(`client-site_${siteId}`)
@@ -101,7 +101,7 @@ export function useClientSiteData(siteId, date, shift) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [siteId, date, shift.start, shift.end])
+  }, [siteId, date, shift.start, shift.end, shift.isClosed])
 
   const scansByCheckpoint = scans.reduce((acc, scan) => {
     if (!acc[scan.checkpoint_id] || new Date(scan.scanned_at) > new Date(acc[scan.checkpoint_id].scanned_at)) {

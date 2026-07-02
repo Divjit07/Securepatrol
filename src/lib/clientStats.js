@@ -39,7 +39,10 @@ function scheduledClockOutAt(dateStr, shiftEnd) {
 }
 
 export function computeGuardShiftForDay(guardScans, checkpoints, { date }) {
-  const { start: shiftStart, end: shiftEnd, endLabel } = getScheduledShiftForDate(date)
+  const schedule = getScheduledShiftForDate(date)
+  if (schedule.isClosed) return null
+
+  const { start: shiftStart, end: shiftEnd, endLabel } = schedule
   const passScans = [...guardScans]
     .filter((s) => s.status === 'pass')
     .sort((a, b) => new Date(a.scanned_at) - new Date(b.scanned_at))
