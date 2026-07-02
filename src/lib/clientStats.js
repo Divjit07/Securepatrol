@@ -68,11 +68,17 @@ export function computeGuardShiftForDay(guardScans, checkpoints, { date }) {
 
   const clockInAt = scheduledClockInAt(date, shiftStart)
   const clockOutAt = scheduledClockOutAt(date, shiftEnd)
+  const signedInAt = new Date(clockInScan.scanned_at)
   const hoursWorked = fixedShiftHours(date)
+  const now = new Date()
+  const todayStr = now.toISOString().slice(0, 10)
+  const onShift = date === todayStr && now < clockOutAt
 
   return {
     clockInAt,
     clockOutAt,
+    signedInAt,
+    onShift,
     clockInCheckpoint: checkpoints.find((cp) => cp.id === clockInScan.checkpoint_id)?.name,
     hoursWorked,
     scanCount: inWindow.length,

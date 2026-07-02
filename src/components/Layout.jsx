@@ -33,7 +33,7 @@ export default function Layout({ children, variant = 'admin' }) {
 
   const clientLinks = [
     { to: '/client', label: 'Scan History', end: true },
-    { to: '/client/checkpoints', label: 'Checkpoints' },
+    { to: '/client/checkpoints', label: 'Shift Clock' },
     { to: '/client/reports', label: 'Reports' },
   ]
 
