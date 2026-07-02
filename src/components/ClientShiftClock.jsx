@@ -39,13 +39,6 @@ export default function ClientShiftClock({ guardShifts, scheduled, loading }) {
                   {row.isStatutoryHoliday ? 'Clock in' : 'Signed in'} {formatShiftTime(row.clockInAt)}
                   {!row.isStatutoryHoliday && row.clockInCheckpoint ? ` · ${row.clockInCheckpoint}` : ''}
                 </p>
-                {!row.isStatutoryHoliday &&
-                  row.signedInAt &&
-                  row.signedInAt.getTime() !== row.clockInAt.getTime() && (
-                    <p className="pl-6 text-xs text-slate-400">
-                      Scanned at {formatShiftTime(row.signedInAt)}
-                    </p>
-                  )}
                 <p className="flex items-center gap-2">
                   <LogOut className="h-4 w-4 text-brand-600" />
                   {row.isStatutoryHoliday ? 'Clock out' : 'Shift ends'} {formatShiftTime(row.clockOutAt)}
