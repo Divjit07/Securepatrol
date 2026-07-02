@@ -10,7 +10,7 @@ import { getClientCheckpointStatus } from '../lib/scans.js'
 export default function ClientCheckpoints() {
   const { profile } = useAuth()
   const siteId = profile?.site_id
-  const { date, setDate, shift, setShift } = useClientShift()
+  const { date, setDate, shift, scheduled } = useClientShift()
   const { site, guards, loading, scansByCheckpoint, groupedByFloor, checkpoints, scans, rounds, patrolScanCount, patrolCheckpointCount, guardShifts } =
     useClientSiteData(siteId, date, shift)
 
@@ -40,8 +40,7 @@ export default function ClientCheckpoints() {
       <ClientShiftBar
         date={date}
         setDate={setDate}
-        shift={shift}
-        setShift={setShift}
+        scheduled={scheduled}
         stats={{
           rounds,
           patrolScanCount,

@@ -2,6 +2,19 @@ import { useState } from 'react'
 
 export const DEFAULT_CLIENT_SHIFT = { start: '11:00', end: '20:00' }
 
+/** Fixed site schedule: 11am start; 8pm end Mon–Fri & Sun, 5pm end Saturday. */
+export function getScheduledShiftForDate(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const day = new Date(y, m - 1, d).getDay()
+  const start = '11:00'
+  const end = day === 6 ? '17:00' : '20:00'
+  const endLabel = day === 6 ? '5:00 PM' : '8:00 PM'
+  const scheduleLabel =
+    day === 6 ? 'Saturday · 11:00 AM – 5:00 PM' : '11:00 AM – 8:00 PM (auto clock-out)'
+
+  return { start, end, endLabel, scheduleLabel, isSaturday: day === 6 }
+}
+
 const SHIFT_KEY = 'client-portal-shift'
 
 function loadShift() {
@@ -23,9 +36,16 @@ export function shiftBounds(dateStr, startTime, endTime) {
   return { start, end }
 }
 
+export function scheduledShiftBounds(dateStr) {
+  const { start, end } = getScheduledShiftForDate(dateStr)
+  return shiftBounds(dateStr, start, end)
+}
+
 export function useClientShift() {
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [shift, setShift] = useState(loadShift)
+
+  const scheduled = getScheduledShiftForDate(date)
 
   const updateShift = (patch) => {
     setShift((prev) => {
@@ -35,5 +55,5 @@ export function useClientShift() {
     })
   }
 
-  return { date, setDate, shift, setShift: updateShift }
+  return { date, setDate, shift: scheduled, scheduled, setShift: updateShift }
 }

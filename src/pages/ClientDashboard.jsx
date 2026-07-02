@@ -9,7 +9,7 @@ import { useClientSiteData } from '../hooks/useClientSiteData.js'
 export default function ClientDashboard() {
   const { profile } = useAuth()
   const siteId = profile?.site_id
-  const { date, setDate, shift, setShift } = useClientShift()
+  const { date, setDate, shift, scheduled } = useClientShift()
   const { site, guards, scans, checkpoints, loading, rounds, patrolScanCount, patrolCheckpointCount, guardShifts } =
     useClientSiteData(siteId, date, shift)
 
@@ -37,8 +37,7 @@ export default function ClientDashboard() {
       <ClientShiftBar
         date={date}
         setDate={setDate}
-        shift={shift}
-        setShift={setShift}
+        scheduled={scheduled}
         stats={{
           rounds,
           patrolScanCount,

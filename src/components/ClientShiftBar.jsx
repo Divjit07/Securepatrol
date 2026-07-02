@@ -1,6 +1,6 @@
 import { Calendar, Clock } from 'lucide-react'
 
-export default function ClientShiftBar({ date, setDate, shift, setShift, stats }) {
+export default function ClientShiftBar({ date, setDate, scheduled, stats }) {
   return (
     <>
       <div className="mb-6 flex flex-wrap gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -13,22 +13,9 @@ export default function ClientShiftBar({ date, setDate, shift, setShift, stats }
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
           />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
           <Clock className="h-4 w-4 text-slate-500" />
-          <label className="text-sm text-slate-600">Shift</label>
-          <input
-            type="time"
-            value={shift.start}
-            onChange={(e) => setShift({ start: e.target.value })}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          />
-          <span className="text-slate-400">to</span>
-          <input
-            type="time"
-            value={shift.end}
-            onChange={(e) => setShift({ end: e.target.value })}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          />
+          <span>{scheduled?.scheduleLabel || '11:00 AM – 8:00 PM'}</span>
         </div>
       </div>
 
@@ -53,7 +40,8 @@ export default function ClientShiftBar({ date, setDate, shift, setShift, stats }
           <div className="border-b border-slate-100 px-5 py-3">
             <h2 className="font-display text-sm font-semibold text-slate-800">Shift clock</h2>
             <p className="text-xs text-slate-500">
-              Clock in: Main Entrance QR · Clock out: Shift Clock-Out QR (scan when leaving at 8pm)
+              Clock in: Main Entrance · Clock out: automatic at {scheduled?.endLabel || '8:00 PM'}
+              {scheduled?.isSaturday ? ' (Saturday)' : ''}
             </p>
           </div>
           <div className="divide-y divide-slate-100">
@@ -62,13 +50,10 @@ export default function ClientShiftBar({ date, setDate, shift, setShift, stats }
                 <div>
                   <p className="font-medium text-slate-900">{row.guardName}</p>
                   <p className="text-xs text-slate-500">
-                    In {row.clockIn?.toLocaleTimeString()}
-                    {row.clockOutPending
-                      ? ' · Out — scan clock-out QR'
-                      : ` · Out ${row.clockOut?.toLocaleTimeString()}`}
+                    In {row.clockIn?.toLocaleTimeString()} · Out {row.clockOut?.toLocaleTimeString()} (auto)
                   </p>
                 </div>
-                <p className={`text-lg font-bold ${row.clockOutPending ? 'text-amber-600' : 'text-brand-700'}`}>
+                <p className={`text-lg font-bold ${row.clockOutPending ? 'text-brand-600' : 'text-brand-700'}`}>
                   {row.durationLabel}
                 </p>
               </div>

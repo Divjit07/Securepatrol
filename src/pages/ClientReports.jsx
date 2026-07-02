@@ -6,7 +6,6 @@ import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import { supabase } from '../lib/supabase.js'
 import { useAuth } from '../hooks/useAuth.jsx'
-import { useClientShift, DEFAULT_CLIENT_SHIFT } from '../hooks/useClientShift.js'
 import {
   computeGuardHoursReport,
   dateRangeDays,
@@ -27,7 +26,6 @@ function localDayEnd(dateStr) {
 export default function ClientReports() {
   const { profile } = useAuth()
   const siteId = profile?.site_id
-  const { shift } = useClientShift()
   const [site, setSite] = useState(null)
   const [tab, setTab] = useState('scans')
   const [scanFilters, setScanFilters] = useState({
@@ -199,7 +197,6 @@ export default function ClientReports() {
     checkpoints,
     guards,
     dates: dateRangeDays(hoursFilters.fromDate, hoursFilters.toDate),
-    shift: shift || DEFAULT_CLIENT_SHIFT,
   })
 
   const exportHoursPdf = () => {
@@ -211,8 +208,8 @@ export default function ClientReports() {
     doc.setFontSize(11)
     doc.text(`Site: ${site?.name || ''}`, 14, 33)
     doc.text(`Pay period: ${hoursFilters.fromDate} to ${hoursFilters.toDate}`, 14, 40)
-    doc.text(`Shift window: ${shift.start} – ${shift.end} (11am – 8pm)`, 14, 47)
-    doc.text('Clock-in: Main Entrance QR · Clock-out: dedicated Shift Clock-Out QR only', 14, 54)
+    doc.text('Schedule: Mon–Fri & Sun 11am–8pm · Sat 11am–5pm (auto clock-out)', 14, 47)
+    doc.text('Clock-in: Main Entrance scan · Clock-out: fixed end time (no scan needed)', 14, 54)
 
     autoTable(doc, {
       startY: 62,
@@ -347,7 +344,7 @@ export default function ClientReports() {
       ) : (
         <>
           <div className="mb-4 rounded-xl border border-brand-100 bg-brand-50 p-4 text-sm text-brand-900">
-            Two-week pay period report. Hours count only when a guard scans the <strong>Main Entrance</strong> clock-in QR at start and the separate <strong>Shift Clock-Out</strong> QR when leaving (shift {shift.start}–{shift.end}).
+            Two-week pay period. Scan <strong>Main Entrance</strong> when you arrive — you are automatically clocked out at <strong>8:00 PM</strong> (weekdays/Sunday) or <strong>5:00 PM</strong> (Saturday). No clock-out scan needed.
           </div>
 
           <div className="mb-4 flex flex-wrap items-end justify-between gap-4">

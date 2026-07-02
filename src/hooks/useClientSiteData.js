@@ -118,7 +118,7 @@ export function useClientSiteData(siteId, date, shift) {
       const dayShift = computeGuardShiftForDay(
         scans.filter((s) => s.guard_id === guard.id),
         checkpoints,
-        { shiftStart: shift.start, shiftEnd: shift.end, date },
+        { date },
       )
       if (!dayShift) return null
       return {
