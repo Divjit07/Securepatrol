@@ -31,37 +31,22 @@ export default function ClientShiftClock({ guardShifts, scheduled, loading }) {
             <div key={row.guardId} className="px-5 py-4">
               <p className="font-semibold text-slate-900">{row.guardName}</p>
               <div className="mt-2 space-y-1 text-sm text-slate-600">
-                {row.isAdjusted ? (
-                  <>
-                    <p className="flex items-center gap-2">
-                      <LogIn className="h-4 w-4 text-green-600" />
-                      Clock in {formatShiftTime(row.clockInAt)}
+                <p className="flex items-center gap-2">
+                  <LogIn className="h-4 w-4 text-green-600" />
+                  Signed in {formatShiftTime(row.clockInAt)}
+                  {!row.isAdjusted && row.clockInCheckpoint ? ` · ${row.clockInCheckpoint}` : ''}
+                </p>
+                {!row.isAdjusted &&
+                  row.signedInAt &&
+                  row.signedInAt.getTime() !== row.clockInAt.getTime() && (
+                    <p className="pl-6 text-xs text-slate-400">
+                      Scanned at {formatShiftTime(row.signedInAt)}
                     </p>
-                    <p className="flex items-center gap-2">
-                      <LogOut className="h-4 w-4 text-brand-600" />
-                      Clock out {formatShiftTime(row.clockOutAt)}
-                    </p>
-                    <p className="text-xs text-amber-700">Times adjusted by admin · {row.hoursWorked} hrs</p>
-                  </>
-                ) : (
-                  <>
-                    <p className="flex items-center gap-2">
-                      <LogIn className="h-4 w-4 text-green-600" />
-                      Signed in {formatShiftTime(row.clockInAt)}
-                      {row.clockInCheckpoint ? ` · ${row.clockInCheckpoint}` : ''}
-                    </p>
-                    {row.signedInAt &&
-                      row.signedInAt.getTime() !== row.clockInAt.getTime() && (
-                        <p className="pl-6 text-xs text-slate-400">
-                          Scanned at {formatShiftTime(row.signedInAt)}
-                        </p>
-                      )}
-                    <p className="flex items-center gap-2">
-                      <LogOut className="h-4 w-4 text-brand-600" />
-                      Shift ends {formatShiftTime(row.clockOutAt)}
-                    </p>
-                  </>
-                )}
+                  )}
+                <p className="flex items-center gap-2">
+                  <LogOut className="h-4 w-4 text-brand-600" />
+                  Shift ends {formatShiftTime(row.clockOutAt)}
+                </p>
                 {row.onShift && (
                   <p className="pt-1 text-xs font-medium uppercase tracking-wide text-brand-600">On shift</p>
                 )}
