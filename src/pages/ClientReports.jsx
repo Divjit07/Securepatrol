@@ -217,7 +217,7 @@ export default function ClientReports() {
     doc.setFontSize(11)
     doc.text(`Site: ${site?.name || ''}`, 14, 33)
     doc.text(`Pay period: ${hoursFilters.fromDate} to ${hoursFilters.toDate}`, 14, 40)
-    doc.text('Schedule: Mon–Fri 11:00 AM–8:00 PM (9 hrs) · Sat 11:00 AM–5:00 PM (6 hrs) · Sun closed', 14, 47)
+    doc.text('Schedule: Mon–Fri 11:00 AM–8:00 PM (9 hrs) · Sat 10:00 AM–5:00 PM (7 hrs) · Sun closed', 14, 47)
     doc.text('Clock-in: Main Entrance scan · Fixed shift times shown below', 14, 54)
 
     autoTable(doc, {
@@ -353,7 +353,7 @@ export default function ClientReports() {
       ) : (
         <>
           <div className="mb-4 rounded-xl border border-brand-100 bg-brand-50 p-4 text-sm text-brand-900">
-            Scan <strong>Main Entrance</strong> when you arrive. Each work day is recorded as <strong>9 hours</strong> (Mon–Fri, 11:00 AM–8:00 PM) or <strong>6 hours</strong> (Saturday, 11:00 AM–5:00 PM). Sundays are closed.
+            Scan <strong>Main Entrance</strong> when you arrive. Each work day is recorded as <strong>9 hours</strong> (Mon–Fri, 11:00 AM–8:00 PM) or <strong>7 hours</strong> (Saturday, 10:00 AM–5:00 PM). Sundays are closed.
           </div>
 
           <div className="mb-4 flex flex-wrap items-end justify-between gap-4">

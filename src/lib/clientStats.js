@@ -33,7 +33,7 @@ function scheduledClockOutAt(dateStr, shiftEnd) {
 export function fixedShiftHours(dateStr) {
   const schedule = getScheduledShiftForDate(dateStr)
   if (schedule.isClosed) return 0
-  return schedule.isSaturday ? 6 : 9
+  return schedule.isSaturday ? 7 : 9
 }
 
 export function formatShiftTime(date) {
