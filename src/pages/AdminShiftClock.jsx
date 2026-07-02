@@ -1,0 +1,419 @@
+import { useEffect, useMemo, useState } from 'react'
+import { Navigate } from 'react-router-dom'
+import { Clock, RotateCcw, Save } from 'lucide-react'
+import Layout from '../components/Layout.jsx'
+import PageHeader from '../components/PageHeader.jsx'
+import { useAuth } from '../hooks/useAuth.jsx'
+import { supabase } from '../lib/supabase.js'
+import { fetchSitesForAdmin } from '../lib/scans.js'
+import { fetchGuardsWithSites } from '../lib/guards.js'
+import { getScheduledShiftForDate, shiftBounds } from '../hooks/useClientShift.js'
+import { computeGuardShiftForDay, formatShiftTime } from '../lib/clientStats.js'
+import {
+  combineDateAndTime,
+  fetchShiftAdjustmentsForDate,
+  mapShiftAdjustments,
+  removeShiftAdjustment,
+  saveShiftAdjustment,
+  shiftAdjustmentKey,
+  toTimeInputValue,
+} from '../lib/shiftAdjustments.js'
+
+function findClockInScan(guardScans, checkpoints, dateStr, shift) {
+  const clockInIds = new Set(
+    checkpoints.filter((cp) => cp.checkpoint_role === 'shift_clock_in').map((cp) => cp.id),
+  )
+  const { start, end } = shiftBounds(dateStr, shift.start, shift.end)
+
+  return [...guardScans]
+    .filter((s) => s.status === 'pass')
+    .sort((a, b) => new Date(a.scanned_at) - new Date(b.scanned_at))
+    .find((s) => {
+      const t = new Date(s.scanned_at)
+      return t >= start && t <= end && clockInIds.has(s.checkpoint_id)
+    })
+}
+
+export default function AdminShiftClock() {
+  const { user, isSuperAdmin, canApproveScans } = useAuth()
+  const [sites, setSites] = useState([])
+  const [guards, setGuards] = useState([])
+  const [selectedSite, setSelectedSite] = useState('')
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [checkpoints, setCheckpoints] = useState([])
+  const [scans, setScans] = useState([])
+  const [adjustments, setAdjustments] = useState({})
+  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState(null)
+  const [editing, setEditing] = useState(null)
+  const [saving, setSaving] = useState(false)
+
+  const scheduled = useMemo(() => getScheduledShiftForDate(date), [date])
+
+  const siteGuards = useMemo(
+    () => guards.filter((g) => g.site_id === selectedSite && g.active),
+    [guards, selectedSite],
+  )
+
+  const loadSiteData = async () => {
+    if (!selectedSite || scheduled.isClosed) {
+      setCheckpoints([])
+      setScans([])
+      setAdjustments({})
+      return
+    }
+
+    setLoading(true)
+    setMessage(null)
+
+    try {
+      const { data: floors } = await supabase.from('floors').select('id').eq('site_id', selectedSite)
+
+      if (!floors?.length) {
+        setCheckpoints([])
+        setScans([])
+        setAdjustments({})
+        setLoading(false)
+        return
+      }
+
+      const [{ data: cps }, adjRows] = await Promise.all([
+        supabase
+          .from('checkpoints')
+          .select('id, name, checkpoint_role, floor_id')
+          .in('floor_id', floors.map((f) => f.id))
+          .eq('active', true),
+        fetchShiftAdjustmentsForDate(selectedSite, date),
+      ])
+
+      const checkpointList = cps || []
+      setCheckpoints(checkpointList)
+      setAdjustments(mapShiftAdjustments(adjRows))
+
+      const cpIds = checkpointList.map((c) => c.id)
+      if (!cpIds.length) {
+        setScans([])
+        setLoading(false)
+        return
+      }
+
+      const { start, end } = shiftBounds(date, scheduled.start, scheduled.end)
+      const { data: scanData, error } = await supabase
+        .from('scans')
+        .select('id, guard_id, checkpoint_id, scanned_at, status')
+        .in('checkpoint_id', cpIds)
+        .eq('status', 'pass')
+        .gte('scanned_at', start.toISOString())
+        .lte('scanned_at', end.toISOString())
+        .order('scanned_at', { ascending: true })
+
+      if (error) throw error
+      setScans(scanData || [])
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message || 'Failed to load shift data' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!user || !canApproveScans) return
+
+    const role = isSuperAdmin ? 'super_admin' : 'admin'
+    fetchSitesForAdmin(user.id, role).then((siteList) => {
+      setSites(siteList)
+      if (siteList.length) setSelectedSite(siteList[0].id)
+    })
+
+    fetchGuardsWithSites().then(setGuards)
+  }, [user?.id, canApproveScans, isSuperAdmin])
+
+  useEffect(() => {
+    if (!selectedSite) return
+    setEditing(null)
+    loadSiteData()
+  }, [selectedSite, date])
+
+  if (!canApproveScans) {
+    return <Navigate to="/admin" replace />
+  }
+
+  const rows = siteGuards.map((guard) => {
+    const guardScans = scans.filter((s) => s.guard_id === guard.id)
+    const adjustment = adjustments[shiftAdjustmentKey(guard.id, date)]
+    const dayShift = computeGuardShiftForDay(guardScans, checkpoints, { date, adjustment })
+    const clockInScan = findClockInScan(guardScans, checkpoints, date, scheduled)
+
+    return {
+      guard,
+      dayShift,
+      adjustment,
+      clockInScan,
+    }
+  })
+
+  const startEdit = (row) => {
+    const defaults = row.dayShift || {
+      clockInAt: combineDateAndTime(date, scheduled.start),
+      clockOutAt: combineDateAndTime(date, scheduled.end),
+    }
+
+    setEditing({
+      guardId: row.guard.id,
+      clockIn: toTimeInputValue(defaults.clockInAt),
+      clockOut: toTimeInputValue(defaults.clockOutAt),
+      note: row.adjustment?.note || '',
+    })
+    setMessage(null)
+  }
+
+  const cancelEdit = () => {
+    setEditing(null)
+  }
+
+  const handleSave = async (guardId) => {
+    if (!editing || editing.guardId !== guardId) return
+
+    setSaving(true)
+    setMessage(null)
+
+    try {
+      const clockInAt = combineDateAndTime(date, editing.clockIn)
+      const clockOutAt = combineDateAndTime(date, editing.clockOut)
+
+      if (clockOutAt <= clockInAt) {
+        throw new Error('Clock-out must be after clock-in')
+      }
+
+      await saveShiftAdjustment({
+        siteId: selectedSite,
+        guardId,
+        shiftDate: date,
+        clockInAt: clockInAt.toISOString(),
+        clockOutAt: clockOutAt.toISOString(),
+        note: editing.note,
+      })
+
+      setMessage({ type: 'success', text: 'Shift times saved.' })
+      setEditing(null)
+      await loadSiteData()
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message || 'Failed to save shift times' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleReset = async (guardId) => {
+    if (!window.confirm('Remove manual override and revert to scan-based shift times?')) return
+
+    setSaving(true)
+    setMessage(null)
+
+    try {
+      await removeShiftAdjustment(guardId, date)
+      setMessage({ type: 'success', text: 'Shift override removed.' })
+      setEditing(null)
+      await loadSiteData()
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message || 'Failed to reset shift times' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Layout variant="admin">
+      <PageHeader
+        title="Shift Clock"
+        description="View guard sign-in times and edit clock-in/out when needed. Only available to the designated approver."
+      />
+
+      <div className="sp-card mb-6 flex flex-wrap items-end gap-4 p-6">
+        <div className="min-w-[220px] flex-1">
+          <label className="mb-1.5 block text-sm font-medium text-slate-700">Site</label>
+          <select
+            className="sp-input w-full"
+            value={selectedSite}
+            onChange={(e) => setSelectedSite(e.target.value)}
+          >
+            {sites.map((site) => (
+              <option key={site.id} value={site.id}>
+                {site.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-slate-700">Date</label>
+          <input
+            type="date"
+            className="sp-input"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {scheduled.isClosed ? (
+        <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-slate-600">
+          {scheduled.scheduleLabel}
+        </div>
+      ) : (
+        <>
+          <p className="mb-4 text-sm text-slate-600">{scheduled.scheduleLabel}</p>
+
+          {message && (
+            <p
+              className={`mb-4 text-sm ${message.type === 'success' ? 'text-green-600' : 'text-red-600'}`}
+            >
+              {message.text}
+            </p>
+          )}
+
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-600 border-t-transparent" />
+            </div>
+          ) : (
+            <div className="sp-card overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-slate-50 text-slate-500">
+                    <tr>
+                      <th className="px-6 py-3 font-medium">Guard</th>
+                      <th className="px-6 py-3 font-medium">Main Entrance scan</th>
+                      <th className="px-6 py-3 font-medium">Clock in</th>
+                      <th className="px-6 py-3 font-medium">Clock out</th>
+                      <th className="px-6 py-3 font-medium">Hours</th>
+                      <th className="px-6 py-3 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {rows.map(({ guard, dayShift, adjustment, clockInScan }) => {
+                      const isEditing = editing?.guardId === guard.id
+
+                      return (
+                        <tr key={guard.id}>
+                          <td className="px-6 py-4">
+                            <p className="font-medium text-slate-900">{guard.name}</p>
+                            {dayShift?.isAdjusted && (
+                              <span className="mt-1 inline-block rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                                Adjusted
+                              </span>
+                            )}
+                            {dayShift?.onShift && (
+                              <span className="mt-1 ml-1 inline-block rounded bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-800">
+                                On shift
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-slate-600">
+                            {clockInScan
+                              ? formatShiftTime(new Date(clockInScan.scanned_at))
+                              : '—'}
+                          </td>
+                          <td className="px-6 py-4">
+                            {isEditing ? (
+                              <input
+                                type="time"
+                                className="sp-input"
+                                value={editing.clockIn}
+                                onChange={(e) =>
+                                  setEditing((prev) => ({ ...prev, clockIn: e.target.value }))
+                                }
+                              />
+                            ) : (
+                              dayShift ? formatShiftTime(dayShift.clockInAt) : '—'
+                            )}
+                          </td>
+                          <td className="px-6 py-4">
+                            {isEditing ? (
+                              <input
+                                type="time"
+                                className="sp-input"
+                                value={editing.clockOut}
+                                onChange={(e) =>
+                                  setEditing((prev) => ({ ...prev, clockOut: e.target.value }))
+                                }
+                              />
+                            ) : (
+                              dayShift ? formatShiftTime(dayShift.clockOutAt) : '—'
+                            )}
+                          </td>
+                          <td className="px-6 py-4 font-medium">
+                            {dayShift ? dayShift.hoursWorked : '—'}
+                          </td>
+                          <td className="px-6 py-4">
+                            {isEditing ? (
+                              <div className="space-y-2">
+                                <textarea
+                                  className="sp-input w-full min-w-[200px]"
+                                  rows={2}
+                                  placeholder="Note (optional)"
+                                  value={editing.note}
+                                  onChange={(e) =>
+                                    setEditing((prev) => ({ ...prev, note: e.target.value }))
+                                  }
+                                />
+                                <div className="flex flex-wrap gap-2">
+                                  <button
+                                    type="button"
+                                    disabled={saving}
+                                    onClick={() => handleSave(guard.id)}
+                                    className="sp-btn-primary inline-flex items-center gap-1.5 px-3 py-1.5 text-xs"
+                                  >
+                                    <Save className="h-3.5 w-3.5" />
+                                    Save
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={cancelEdit}
+                                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => startEdit({ guard, dayShift, adjustment })}
+                                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
+                                >
+                                  <Clock className="h-3.5 w-3.5" />
+                                  {dayShift ? 'Edit times' : 'Set times'}
+                                </button>
+                                {adjustment && (
+                                  <button
+                                    type="button"
+                                    disabled={saving}
+                                    onClick={() => handleReset(guard.id)}
+                                    className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-50"
+                                  >
+                                    <RotateCcw className="h-3.5 w-3.5" />
+                                    Reset
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {siteGuards.length === 0 && (
+                <p className="p-8 text-center text-slate-500">No active guards at this site.</p>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </Layout>
+  )
+}

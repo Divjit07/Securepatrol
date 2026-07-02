@@ -13,6 +13,7 @@ import {
   defaultPayPeriodStart,
   formatShiftTime,
 } from '../lib/clientStats.js'
+import { fetchShiftAdjustmentsForSite, mapShiftAdjustments } from '../lib/shiftAdjustments.js'
 
 function localDayStart(dateStr) {
   const [y, m, d] = dateStr.split('-').map(Number)
@@ -41,6 +42,7 @@ export default function ClientReports() {
   const [checkpoints, setCheckpoints] = useState([])
   const [guards, setGuards] = useState([])
   const [hoursScans, setHoursScans] = useState([])
+  const [hoursAdjustments, setHoursAdjustments] = useState({})
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -121,20 +123,25 @@ export default function ClientReports() {
     const from = localDayStart(hoursFilters.fromDate)
     const to = localDayEnd(hoursFilters.toDate)
 
-    const { data, error } = await supabase
-      .from('scans')
-      .select('id, guard_id, checkpoint_id, scanned_at, status')
-      .in('checkpoint_id', cpIds)
-      .eq('status', 'pass')
-      .gte('scanned_at', from.toISOString())
-      .lte('scanned_at', to.toISOString())
-      .order('scanned_at', { ascending: true })
+    const [{ data, error }, adjRows] = await Promise.all([
+      supabase
+        .from('scans')
+        .select('id, guard_id, checkpoint_id, scanned_at, status')
+        .in('checkpoint_id', cpIds)
+        .eq('status', 'pass')
+        .gte('scanned_at', from.toISOString())
+        .lte('scanned_at', to.toISOString())
+        .order('scanned_at', { ascending: true }),
+      fetchShiftAdjustmentsForSite(siteId, hoursFilters.fromDate, hoursFilters.toDate),
+    ])
 
     if (error) {
       alert(error.message)
       setHoursScans([])
+      setHoursAdjustments({})
     } else {
       setHoursScans(data || [])
+      setHoursAdjustments(mapShiftAdjustments(adjRows))
     }
 
     setLoading(false)
@@ -198,6 +205,7 @@ export default function ClientReports() {
     checkpoints,
     guards,
     dates: dateRangeDays(hoursFilters.fromDate, hoursFilters.toDate),
+    adjustmentsByKey: hoursAdjustments,
   })
 
   const exportHoursPdf = () => {
@@ -407,7 +415,12 @@ export default function ClientReports() {
                         <td className="px-4 py-3 font-medium">{row.guardName}</td>
                         <td className="px-4 py-3">{formatShiftTime(row.clockIn)}</td>
                         <td className="px-4 py-3">{formatShiftTime(row.clockOut)}</td>
-                        <td className="px-4 py-3 font-semibold">{row.hoursWorked}</td>
+                        <td className="px-4 py-3 font-semibold">
+                          {row.hoursWorked}
+                          {row.isAdjusted && (
+                            <span className="ml-2 text-xs font-normal text-amber-700">adjusted</span>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

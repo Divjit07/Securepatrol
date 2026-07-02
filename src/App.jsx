@@ -15,6 +15,7 @@ import ClientManager from './pages/ClientManager.jsx'
 import Reports from './pages/Reports.jsx'
 import Alerts from './pages/Alerts.jsx'
 import ScanApproval from './pages/ScanApproval.jsx'
+import AdminShiftClock from './pages/AdminShiftClock.jsx'
 import ClientDashboard from './pages/ClientDashboard.jsx'
 import ClientCheckpoints from './pages/ClientCheckpoints.jsx'
 import ClientReports from './pages/ClientReports.jsx'
@@ -136,6 +137,14 @@ export default function App() {
         element={
           <ProtectedRoute requireAdmin>
             <ScanApproval />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/shift-clock"
+        element={
+          <ProtectedRoute requireAdmin>
+            <AdminShiftClock />
           </ProtectedRoute>
         }
       />

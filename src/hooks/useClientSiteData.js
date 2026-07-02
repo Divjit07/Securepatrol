@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { shiftBounds } from './useClientShift.js'
 import { countPatrolRounds, computeGuardShiftForDay } from '../lib/clientStats.js'
+import { fetchShiftAdjustmentsForDate, mapShiftAdjustments, shiftAdjustmentKey } from '../lib/shiftAdjustments.js'
 
 export function useClientSiteData(siteId, date, shift) {
   const [site, setSite] = useState(null)
@@ -9,6 +10,7 @@ export function useClientSiteData(siteId, date, shift) {
   const [checkpoints, setCheckpoints] = useState([])
   const [guards, setGuards] = useState([])
   const [scans, setScans] = useState([])
+  const [adjustments, setAdjustments] = useState({})
   const [loading, setLoading] = useState(true)
   const checkpointIdsRef = useRef(new Set())
 
@@ -51,18 +53,23 @@ export function useClientSiteData(siteId, date, shift) {
 
     if (cps?.length && !shift.isClosed) {
       const { start, end } = shiftBounds(date, shift.start, shift.end)
-      const { data: scanData } = await supabase
-        .from('scans')
-        .select('*, profiles:guard_id(name)')
-        .in('checkpoint_id', cps.map((c) => c.id))
-        .eq('status', 'pass')
-        .gte('scanned_at', start.toISOString())
-        .lte('scanned_at', end.toISOString())
-        .order('scanned_at', { ascending: false })
+      const [{ data: scanData }, adjRows] = await Promise.all([
+        supabase
+          .from('scans')
+          .select('*, profiles:guard_id(name)')
+          .in('checkpoint_id', cps.map((c) => c.id))
+          .eq('status', 'pass')
+          .gte('scanned_at', start.toISOString())
+          .lte('scanned_at', end.toISOString())
+          .order('scanned_at', { ascending: false }),
+        fetchShiftAdjustmentsForDate(siteId, date),
+      ])
 
       setScans(scanData || [])
+      setAdjustments(mapShiftAdjustments(adjRows))
     } else {
       setScans([])
+      setAdjustments({})
     }
 
     setLoading(false)
@@ -115,10 +122,11 @@ export function useClientSiteData(siteId, date, shift) {
 
   const guardShifts = guards
     .map((guard) => {
+      const adjustment = adjustments[shiftAdjustmentKey(guard.id, date)]
       const dayShift = computeGuardShiftForDay(
         scans.filter((s) => s.guard_id === guard.id),
         checkpoints,
-        { date },
+        { date, adjustment },
       )
       if (!dayShift) return null
       return {
@@ -126,8 +134,11 @@ export function useClientSiteData(siteId, date, shift) {
         guardName: guard.name,
         clockInAt: dayShift.clockInAt,
         clockOutAt: dayShift.clockOutAt,
+        signedInAt: dayShift.signedInAt,
         clockInCheckpoint: dayShift.clockInCheckpoint,
         onShift: dayShift.onShift,
+        isAdjusted: dayShift.isAdjusted,
+        hoursWorked: dayShift.hoursWorked,
       }
     })
     .filter(Boolean)

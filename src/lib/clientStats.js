@@ -40,7 +40,13 @@ export function formatShiftTime(date) {
   return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
 }
 
-export function computeGuardShiftForDay(guardScans, checkpoints, { date }) {
+export function hoursFromShiftTimes(clockInAt, clockOutAt) {
+  const ms = clockOutAt - clockInAt
+  if (ms <= 0) return 0
+  return Math.round((ms / 3600000) * 100) / 100
+}
+
+export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustment }) {
   const schedule = getScheduledShiftForDate(date)
   if (schedule.isClosed) return null
 
@@ -49,7 +55,7 @@ export function computeGuardShiftForDay(guardScans, checkpoints, { date }) {
     .filter((s) => s.status === 'pass')
     .sort((a, b) => new Date(a.scanned_at) - new Date(b.scanned_at))
 
-  if (!passScans.length) return null
+  if (!passScans.length && !adjustment) return null
 
   const clockInIds = new Set(
     checkpoints.filter((cp) => cp.checkpoint_role === 'shift_clock_in').map((cp) => cp.id),
@@ -61,15 +67,26 @@ export function computeGuardShiftForDay(guardScans, checkpoints, { date }) {
     return t >= start && t <= end
   })
 
-  if (!inWindow.length) return null
-
   const clockInScan = inWindow.find((s) => clockInIds.has(s.checkpoint_id))
-  if (!clockInScan) return null
 
-  const clockInAt = scheduledClockInAt(date, shiftStart)
-  const clockOutAt = scheduledClockOutAt(date, shiftEnd)
-  const signedInAt = new Date(clockInScan.scanned_at)
-  const hoursWorked = fixedShiftHours(date)
+  if (!clockInScan && !adjustment) return null
+
+  const defaultClockIn = scheduledClockInAt(date, shiftStart)
+  const defaultClockOut = scheduledClockOutAt(date, shiftEnd)
+  const signedInAt = clockInScan ? new Date(clockInScan.scanned_at) : defaultClockIn
+
+  let clockInAt = defaultClockIn
+  let clockOutAt = defaultClockOut
+  let hoursWorked = fixedShiftHours(date)
+  let isAdjusted = false
+
+  if (adjustment) {
+    clockInAt = new Date(adjustment.clock_in_at)
+    clockOutAt = new Date(adjustment.clock_out_at)
+    hoursWorked = hoursFromShiftTimes(clockInAt, clockOutAt)
+    isAdjusted = true
+  }
+
   const now = new Date()
   const todayStr = now.toISOString().slice(0, 10)
   const onShift = date === todayStr && now < clockOutAt
@@ -79,7 +96,10 @@ export function computeGuardShiftForDay(guardScans, checkpoints, { date }) {
     clockOutAt,
     signedInAt,
     onShift,
-    clockInCheckpoint: checkpoints.find((cp) => cp.id === clockInScan.checkpoint_id)?.name,
+    isAdjusted,
+    clockInCheckpoint: clockInScan
+      ? checkpoints.find((cp) => cp.id === clockInScan.checkpoint_id)?.name
+      : 'Manual entry',
     hoursWorked,
     scanCount: inWindow.length,
   }
@@ -90,13 +110,15 @@ export function computeGuardHoursReport({
   checkpoints = [],
   guards = [],
   dates = [],
+  adjustmentsByKey = {},
 }) {
   const rows = []
 
   for (const date of dates) {
     for (const guard of guards) {
       const guardScans = scans.filter((s) => s.guard_id === guard.id)
-      const dayShift = computeGuardShiftForDay(guardScans, checkpoints, { date })
+      const adjustment = adjustmentsByKey[`${guard.id}-${date}`]
+      const dayShift = computeGuardShiftForDay(guardScans, checkpoints, { date, adjustment })
 
       if (!dayShift) continue
 
@@ -108,6 +130,7 @@ export function computeGuardHoursReport({
         clockOut: dayShift.clockOutAt,
         hoursWorked: dayShift.hoursWorked,
         clockInCheckpoint: dayShift.clockInCheckpoint,
+        isAdjusted: dayShift.isAdjusted,
       })
     }
   }

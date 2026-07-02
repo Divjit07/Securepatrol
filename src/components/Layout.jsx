@@ -22,7 +22,12 @@ export default function Layout({ children, variant = 'admin' }) {
     { to: '/admin/clients', label: 'Clients' },
     { to: '/admin/reports', label: 'Reports' },
     { to: '/admin/alerts', label: 'Alerts' },
-    ...(canApproveScans ? [{ to: '/admin/approve-scan', label: 'Approve Scan' }] : []),
+    ...(canApproveScans
+      ? [
+          { to: '/admin/approve-scan', label: 'Approve Scan' },
+          { to: '/admin/shift-clock', label: 'Shift Clock' },
+        ]
+      : []),
   ]
 
   const guardLinks = [
