@@ -17,6 +17,7 @@ import Alerts from './pages/Alerts.jsx'
 import ScanApproval from './pages/ScanApproval.jsx'
 import ClientDashboard from './pages/ClientDashboard.jsx'
 import ClientCheckpoints from './pages/ClientCheckpoints.jsx'
+import ClientReports from './pages/ClientReports.jsx'
 
 function HomeRedirect() {
   const { user, isAdmin, isClient, loading } = useAuth()
@@ -152,6 +153,14 @@ export default function App() {
         element={
           <ProtectedRoute requireClient>
             <ClientCheckpoints />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/client/reports"
+        element={
+          <ProtectedRoute requireClient>
+            <ClientReports />
           </ProtectedRoute>
         }
       />

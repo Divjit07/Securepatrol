@@ -33,31 +33,41 @@ export default function ClientShiftBar({ date, setDate, shift, setShift, stats }
       </div>
 
       {stats && (
-        <div className="mb-6 grid gap-4 sm:grid-cols-3">
+        <div className="mb-6 grid gap-4 sm:grid-cols-2">
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-sm text-slate-500">Checkpoints scanned</p>
-            <p className="text-2xl font-bold">
-              {stats.scannedCount}{' '}
-              <span className="text-base font-normal text-slate-400">/ {stats.total}</span>
-            </p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-sm text-slate-500">Shift compliance</p>
-            <p
-              className={`text-2xl font-bold ${
-                stats.compliance >= 80
-                  ? 'text-green-600'
-                  : stats.compliance >= 50
-                    ? 'text-amber-600'
-                    : 'text-red-600'
-              }`}
-            >
-              {stats.compliance}%
+            <p className="text-sm text-slate-500">Patrol rounds</p>
+            <p className="text-2xl font-bold">{stats.rounds}</p>
+            <p className="mt-1 text-xs text-slate-400">
+              {stats.patrolScanCount} scans across {stats.patrolCheckpointCount} checkpoints
             </p>
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-sm text-slate-500">Total scans this shift</p>
             <p className="text-2xl font-bold">{stats.scanCount}</p>
+          </div>
+        </div>
+      )}
+
+      {stats?.guardShifts?.length > 0 && (
+        <div className="mb-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 px-5 py-3">
+            <h2 className="font-display text-sm font-semibold text-slate-800">Shift clock</h2>
+            <p className="text-xs text-slate-500">
+              Starts at Main Entrance scan · ends at last patrol checkpoint scan
+            </p>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {stats.guardShifts.map((row) => (
+              <div key={row.guardId} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-sm">
+                <div>
+                  <p className="font-medium text-slate-900">{row.guardName}</p>
+                  <p className="text-xs text-slate-500">
+                    In {row.clockIn?.toLocaleTimeString()} · Out {row.clockOut?.toLocaleTimeString()}
+                  </p>
+                </div>
+                <p className="text-lg font-bold text-brand-700">{row.durationLabel}</p>
+              </div>
+            ))}
           </div>
         </div>
       )}

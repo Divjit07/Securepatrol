@@ -31,6 +31,7 @@ export default function CheckpointManager() {
     radius_metres: 20,
     altitude_metres: '',
     coordPaste: '',
+    checkpoint_role: 'patrol',
   })
   const [floorForm, setFloorForm] = useState({ floor_name: '', floor_number: 1 })
   const [generateQrAfterSave, setGenerateQrAfterSave] = useState(true)
@@ -160,6 +161,7 @@ export default function CheckpointManager() {
         longitude: parseFloat(form.longitude),
         altitude_metres: altitudeValue,
         radius_metres: parseInt(form.radius_metres, 10) || defaultRadiusForFloor(),
+        checkpoint_role: form.checkpoint_role,
       })
       .select('*, floors(floor_name)')
       .single()
@@ -169,7 +171,7 @@ export default function CheckpointManager() {
       return
     }
 
-    setForm({ name: '', floor_id: '', latitude: '', longitude: '', altitude_metres: '', radius_metres: 20, coordPaste: '' })
+    setForm({ name: '', floor_id: '', latitude: '', longitude: '', altitude_metres: '', radius_metres: 20, coordPaste: '', checkpoint_role: 'patrol' })
     setShowForm(false)
     await loadCheckpoints(floors)
 
@@ -440,6 +442,21 @@ export default function CheckpointManager() {
               />
           <p className="mt-1 text-xs text-slate-500">Default 20m + indoor GPS tolerance.</p>
             </div>
+            <div>
+              <label className="sp-label">Checkpoint type</label>
+              <select
+                value={form.checkpoint_role}
+                onChange={(e) => setForm({ ...form, checkpoint_role: e.target.value })}
+                className="sp-input"
+              >
+                <option value="patrol">Patrol checkpoint</option>
+                <option value="shift_clock_in">Shift clock-in (Main Entrance)</option>
+                <option value="shift_clock_out">Shift clock-out</option>
+              </select>
+              <p className="mt-1 text-xs text-slate-500">
+                Clock-in starts the shift timer for client hours reports.
+              </p>
+            </div>
             <div className="sm:col-span-2">
               <label className="sp-label">Paste coordinates (optional)</label>
               <div className="flex gap-2">
@@ -613,6 +630,7 @@ export default function CheckpointManager() {
               <th className="px-4 py-3 font-medium">Floor</th>
               <th className="px-4 py-3 font-medium">GPS</th>
               <th className="px-4 py-3 font-medium">Radius</th>
+              <th className="px-4 py-3 font-medium">Type</th>
               <th className="px-4 py-3 font-medium">ID (NFC)</th>
               <th className="px-4 py-3 font-medium">Actions</th>
             </tr>
@@ -667,6 +685,13 @@ export default function CheckpointManager() {
                 <td className="px-4 py-3">{cp.floors?.floor_name}</td>
                 <td className="px-4 py-3 text-xs">{cp.latitude?.toFixed(4)}, {cp.longitude?.toFixed(4)}</td>
                 <td className="px-4 py-3">{cp.radius_metres}m</td>
+                <td className="px-4 py-3 text-xs text-slate-600">
+                  {cp.checkpoint_role === 'shift_clock_in'
+                    ? 'Clock in'
+                    : cp.checkpoint_role === 'shift_clock_out'
+                      ? 'Clock out'
+                      : 'Patrol'}
+                </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-xs">{cp.id.slice(0, 8)}…</span>

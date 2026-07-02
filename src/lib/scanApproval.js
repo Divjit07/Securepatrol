@@ -2,9 +2,13 @@ import { supabase } from './supabase.js'
 
 export const SCAN_APPROVER_EMAIL = 'divjit007@gmail.com'
 
+export function getUserEmail(user) {
+  return user?.email?.toLowerCase() || user?.user_metadata?.email?.toLowerCase() || ''
+}
+
 export function isScanApprover(user, profile) {
   if (profile?.can_approve_scans === true) return true
-  if (user?.email?.toLowerCase() === SCAN_APPROVER_EMAIL) return true
+  if (getUserEmail(user) === SCAN_APPROVER_EMAIL) return true
   const name = profile?.name?.trim().toLowerCase() || ''
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin'
   return isAdmin && name.startsWith('divjit')

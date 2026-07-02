@@ -25,22 +25,29 @@ export function AuthProvider({ children }) {
   }, [])
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        const p = await loadProfile(session.user.id)
+    async function initSession() {
+      const { data: { session } } = await supabase.auth.getSession()
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      const currentUser = authUser ?? session?.user ?? null
+      setUser(currentUser)
+      if (currentUser) {
+        const p = await loadProfile(currentUser.id)
         setProfile(p)
       }
       setLoading(false)
-    })
+    }
+    initSession()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        const p = await loadProfile(session.user.id)
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      const currentUser = authUser ?? session?.user ?? null
+      setUser(currentUser)
+      if (currentUser) {
+        const p = await loadProfile(currentUser.id)
         setProfile(p)
       } else {
         setProfile(null)
+        setCanApproveScans(false)
       }
       setLoading(false)
     })

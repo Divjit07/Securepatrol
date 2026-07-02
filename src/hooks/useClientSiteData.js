@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { shiftBounds } from './useClientShift.js'
+import { countPatrolRounds, computeGuardShiftForDay } from '../lib/clientStats.js'
 
 export function useClientSiteData(siteId, date, shift) {
   const [site, setSite] = useState(null)
@@ -110,9 +111,26 @@ export function useClientSiteData(siteId, date, shift) {
   }, {})
 
   const scannedCount = checkpoints.filter((cp) => scansByCheckpoint[cp.id]).length
-  const compliance = checkpoints.length
-    ? Math.round((scannedCount / checkpoints.length) * 100)
-    : 0
+  const { rounds, patrolScanCount, patrolCheckpointCount } = countPatrolRounds(scans, checkpoints)
+
+  const guardShifts = guards
+    .map((guard) => {
+      const dayShift = computeGuardShiftForDay(
+        scans.filter((s) => s.guard_id === guard.id),
+        checkpoints,
+        { shiftStart: shift.start, shiftEnd: shift.end, date },
+      )
+      if (!dayShift) return null
+      return {
+        guardId: guard.id,
+        guardName: guard.name,
+        clockIn: dayShift.clockInAt,
+        clockOut: dayShift.clockOutAt,
+        durationLabel: dayShift.durationLabel,
+        hoursWorked: dayShift.hoursWorked,
+      }
+    })
+    .filter(Boolean)
 
   const groupedByFloor = floors.map((floor) => ({
     floor,
@@ -128,7 +146,10 @@ export function useClientSiteData(siteId, date, shift) {
     loading,
     scansByCheckpoint,
     scannedCount,
-    compliance,
+    rounds,
+    patrolScanCount,
+    patrolCheckpointCount,
+    guardShifts,
     groupedByFloor,
   }
 }
