@@ -1,7 +1,18 @@
 import { supabase } from './supabase.js'
 
+export const STATUTORY_HOLIDAY_NOTE_PREFIX = 'Statutory holiday'
+
 export function shiftAdjustmentKey(guardId, dateStr) {
   return `${guardId}-${dateStr}`
+}
+
+export function statutoryHolidayNote(holidayName) {
+  const trimmed = holidayName?.trim()
+  return trimmed ? `${STATUTORY_HOLIDAY_NOTE_PREFIX} — ${trimmed}` : STATUTORY_HOLIDAY_NOTE_PREFIX
+}
+
+export function isStatutoryHolidayAdjustment(adjustment) {
+  return Boolean(adjustment?.note?.startsWith(STATUTORY_HOLIDAY_NOTE_PREFIX))
 }
 
 export function mapShiftAdjustments(rows = []) {

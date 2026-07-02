@@ -1,4 +1,5 @@
 import { getScheduledShiftForDate, shiftBounds } from '../hooks/useClientShift.js'
+import { isStatutoryHolidayAdjustment } from './shiftAdjustments.js'
 
 export function getPatrolCheckpoints(checkpoints = []) {
   return checkpoints.filter((cp) => (cp.checkpoint_role || 'patrol') !== 'shift_clock_out')
@@ -110,7 +111,9 @@ export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustm
   if (adjustment) {
     clockInAt = new Date(adjustment.clock_in_at)
     clockOutAt = new Date(adjustment.clock_out_at)
-    hoursWorked = hoursFromShiftTimes(clockInAt, clockOutAt)
+    hoursWorked = isStatutoryHolidayAdjustment(adjustment)
+      ? fixedShiftHours(date)
+      : hoursFromShiftTimes(clockInAt, clockOutAt)
     isAdjusted = true
   }
 
@@ -149,6 +152,11 @@ export function computeGuardHoursReport({
 
       if (!dayShift) continue
 
+      const statutoryHoliday = isStatutoryHolidayAdjustment(adjustment)
+      const durationMinutes = statutoryHoliday
+        ? fixedShiftHours(date) * 60
+        : durationFromShiftTimes(dayShift.clockInAt, dayShift.clockOutAt).totalMinutes
+
       rows.push({
         date,
         guardId: guard.id,
@@ -156,8 +164,10 @@ export function computeGuardHoursReport({
         clockIn: dayShift.clockInAt,
         clockOut: dayShift.clockOutAt,
         hoursWorked: dayShift.hoursWorked,
-        durationMinutes: durationFromShiftTimes(dayShift.clockInAt, dayShift.clockOutAt).totalMinutes,
-        hoursLabel: formatShiftDuration(dayShift.clockInAt, dayShift.clockOutAt),
+        durationMinutes,
+        hoursLabel: statutoryHoliday
+          ? formatDurationFromMinutes(durationMinutes)
+          : formatShiftDuration(dayShift.clockInAt, dayShift.clockOutAt),
         clockInCheckpoint: dayShift.clockInCheckpoint,
         isAdjusted: dayShift.isAdjusted,
       })
