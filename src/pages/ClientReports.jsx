@@ -228,7 +228,7 @@ export default function ClientReports() {
         row.guardName,
         row.clockIn.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
         row.clockOut.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
-        String(row.hoursWorked),
+        String(row.hoursLabel),
       ]),
     })
 
@@ -241,7 +241,7 @@ export default function ClientReports() {
       body: Object.values(hoursReport.totalByGuard).map((g) => [
         g.name,
         g.days,
-        g.hours,
+        g.hoursLabel,
       ]),
     })
 
@@ -391,7 +391,7 @@ export default function ClientReports() {
                 {Object.values(hoursReport.totalByGuard).map((g) => (
                   <div key={g.name} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                     <p className="text-sm text-slate-500">{g.name}</p>
-                    <p className="text-2xl font-bold">{g.hours} hrs</p>
+                    <p className="text-2xl font-bold">{g.hoursLabel}</p>
                     <p className="text-xs text-slate-400">{g.days} days worked</p>
                   </div>
                 ))}
@@ -415,12 +415,7 @@ export default function ClientReports() {
                         <td className="px-4 py-3 font-medium">{row.guardName}</td>
                         <td className="px-4 py-3">{formatShiftTime(row.clockIn)}</td>
                         <td className="px-4 py-3">{formatShiftTime(row.clockOut)}</td>
-                        <td className="px-4 py-3 font-semibold">
-                          {row.hoursWorked}
-                          {row.isAdjusted && (
-                            <span className="ml-2 text-xs font-normal text-amber-700">adjusted</span>
-                          )}
-                        </td>
+                        <td className="px-4 py-3 font-semibold">{row.hoursLabel}</td>
                       </tr>
                     ))}
                   </tbody>

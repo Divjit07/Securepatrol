@@ -46,6 +46,33 @@ export function hoursFromShiftTimes(clockInAt, clockOutAt) {
   return Math.round((ms / 3600000) * 100) / 100
 }
 
+export function durationFromShiftTimes(clockInAt, clockOutAt) {
+  const ms = new Date(clockOutAt) - new Date(clockInAt)
+  if (ms <= 0) return { hours: 0, minutes: 0, totalMinutes: 0 }
+
+  const totalMinutes = Math.round(ms / 60000)
+  return {
+    hours: Math.floor(totalMinutes / 60),
+    minutes: totalMinutes % 60,
+    totalMinutes,
+  }
+}
+
+export function formatDurationFromMinutes(totalMinutes) {
+  if (totalMinutes <= 0) return '0 mins'
+
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+
+  if (hours === 0) return `${minutes} mins`
+  if (minutes === 0) return `${hours}h`
+  return `${hours}h ${minutes} mins`
+}
+
+export function formatShiftDuration(clockInAt, clockOutAt) {
+  return formatDurationFromMinutes(durationFromShiftTimes(clockInAt, clockOutAt).totalMinutes)
+}
+
 export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustment }) {
   const schedule = getScheduledShiftForDate(date)
   if (schedule.isClosed) return null
@@ -129,6 +156,8 @@ export function computeGuardHoursReport({
         clockIn: dayShift.clockInAt,
         clockOut: dayShift.clockOutAt,
         hoursWorked: dayShift.hoursWorked,
+        durationMinutes: durationFromShiftTimes(dayShift.clockInAt, dayShift.clockOutAt).totalMinutes,
+        hoursLabel: formatShiftDuration(dayShift.clockInAt, dayShift.clockOutAt),
         clockInCheckpoint: dayShift.clockInCheckpoint,
         isAdjusted: dayShift.isAdjusted,
       })
@@ -136,11 +165,16 @@ export function computeGuardHoursReport({
   }
 
   const totalByGuard = rows.reduce((acc, row) => {
-    acc[row.guardId] = acc[row.guardId] || { name: row.guardName, hours: 0, days: 0 }
+    acc[row.guardId] = acc[row.guardId] || { name: row.guardName, hours: 0, totalMinutes: 0, days: 0 }
     acc[row.guardId].hours += row.hoursWorked
+    acc[row.guardId].totalMinutes += row.durationMinutes
     acc[row.guardId].days += 1
     return acc
   }, {})
+
+  for (const guardId of Object.keys(totalByGuard)) {
+    totalByGuard[guardId].hoursLabel = formatDurationFromMinutes(totalByGuard[guardId].totalMinutes)
+  }
 
   return { rows, totalByGuard }
 }
