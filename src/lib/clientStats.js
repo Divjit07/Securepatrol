@@ -1,5 +1,5 @@
 import { getScheduledShiftForDate, shiftBounds } from '../hooks/useClientShift.js'
-import { isStatutoryHolidayAdjustment } from './shiftAdjustments.js'
+import { isStatutoryHolidayAdjustment, clientStatutoryHolidayLabel } from './shiftAdjustments.js'
 
 export function getPatrolCheckpoints(checkpoints = []) {
   return checkpoints.filter((cp) => (cp.checkpoint_role || 'patrol') !== 'shift_clock_out')
@@ -127,6 +127,8 @@ export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustm
     signedInAt,
     onShift,
     isAdjusted,
+    isStatutoryHoliday: isStatutoryHolidayAdjustment(adjustment),
+    statutoryHolidayLabel: adjustment ? clientStatutoryHolidayLabel(adjustment.note) : null,
     clockInCheckpoint: clockInScan
       ? checkpoints.find((cp) => cp.id === clockInScan.checkpoint_id)?.name
       : 'Manual entry',
@@ -170,6 +172,8 @@ export function computeGuardHoursReport({
           : formatShiftDuration(dayShift.clockInAt, dayShift.clockOutAt),
         clockInCheckpoint: dayShift.clockInCheckpoint,
         isAdjusted: dayShift.isAdjusted,
+        isStatutoryHoliday: dayShift.isStatutoryHoliday,
+        statutoryHolidayLabel: dayShift.statutoryHolidayLabel,
       })
     }
   }

@@ -18,6 +18,7 @@ import {
   saveShiftAdjustment,
   shiftAdjustmentKey,
   statutoryHolidayNote,
+  statutoryHolidayName,
   toTimeInputValue,
 } from '../lib/shiftAdjustments.js'
 
@@ -49,7 +50,6 @@ export default function AdminShiftClock() {
   const [message, setMessage] = useState(null)
   const [editing, setEditing] = useState(null)
   const [saving, setSaving] = useState(false)
-  const [holidayName, setHolidayName] = useState('')
 
   const scheduled = useMemo(() => getScheduledShiftForDate(date), [date])
 
@@ -160,15 +160,15 @@ export default function AdminShiftClock() {
       clockInAt: combineDateAndTime(date, scheduled.start),
       clockOutAt: combineDateAndTime(date, scheduled.end),
     }
+    const isHoliday = statutoryHoliday || isStatutoryHolidayAdjustment(row.adjustment)
 
     setEditing({
       guardId: row.guard.id,
       clockIn: toTimeInputValue(defaults.clockInAt),
       clockOut: toTimeInputValue(defaults.clockOutAt),
-      note: statutoryHoliday
-        ? statutoryHolidayNote(holidayName)
-        : row.adjustment?.note || '',
-      statutoryHoliday,
+      statutoryHoliday: isHoliday,
+      holidayName: isHoliday ? statutoryHolidayName(row.adjustment?.note) : '',
+      note: row.adjustment?.note || '',
     })
     setMessage(null)
   }
@@ -191,16 +191,27 @@ export default function AdminShiftClock() {
         throw new Error('Clock-out must be after clock-in')
       }
 
+      let note = editing.note
+      if (editing.statutoryHoliday) {
+        if (!editing.holidayName?.trim()) {
+          throw new Error('Enter a holiday name (e.g. Canada Day)')
+        }
+        note = statutoryHolidayNote(editing.holidayName)
+      }
+
       await saveShiftAdjustment({
         siteId: selectedSite,
         guardId,
         shiftDate: date,
         clockInAt: clockInAt.toISOString(),
         clockOutAt: clockOutAt.toISOString(),
-        note: editing.note,
+        note,
       })
 
-      setMessage({ type: 'success', text: 'Shift times saved.' })
+      setMessage({
+        type: 'success',
+        text: editing.statutoryHoliday ? 'Statutory holiday saved.' : 'Shift times saved.',
+      })
       setEditing(null)
       await loadSiteData()
     } catch (err) {
@@ -228,113 +239,11 @@ export default function AdminShiftClock() {
     }
   }
 
-  const handleCreditHolidayForAll = async () => {
-    if (!holidayName.trim()) {
-      setMessage({ type: 'error', text: 'Enter a holiday name first (e.g. Canada Day).' })
-      return
-    }
-
-    setSaving(true)
-    setMessage(null)
-
-    try {
-      const clockInAt = combineDateAndTime(date, scheduled.start)
-      const clockOutAt = combineDateAndTime(date, scheduled.end)
-      const note = statutoryHolidayNote(holidayName)
-      let credited = 0
-      let skipped = 0
-
-      for (const guard of siteGuards) {
-        const adjustment = adjustments[shiftAdjustmentKey(guard.id, date)]
-        if (adjustment) {
-          skipped += 1
-          continue
-        }
-
-        const guardScans = scans.filter((s) => s.guard_id === guard.id)
-        const existingShift = computeGuardShiftForDay(guardScans, checkpoints, { date })
-        if (existingShift) {
-          skipped += 1
-          continue
-        }
-
-        await saveShiftAdjustment({
-          siteId: selectedSite,
-          guardId: guard.id,
-          shiftDate: date,
-          clockInAt: clockInAt.toISOString(),
-          clockOutAt: clockOutAt.toISOString(),
-          note,
-        })
-        credited += 1
-      }
-
-      if (credited === 0) {
-        setMessage({
-          type: 'error',
-          text: 'No guards were credited. Everyone already has a shift or override for this date.',
-        })
-      } else {
-        setMessage({
-          type: 'success',
-          text: `Statutory holiday added for ${credited} guard${credited === 1 ? '' : 's'}${skipped ? ` (${skipped} skipped)` : ''}.`,
-        })
-      }
-
-      setEditing(null)
-      await loadSiteData()
-    } catch (err) {
-      setMessage({ type: 'error', text: err.message || 'Failed to add statutory holiday' })
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleRemoveHolidayForAll = async () => {
-    const holidayAdjustments = siteGuards.filter((guard) =>
-      isStatutoryHolidayAdjustment(adjustments[shiftAdjustmentKey(guard.id, date)]),
-    )
-
-    if (!holidayAdjustments.length) {
-      setMessage({ type: 'error', text: 'No statutory holiday entries to remove for this date.' })
-      return
-    }
-
-    if (
-      !window.confirm(
-        `Remove statutory holiday entries for ${holidayAdjustments.length} guard${holidayAdjustments.length === 1 ? '' : 's'} on this date?`,
-      )
-    ) {
-      return
-    }
-
-    setSaving(true)
-    setMessage(null)
-
-    try {
-      for (const guard of holidayAdjustments) {
-        await removeShiftAdjustment(guard.id, date)
-      }
-
-      setMessage({ type: 'success', text: 'Statutory holiday entries removed.' })
-      setEditing(null)
-      await loadSiteData()
-    } catch (err) {
-      setMessage({ type: 'error', text: err.message || 'Failed to remove statutory holiday' })
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const statutoryHolidayCount = rows.filter(({ adjustment }) =>
-    isStatutoryHolidayAdjustment(adjustment),
-  ).length
-
   return (
     <Layout variant="admin">
       <PageHeader
         title="Shift Clock"
-        description="View guard sign-in times, edit clock-in/out, or add paid statutory holidays when guards did not scan."
+        description="View guard sign-in times, edit clock-in/out per guard, or add a paid statutory holiday with a note."
       />
 
       <div className="sp-card mb-6 flex flex-wrap items-end gap-4 p-6">
@@ -370,54 +279,10 @@ export default function AdminShiftClock() {
         </div>
       ) : (
         <>
-          <p className="mb-4 text-sm text-slate-600">{scheduled.scheduleLabel}</p>
-
-          <div className="sp-card mb-6 p-6">
-            <div className="flex items-start gap-3">
-              <CalendarHeart className="mt-0.5 h-5 w-5 shrink-0 text-brand-600" />
-              <div className="flex-1">
-                <h2 className="font-semibold text-slate-900">Statutory holiday</h2>
-                <p className="mt-1 text-sm text-slate-600">
-                  Add a paid holiday for guards who did not scan Main Entrance. Uses the scheduled shift
-                  hours for this date ({scheduled.start}–{scheduled.end}).
-                </p>
-                <div className="mt-4 flex flex-wrap items-end gap-3">
-                  <div className="min-w-[220px] flex-1">
-                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                      Holiday name
-                    </label>
-                    <input
-                      type="text"
-                      className="sp-input w-full"
-                      value={holidayName}
-                      onChange={(e) => setHolidayName(e.target.value)}
-                      placeholder="e.g. Canada Day"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    disabled={saving || !siteGuards.length}
-                    onClick={handleCreditHolidayForAll}
-                    className="sp-btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm"
-                  >
-                    <CalendarHeart className="h-4 w-4" />
-                    Credit all guards
-                  </button>
-                  {statutoryHolidayCount > 0 && (
-                    <button
-                      type="button"
-                      disabled={saving}
-                      onClick={handleRemoveHolidayForAll}
-                      className="inline-flex items-center gap-2 rounded-lg border border-amber-300 px-4 py-2 text-sm font-medium text-amber-800 hover:bg-amber-50"
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                      Remove holiday ({statutoryHolidayCount})
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
+          <p className="mb-4 text-sm text-slate-600">
+            {scheduled.scheduleLabel}. Use <strong>Add holiday</strong> on a guard to credit hours
+            (e.g. 11:00 AM–8:00 PM) with a statutory holiday note — it will show on the client portal.
+          </p>
 
           {message && (
             <p
@@ -510,15 +375,41 @@ export default function AdminShiftClock() {
                           <td className="px-6 py-4">
                             {isEditing ? (
                               <div className="space-y-2">
-                                <textarea
-                                  className="sp-input w-full min-w-[200px]"
-                                  rows={2}
-                                  placeholder="Note (optional)"
-                                  value={editing.note}
-                                  onChange={(e) =>
-                                    setEditing((prev) => ({ ...prev, note: e.target.value }))
-                                  }
-                                />
+                                <label className="flex items-center gap-2 text-xs font-medium text-slate-700">
+                                  <input
+                                    type="checkbox"
+                                    checked={editing.statutoryHoliday}
+                                    onChange={(e) =>
+                                      setEditing((prev) => ({
+                                        ...prev,
+                                        statutoryHoliday: e.target.checked,
+                                        holidayName: e.target.checked ? prev.holidayName : '',
+                                      }))
+                                    }
+                                  />
+                                  Statutory holiday
+                                </label>
+                                {editing.statutoryHoliday ? (
+                                  <input
+                                    type="text"
+                                    className="sp-input w-full min-w-[200px]"
+                                    placeholder="Holiday name, e.g. Canada Day"
+                                    value={editing.holidayName}
+                                    onChange={(e) =>
+                                      setEditing((prev) => ({ ...prev, holidayName: e.target.value }))
+                                    }
+                                  />
+                                ) : (
+                                  <textarea
+                                    className="sp-input w-full min-w-[200px]"
+                                    rows={2}
+                                    placeholder="Note (optional)"
+                                    value={editing.note}
+                                    onChange={(e) =>
+                                      setEditing((prev) => ({ ...prev, note: e.target.value }))
+                                    }
+                                  />
+                                )}
                                 <div className="flex flex-wrap gap-2">
                                   <button
                                     type="button"
@@ -543,7 +434,9 @@ export default function AdminShiftClock() {
                                 {!dayShift && (
                                   <button
                                     type="button"
-                                    onClick={() => startEdit({ guard, dayShift, adjustment }, { statutoryHoliday: true })}
+                                    onClick={() =>
+                                      startEdit({ guard, dayShift, adjustment }, { statutoryHoliday: true })
+                                    }
                                     className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-medium text-emerald-800 hover:bg-emerald-50"
                                   >
                                     <CalendarHeart className="h-3.5 w-3.5" />

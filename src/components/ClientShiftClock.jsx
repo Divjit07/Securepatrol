@@ -30,13 +30,16 @@ export default function ClientShiftClock({ guardShifts, scheduled, loading }) {
           {guardShifts.map((row) => (
             <div key={row.guardId} className="px-5 py-4">
               <p className="font-semibold text-slate-900">{row.guardName}</p>
+              {row.statutoryHolidayLabel && (
+                <p className="mt-1 text-xs font-medium text-brand-700">{row.statutoryHolidayLabel}</p>
+              )}
               <div className="mt-2 space-y-1 text-sm text-slate-600">
                 <p className="flex items-center gap-2">
                   <LogIn className="h-4 w-4 text-green-600" />
-                  Signed in {formatShiftTime(row.clockInAt)}
-                  {!row.isAdjusted && row.clockInCheckpoint ? ` · ${row.clockInCheckpoint}` : ''}
+                  {row.isStatutoryHoliday ? 'Clock in' : 'Signed in'} {formatShiftTime(row.clockInAt)}
+                  {!row.isStatutoryHoliday && row.clockInCheckpoint ? ` · ${row.clockInCheckpoint}` : ''}
                 </p>
-                {!row.isAdjusted &&
+                {!row.isStatutoryHoliday &&
                   row.signedInAt &&
                   row.signedInAt.getTime() !== row.clockInAt.getTime() && (
                     <p className="pl-6 text-xs text-slate-400">
@@ -45,8 +48,11 @@ export default function ClientShiftClock({ guardShifts, scheduled, loading }) {
                   )}
                 <p className="flex items-center gap-2">
                   <LogOut className="h-4 w-4 text-brand-600" />
-                  Shift ends {formatShiftTime(row.clockOutAt)}
+                  {row.isStatutoryHoliday ? 'Clock out' : 'Shift ends'} {formatShiftTime(row.clockOutAt)}
                 </p>
+                {row.hoursLabel && (
+                  <p className="text-xs text-slate-500">{row.hoursLabel}</p>
+                )}
                 {row.onShift && (
                   <p className="pt-1 text-xs font-medium uppercase tracking-wide text-brand-600">On shift</p>
                 )}

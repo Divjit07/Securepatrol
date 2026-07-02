@@ -15,6 +15,19 @@ export function isStatutoryHolidayAdjustment(adjustment) {
   return Boolean(adjustment?.note?.startsWith(STATUTORY_HOLIDAY_NOTE_PREFIX))
 }
 
+export function statutoryHolidayName(note) {
+  if (!note?.startsWith(STATUTORY_HOLIDAY_NOTE_PREFIX)) return ''
+  return note.replace(`${STATUTORY_HOLIDAY_NOTE_PREFIX} — `, '').trim()
+}
+
+/** Client-facing label, e.g. "Canada Day — statutory holiday" */
+export function clientStatutoryHolidayLabel(note) {
+  if (!isStatutoryHolidayAdjustment({ note })) return null
+  const name = statutoryHolidayName(note)
+  if (!name) return 'Statutory holiday'
+  return `${name} — statutory holiday`
+}
+
 export function mapShiftAdjustments(rows = []) {
   return Object.fromEntries(
     rows.map((row) => [

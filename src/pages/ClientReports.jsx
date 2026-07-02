@@ -222,13 +222,14 @@ export default function ClientReports() {
 
     autoTable(doc, {
       startY: 62,
-      head: [['Date', 'Guard', 'Clock In', 'Clock Out', 'Hours']],
+      head: [['Date', 'Guard', 'Clock In', 'Clock Out', 'Hours', 'Day type']],
       body: hoursReport.rows.map((row) => [
         row.date,
         row.guardName,
         row.clockIn.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
         row.clockOut.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
         String(row.hoursLabel),
+        row.statutoryHolidayLabel || 'Regular shift',
       ]),
     })
 
@@ -406,6 +407,7 @@ export default function ClientReports() {
                       <th className="px-4 py-3 font-medium">Clock in</th>
                       <th className="px-4 py-3 font-medium">Clock out</th>
                       <th className="px-4 py-3 font-medium">Hours</th>
+                      <th className="px-4 py-3 font-medium">Day type</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -416,6 +418,9 @@ export default function ClientReports() {
                         <td className="px-4 py-3">{formatShiftTime(row.clockIn)}</td>
                         <td className="px-4 py-3">{formatShiftTime(row.clockOut)}</td>
                         <td className="px-4 py-3 font-semibold">{row.hoursLabel}</td>
+                        <td className="px-4 py-3 text-brand-700">
+                          {row.statutoryHolidayLabel || 'Regular shift'}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

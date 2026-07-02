@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { shiftBounds } from './useClientShift.js'
-import { countPatrolRounds, computeGuardShiftForDay } from '../lib/clientStats.js'
+import { countPatrolRounds, computeGuardShiftForDay, formatShiftDuration } from '../lib/clientStats.js'
 import { fetchShiftAdjustmentsForDate, mapShiftAdjustments, shiftAdjustmentKey } from '../lib/shiftAdjustments.js'
 
 export function useClientSiteData(siteId, date, shift) {
@@ -138,7 +138,10 @@ export function useClientSiteData(siteId, date, shift) {
         clockInCheckpoint: dayShift.clockInCheckpoint,
         onShift: dayShift.onShift,
         isAdjusted: dayShift.isAdjusted,
+        isStatutoryHoliday: dayShift.isStatutoryHoliday,
+        statutoryHolidayLabel: dayShift.statutoryHolidayLabel,
         hoursWorked: dayShift.hoursWorked,
+        hoursLabel: formatShiftDuration(dayShift.clockInAt, dayShift.clockOutAt),
       }
     })
     .filter(Boolean)
