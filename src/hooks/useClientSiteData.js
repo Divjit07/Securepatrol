@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
-import { shiftBounds } from './useClientShift.js'
+import { shiftBounds, shiftScanBounds } from './useClientShift.js'
 import { countPatrolRounds, computeGuardShiftForDay, formatShiftDuration } from '../lib/clientStats.js'
 import { fetchShiftAdjustmentsForDate, mapShiftAdjustments, shiftAdjustmentKey } from '../lib/shiftAdjustments.js'
 
@@ -52,7 +52,7 @@ export function useClientSiteData(siteId, date, shift) {
     checkpointIdsRef.current = new Set(checkpointList.map((cp) => cp.id))
 
     if (cps?.length && !shift.isClosed) {
-      const { start, end } = shiftBounds(date, shift.start, shift.end)
+      const { start, end } = shiftScanBounds(date, shift.start, shift.end)
       const [{ data: scanData }, adjRows] = await Promise.all([
         supabase
           .from('scans')
@@ -89,7 +89,7 @@ export function useClientSiteData(siteId, date, shift) {
         if (!checkpointIdsRef.current.has(checkpointId)) return
         if (payload.new.status !== 'pass') return
 
-        const { start, end } = shiftBounds(date, shift.start, shift.end)
+        const { start, end } = shiftScanBounds(date, shift.start, shift.end)
         const scannedAt = new Date(payload.new.scanned_at)
         if (scannedAt < start || scannedAt > end) return
 
@@ -118,7 +118,11 @@ export function useClientSiteData(siteId, date, shift) {
   }, {})
 
   const scannedCount = checkpoints.filter((cp) => scansByCheckpoint[cp.id]).length
-  const { rounds, patrolScanCount, patrolCheckpointCount } = countPatrolRounds(scans, checkpoints)
+  const { rounds, patrolScanCount, patrolCheckpointCount } = countPatrolRounds(scans, checkpoints, {
+    date,
+    shiftStart: shift.start,
+    shiftEnd: shift.end,
+  })
 
   const guardShifts = guards
     .map((guard) => {
@@ -140,6 +144,7 @@ export function useClientSiteData(siteId, date, shift) {
         isAdjusted: dayShift.isAdjusted,
         isStatutoryHoliday: dayShift.isStatutoryHoliday,
         statutoryHolidayLabel: dayShift.statutoryHolidayLabel,
+        arrivedEarly: dayShift.arrivedEarly,
         hoursWorked: dayShift.hoursWorked,
         hoursLabel: formatShiftDuration(dayShift.clockInAt, dayShift.clockOutAt),
       }

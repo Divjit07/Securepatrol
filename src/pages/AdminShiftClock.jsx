@@ -7,7 +7,7 @@ import { useAuth } from '../hooks/useAuth.jsx'
 import { supabase } from '../lib/supabase.js'
 import { fetchSitesForAdmin } from '../lib/scans.js'
 import { fetchGuardsWithSites } from '../lib/guards.js'
-import { getScheduledShiftForDate, shiftBounds } from '../hooks/useClientShift.js'
+import { getScheduledShiftForDate, shiftBounds, shiftScanBounds } from '../hooks/useClientShift.js'
 import { computeGuardShiftForDay, formatShiftDuration, formatShiftTime } from '../lib/clientStats.js'
 import {
   combineDateAndTime,
@@ -26,7 +26,7 @@ function findClockInScan(guardScans, checkpoints, dateStr, shift) {
   const clockInIds = new Set(
     checkpoints.filter((cp) => cp.checkpoint_role === 'shift_clock_in').map((cp) => cp.id),
   )
-  const { start, end } = shiftBounds(dateStr, shift.start, shift.end)
+  const { start, end } = shiftScanBounds(dateStr, shift.start, shift.end)
 
   return [...guardScans]
     .filter((s) => s.status === 'pass')
@@ -100,7 +100,7 @@ export default function AdminShiftClock() {
         return
       }
 
-      const { start, end } = shiftBounds(date, scheduled.start, scheduled.end)
+      const { start, end } = shiftScanBounds(date, scheduled.start, scheduled.end)
       const { data: scanData, error } = await supabase
         .from('scans')
         .select('id, guard_id, checkpoint_id, scanned_at, status')

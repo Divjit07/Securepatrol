@@ -1,16 +1,24 @@
-import { getScheduledShiftForDate, shiftBounds } from '../hooks/useClientShift.js'
+import { getScheduledShiftForDate, shiftBounds, shiftScanBounds } from '../hooks/useClientShift.js'
 import { isStatutoryHolidayAdjustment, clientStatutoryHolidayLabel } from './shiftAdjustments.js'
 
 export function getPatrolCheckpoints(checkpoints = []) {
   return checkpoints.filter((cp) => (cp.checkpoint_role || 'patrol') !== 'shift_clock_out')
 }
 
-export function countPatrolRounds(scans = [], checkpoints = []) {
+export function countPatrolRounds(scans = [], checkpoints = [], { date, shiftStart, shiftEnd } = {}) {
   const roundCps = getPatrolCheckpoints(checkpoints)
   if (!roundCps.length) return { rounds: 0, patrolScanCount: 0, patrolCheckpointCount: 0 }
 
   const roundIds = new Set(roundCps.map((cp) => cp.id))
-  const roundScans = scans.filter((s) => s.status === 'pass' && roundIds.has(s.checkpoint_id))
+  let roundScans = scans.filter((s) => s.status === 'pass' && roundIds.has(s.checkpoint_id))
+
+  if (date && shiftStart && shiftEnd) {
+    const { start, end } = shiftBounds(date, shiftStart, shiftEnd)
+    roundScans = roundScans.filter((s) => {
+      const t = new Date(s.scanned_at)
+      return t >= start && t <= end
+    })
+  }
 
   return {
     rounds: Math.floor(roundScans.length / roundCps.length),
@@ -89,13 +97,13 @@ export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustm
     checkpoints.filter((cp) => cp.checkpoint_role === 'shift_clock_in').map((cp) => cp.id),
   )
 
-  const { start, end } = shiftBounds(date, shiftStart, shiftEnd)
-  const inWindow = passScans.filter((s) => {
-    const t = new Date(s.scanned_at)
-    return t >= start && t <= end
-  })
+  const { start: scanStart, end } = shiftScanBounds(date, shiftStart, shiftEnd)
+  const { start: shiftStartBound } = shiftBounds(date, shiftStart, shiftEnd)
 
-  const clockInScan = inWindow.find((s) => clockInIds.has(s.checkpoint_id))
+  const clockInScan = passScans.find((s) => {
+    const t = new Date(s.scanned_at)
+    return t >= scanStart && t <= end && clockInIds.has(s.checkpoint_id)
+  })
 
   if (!clockInScan && !adjustment) return null
 
@@ -107,6 +115,16 @@ export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustm
   let clockOutAt = defaultClockOut
   let hoursWorked = fixedShiftHours(date)
   let isAdjusted = false
+  const arrivedEarly = Boolean(clockInScan && signedInAt < defaultClockIn)
+
+  if (arrivedEarly && !adjustment) {
+    clockInAt = signedInAt
+  }
+
+  const inWindow = passScans.filter((s) => {
+    const t = new Date(s.scanned_at)
+    return t >= shiftStartBound && t <= end
+  })
 
   if (adjustment) {
     clockInAt = new Date(adjustment.clock_in_at)
@@ -129,6 +147,7 @@ export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustm
     isAdjusted,
     isStatutoryHoliday: isStatutoryHolidayAdjustment(adjustment),
     statutoryHolidayLabel: adjustment ? clientStatutoryHolidayLabel(adjustment.note) : null,
+    arrivedEarly,
     clockInCheckpoint: clockInScan
       ? checkpoints.find((cp) => cp.id === clockInScan.checkpoint_id)?.name
       : 'Manual entry',

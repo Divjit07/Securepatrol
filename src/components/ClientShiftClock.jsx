@@ -33,6 +33,9 @@ export default function ClientShiftClock({ guardShifts, scheduled, loading }) {
               {row.statutoryHolidayLabel && (
                 <p className="mt-1 text-xs font-medium text-brand-700">{row.statutoryHolidayLabel}</p>
               )}
+              {row.arrivedEarly && (
+                <p className="mt-1 text-xs font-medium text-green-700">Arrived early</p>
+              )}
               <div className="mt-2 space-y-1 text-sm text-slate-600">
                 <p className="flex items-center gap-2">
                   <LogIn className="h-4 w-4 text-green-600" />
