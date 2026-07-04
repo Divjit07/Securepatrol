@@ -70,6 +70,64 @@ export async function fetchIncidentReportsForSite(siteId, { limit = 100 } = {}) 
   return data || []
 }
 
+export async function fetchIncidentReportsForSites(siteIds, { limit = 100 } = {}) {
+  if (!siteIds?.length) return []
+
+  const { data, error } = await supabase
+    .from('incident_reports')
+    .select(`
+      id,
+      site_id,
+      description,
+      guard_lat,
+      guard_lng,
+      photo_path,
+      created_at,
+      guard:profiles!guard_id(name),
+      site:sites(name)
+    `)
+    .in('site_id', siteIds)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) throw error
+  return data || []
+}
+
+export async function updateIncidentReportDescription(reportId, description) {
+  const trimmed = description.trim()
+  if (trimmed.length < 10) {
+    throw new Error('Report must be at least 10 characters')
+  }
+  if (trimmed.length > 5000) {
+    throw new Error('Report must be under 5000 characters')
+  }
+
+  const { error } = await supabase
+    .from('incident_reports')
+    .update({ description: trimmed })
+    .eq('id', reportId)
+
+  if (error) throw error
+}
+
+export async function deleteIncidentReport(reportId, photoPath) {
+  const { error } = await supabase.from('incident_reports').delete().eq('id', reportId)
+  if (error) throw error
+
+  if (photoPath) {
+    await supabase.storage.from(BUCKET).remove([photoPath])
+  }
+}
+
+export function formatIncidentReportTime(iso) {
+  return new Date(iso).toLocaleString('en-CA', {
+    timeZone: 'America/Toronto',
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  })
+}
+
 export async function getIncidentPhotoSignedUrl(photoPath, expiresIn = 3600) {
   if (!photoPath) return null
 

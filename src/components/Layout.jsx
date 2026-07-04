@@ -6,7 +6,7 @@ import { useAuth } from '../hooks/useAuth.jsx'
 import SyncIndicator from './SyncIndicator.jsx'
 
 export default function Layout({ children, variant = 'admin' }) {
-  const { profile, signOut, canApproveScans, canManageShiftClock } = useAuth()
+  const { profile, signOut, canApproveScans, canManageShiftClock, isSuperAdmin } = useAuth()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -24,6 +24,9 @@ export default function Layout({ children, variant = 'admin' }) {
     { to: '/admin/alerts', label: 'Alerts' },
     ...(canApproveScans ? [{ to: '/admin/approve-scan', label: 'Approve Scan' }] : []),
     ...(canManageShiftClock ? [{ to: '/admin/shift-clock', label: 'Shift Clock' }] : []),
+    ...((canApproveScans || canManageShiftClock || isSuperAdmin)
+      ? [{ to: '/admin/incidents', label: 'Incidents' }]
+      : []),
   ]
 
   const guardLinks = [

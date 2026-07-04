@@ -17,6 +17,7 @@ import Reports from './pages/Reports.jsx'
 import Alerts from './pages/Alerts.jsx'
 import ScanApproval from './pages/ScanApproval.jsx'
 import AdminShiftClock from './pages/AdminShiftClock.jsx'
+import AdminIncidents from './pages/AdminIncidents.jsx'
 import ClientDashboard from './pages/ClientDashboard.jsx'
 import ClientCheckpoints from './pages/ClientCheckpoints.jsx'
 import ClientReports from './pages/ClientReports.jsx'
@@ -155,6 +156,14 @@ export default function App() {
         element={
           <ProtectedRoute requireAdmin>
             <AdminShiftClock />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/incidents"
+        element={
+          <ProtectedRoute requireAdmin>
+            <AdminIncidents />
           </ProtectedRoute>
         }
       />
