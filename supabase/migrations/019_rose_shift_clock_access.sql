@@ -19,10 +19,9 @@ WHERE role IN ('admin', 'super_admin')
   AND name ILIKE 'divjit%'
   AND can_manage_shift_clock = false;
 
--- Rose: shift clock only (not scan approval)
+-- Rose: shift clock only
 UPDATE profiles p
-SET can_manage_shift_clock = true,
-    can_approve_scans = false
+SET can_manage_shift_clock = true
 FROM auth.users u
 WHERE p.id = u.id
   AND lower(u.email) = 'rose@prodsec.ca'
