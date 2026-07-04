@@ -1,4 +1,4 @@
-const CACHE_NAME = 'securepatrol-v12'
+const CACHE_NAME = 'securepatrol-v13'
 const OFFLINE_URLS = ['/', '/index.html', '/manifest.json']
 
 self.addEventListener('install', (event) => {

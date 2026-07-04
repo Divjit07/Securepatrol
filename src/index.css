@@ -79,11 +79,15 @@
   }
 
   .sp-nav-link {
-    @apply rounded-lg px-3.5 py-2 text-sm font-medium text-slate-400 transition hover:text-white;
+    @apply whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[13px] font-medium text-slate-400 transition hover:text-white lg:px-3 lg:py-2 lg:text-sm;
   }
 
   .sp-nav-link-active {
     @apply bg-white/10 text-white shadow-inner;
+  }
+
+  .sp-nav-divider {
+    @apply mx-1 hidden h-5 w-px shrink-0 bg-white/10 lg:block;
   }
 
   .sp-logo-frame {
