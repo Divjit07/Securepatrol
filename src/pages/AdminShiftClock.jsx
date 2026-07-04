@@ -38,7 +38,7 @@ function findClockInScan(guardScans, checkpoints, dateStr, shift) {
 }
 
 export default function AdminShiftClock() {
-  const { user, isSuperAdmin, canApproveScans } = useAuth()
+  const { user, isSuperAdmin, canManageShiftClock } = useAuth()
   const [sites, setSites] = useState([])
   const [guards, setGuards] = useState([])
   const [selectedSite, setSelectedSite] = useState('')
@@ -120,7 +120,7 @@ export default function AdminShiftClock() {
   }
 
   useEffect(() => {
-    if (!user || !canApproveScans) return
+    if (!user || !canManageShiftClock) return
 
     const role = isSuperAdmin ? 'super_admin' : 'admin'
     fetchSitesForAdmin(user.id, role).then((siteList) => {
@@ -129,7 +129,7 @@ export default function AdminShiftClock() {
     })
 
     fetchGuardsWithSites().then(setGuards)
-  }, [user?.id, canApproveScans, isSuperAdmin])
+  }, [user?.id, canManageShiftClock, isSuperAdmin])
 
   useEffect(() => {
     if (!selectedSite) return
@@ -137,7 +137,7 @@ export default function AdminShiftClock() {
     loadSiteData()
   }, [selectedSite, date])
 
-  if (!canApproveScans) {
+  if (!canManageShiftClock) {
     return <Navigate to="/admin" replace />
   }
 

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { isScanApprover, checkScanApproverFromDb } from '../lib/scanApproval.js'
+import { isShiftClockAdmin, checkShiftClockAdminFromDb } from '../lib/shiftClockAccess.js'
 
 const AuthContext = createContext(null)
 
@@ -9,6 +10,7 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [canApproveScans, setCanApproveScans] = useState(false)
+  const [canManageShiftClock, setCanManageShiftClock] = useState(false)
 
   const loadProfile = useCallback(async (userId) => {
     const { data, error } = await supabase
@@ -48,6 +50,7 @@ export function AuthProvider({ children }) {
       } else {
         setProfile(null)
         setCanApproveScans(false)
+        setCanManageShiftClock(false)
       }
       setLoading(false)
     })
@@ -77,26 +80,45 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let cancelled = false
 
-    async function resolveApproverAccess() {
+    async function resolvePrivilegedAccess() {
       if (!user || !isAdmin) {
-        if (!cancelled) setCanApproveScans(false)
+        if (!cancelled) {
+          setCanApproveScans(false)
+          setCanManageShiftClock(false)
+        }
         return
       }
 
       if (isScanApprover(user, profile)) {
         if (!cancelled) setCanApproveScans(true)
+      } else {
+        const fromDb = await checkScanApproverFromDb()
+        if (!cancelled) setCanApproveScans(fromDb === true)
+      }
+
+      if (isShiftClockAdmin(user, profile)) {
+        if (!cancelled) setCanManageShiftClock(true)
         return
       }
 
-      const fromDb = await checkScanApproverFromDb()
-      if (!cancelled) setCanApproveScans(fromDb === true)
+      const shiftFromDb = await checkShiftClockAdminFromDb()
+      if (!cancelled) setCanManageShiftClock(shiftFromDb === true)
     }
 
-    resolveApproverAccess()
+    resolvePrivilegedAccess()
     return () => {
       cancelled = true
     }
-  }, [user?.id, user?.email, profile?.id, profile?.name, profile?.role, profile?.can_approve_scans, isAdmin])
+  }, [
+    user?.id,
+    user?.email,
+    profile?.id,
+    profile?.name,
+    profile?.role,
+    profile?.can_approve_scans,
+    profile?.can_manage_shift_clock,
+    isAdmin,
+  ])
 
   return (
     <AuthContext.Provider
@@ -111,6 +133,7 @@ export function AuthProvider({ children }) {
         isClient,
         isSuperAdmin,
         canApproveScans,
+        canManageShiftClock,
         refreshProfile: () => loadProfile(user?.id).then(setProfile),
       }}
     >
