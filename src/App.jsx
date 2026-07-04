@@ -6,6 +6,7 @@ import GuardDashboard from './pages/GuardDashboard.jsx'
 import ScanScreen from './pages/ScanScreen.jsx'
 import ScanResult from './pages/ScanResult.jsx'
 import GuardHistory from './pages/GuardHistory.jsx'
+import GuardIncidentReport from './pages/GuardIncidentReport.jsx'
 import AdminDashboard from './pages/AdminDashboard.jsx'
 import SiteDashboard from './pages/SiteDashboard.jsx'
 import LiveFeedPage from './pages/LiveFeedPage.jsx'
@@ -64,6 +65,14 @@ export default function App() {
         element={
           <ProtectedRoute requireGuard>
             <GuardHistory />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/guard/incident"
+        element={
+          <ProtectedRoute requireGuard>
+            <GuardIncidentReport />
           </ProtectedRoute>
         }
       />

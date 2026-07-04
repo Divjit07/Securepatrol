@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ScanLine, Building2 } from 'lucide-react'
+import { ScanLine, Building2, AlertTriangle } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import CheckpointCard from '../components/CheckpointCard.jsx'
@@ -53,7 +53,7 @@ export default function GuardDashboard() {
         description={`Good shift, ${profile?.name || 'Guard'}. Track today's checkpoint progress below.`}
       />
 
-      <div className="mb-8 grid gap-4 sm:grid-cols-3">
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="sp-stat-card">
           <div className="flex items-center gap-2 text-slate-500">
             <Building2 className="h-4 w-4" />
@@ -70,6 +70,13 @@ export default function GuardDashboard() {
         <Link to="/guard/scan" className="sp-btn-primary h-full min-h-[5.5rem] text-base">
           <ScanLine className="h-5 w-5" />
           Scan checkpoint
+        </Link>
+        <Link
+          to="/guard/incident"
+          className="sp-btn-secondary flex h-full min-h-[5.5rem] items-center justify-center gap-2 text-base"
+        >
+          <AlertTriangle className="h-5 w-5" />
+          Report incident
         </Link>
       </div>
 

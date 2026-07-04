@@ -50,9 +50,27 @@ supabase functions deploy delete-guard
 supabase functions deploy create-client
 supabase functions deploy list-clients
 supabase functions deploy delete-client
+supabase functions deploy submit-incident-report
 ```
 
 Your project ref is the ID in your Supabase URL: `https://YOUR_PROJECT_REF.supabase.co`
+
+### Guard incident reports (email to admin)
+
+Guards can submit site incident reports from **Report** in the guard portal. Reports are saved in the database and emailed to **admin@prodsec.ca** (optional photo attachment).
+
+1. Run `supabase/migrations/020_incident_reports.sql` in the SQL Editor
+2. Deploy the Edge Function (see commands above)
+3. Create a free [Resend](https://resend.com) account and add your sending domain (or use `onboarding@resend.dev` for testing)
+4. In Supabase → **Edge Functions → Secrets**, set:
+
+```
+RESEND_API_KEY=re_xxxxxxxx
+INCIDENT_REPORT_TO=admin@prodsec.ca
+INCIDENT_REPORT_FROM=SecurePatrol <alerts@yourdomain.com>
+```
+
+`INCIDENT_REPORT_FROM` must use a domain verified in Resend.
 
 ### 2. Configure environment
 

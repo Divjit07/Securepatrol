@@ -29,6 +29,7 @@ export default function Layout({ children, variant = 'admin' }) {
   const guardLinks = [
     { to: '/guard', label: 'Dashboard', end: true },
     { to: '/guard/scan', label: 'Scan' },
+    { to: '/guard/incident', label: 'Report' },
     { to: '/guard/history', label: 'History' },
   ]
 
