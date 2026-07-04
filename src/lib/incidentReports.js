@@ -80,3 +80,16 @@ export async function getIncidentPhotoSignedUrl(photoPath, expiresIn = 3600) {
   if (error) throw error
   return data?.signedUrl || null
 }
+
+export function isHeicPhotoPath(photoPath) {
+  return /\.heic$/i.test(photoPath || '')
+}
+
+/** Download photo bytes (uses same storage RLS as signed URLs). */
+export async function downloadIncidentPhoto(photoPath) {
+  if (!photoPath) return null
+
+  const { data, error } = await supabase.storage.from(BUCKET).download(photoPath)
+  if (error) throw error
+  return data
+}

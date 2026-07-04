@@ -4,7 +4,7 @@ import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { supabase } from '../lib/supabase.js'
-import { fetchIncidentReportsForSite, getIncidentPhotoSignedUrl } from '../lib/incidentReports.js'
+import { fetchIncidentReportsForSite, getIncidentPhotoSignedUrl, isHeicPhotoPath } from '../lib/incidentReports.js'
 
 function formatReportTime(iso) {
   return new Date(iso).toLocaleString('en-CA', {
@@ -27,6 +27,7 @@ export default function ClientIncidents() {
   const [selected, setSelected] = useState(null)
   const [photoUrl, setPhotoUrl] = useState(null)
   const [photoLoading, setPhotoLoading] = useState(false)
+  const [photoError, setPhotoError] = useState(null)
 
   useEffect(() => {
     if (!siteId) return
@@ -46,6 +47,7 @@ export default function ClientIncidents() {
   const openReport = async (report) => {
     setSelected(report)
     setPhotoUrl(null)
+    setPhotoError(null)
 
     if (!report.photo_path) return
 
@@ -55,6 +57,7 @@ export default function ClientIncidents() {
       setPhotoUrl(url)
     } catch (err) {
       console.error(err)
+      setPhotoError(err.message || 'Could not load photo')
     } finally {
       setPhotoLoading(false)
     }
@@ -63,6 +66,7 @@ export default function ClientIncidents() {
   const closeReport = () => {
     setSelected(null)
     setPhotoUrl(null)
+    setPhotoError(null)
   }
 
   if (!siteId) {
@@ -185,13 +189,38 @@ export default function ClientIncidents() {
                       <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
                     </div>
                   ) : photoUrl ? (
-                    <img
-                      src={photoUrl}
-                      alt="Incident"
-                      className="mt-2 max-h-80 w-full rounded-lg border border-slate-200 object-contain"
-                    />
+                    isHeicPhotoPath(selected.photo_path) ? (
+                      <a
+                        href={photoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:text-brand-700"
+                      >
+                        Open photo (iPhone format)
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    ) : (
+                      <>
+                        <img
+                          src={photoUrl}
+                          alt="Incident"
+                          className="mt-2 max-h-80 w-full rounded-lg border border-slate-200 object-contain"
+                        />
+                        <a
+                          href={photoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-2 inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-brand-600"
+                        >
+                          Open full size
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </>
+                    )
                   ) : (
-                    <p className="mt-2 text-sm text-slate-500">Photo could not be loaded.</p>
+                    <p className="mt-2 text-sm text-red-600">
+                      {photoError || 'Photo could not be loaded.'}
+                    </p>
                   )}
                 </div>
               )}
