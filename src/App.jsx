@@ -20,6 +20,7 @@ import AdminShiftClock from './pages/AdminShiftClock.jsx'
 import ClientDashboard from './pages/ClientDashboard.jsx'
 import ClientCheckpoints from './pages/ClientCheckpoints.jsx'
 import ClientReports from './pages/ClientReports.jsx'
+import ClientIncidents from './pages/ClientIncidents.jsx'
 
 function HomeRedirect() {
   const { user, isAdmin, isClient, loading } = useAuth()
@@ -179,6 +180,14 @@ export default function App() {
         element={
           <ProtectedRoute requireClient>
             <ClientReports />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/client/incidents"
+        element={
+          <ProtectedRoute requireClient>
+            <ClientIncidents />
           </ProtectedRoute>
         }
       />

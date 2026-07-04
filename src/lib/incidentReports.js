@@ -49,3 +49,34 @@ export async function submitIncidentReport({ description, photoPath, guardLat, g
   if (data?.error) throw new Error(data.error)
   return data
 }
+
+export async function fetchIncidentReportsForSite(siteId, { limit = 100 } = {}) {
+  const { data, error } = await supabase
+    .from('incident_reports')
+    .select(`
+      id,
+      description,
+      guard_lat,
+      guard_lng,
+      photo_path,
+      created_at,
+      guard:profiles!guard_id(name)
+    `)
+    .eq('site_id', siteId)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) throw error
+  return data || []
+}
+
+export async function getIncidentPhotoSignedUrl(photoPath, expiresIn = 3600) {
+  if (!photoPath) return null
+
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .createSignedUrl(photoPath, expiresIn)
+
+  if (error) throw error
+  return data?.signedUrl || null
+}
