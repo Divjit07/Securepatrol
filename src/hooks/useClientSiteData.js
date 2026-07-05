@@ -4,7 +4,7 @@ import { shiftBounds, shiftScanBounds } from './useClientShift.js'
 import { countPatrolRounds, computeGuardShiftForDay, formatShiftDuration } from '../lib/clientStats.js'
 import { fetchShiftAdjustmentsForDate, mapShiftAdjustments, shiftAdjustmentKey } from '../lib/shiftAdjustments.js'
 
-export function useClientSiteData(siteId, date, shift) {
+export function useClientSiteData(siteId, date, shift, guardId = null) {
   const [site, setSite] = useState(null)
   const [floors, setFloors] = useState([])
   const [checkpoints, setCheckpoints] = useState([])
@@ -54,14 +54,18 @@ export function useClientSiteData(siteId, date, shift) {
     if (cps?.length && !shift.isClosed) {
       const { start, end } = shiftScanBounds(date, shift.start, shift.end)
       const [{ data: scanData }, adjRows] = await Promise.all([
-        supabase
-          .from('scans')
-          .select('*, profiles:guard_id(name)')
-          .in('checkpoint_id', cps.map((c) => c.id))
-          .eq('status', 'pass')
-          .gte('scanned_at', start.toISOString())
-          .lte('scanned_at', end.toISOString())
-          .order('scanned_at', { ascending: false }),
+        (() => {
+          let query = supabase
+            .from('scans')
+            .select('*, profiles:guard_id(name)')
+            .in('checkpoint_id', cps.map((c) => c.id))
+            .eq('status', 'pass')
+            .gte('scanned_at', start.toISOString())
+            .lte('scanned_at', end.toISOString())
+            .order('scanned_at', { ascending: false })
+          if (guardId) query = query.eq('guard_id', guardId)
+          return query
+        })(),
         fetchShiftAdjustmentsForDate(siteId, date),
       ])
 
@@ -73,7 +77,7 @@ export function useClientSiteData(siteId, date, shift) {
     }
 
     setLoading(false)
-  }, [siteId, date, shift.start, shift.end, shift.isClosed])
+  }, [siteId, date, shift.start, shift.end, shift.isClosed, guardId])
 
   useEffect(() => {
     loadData()
@@ -88,6 +92,7 @@ export function useClientSiteData(siteId, date, shift) {
         const checkpointId = payload.new.checkpoint_id
         if (!checkpointIdsRef.current.has(checkpointId)) return
         if (payload.new.status !== 'pass') return
+        if (guardId && payload.new.guard_id !== guardId) return
 
         const { start, end } = shiftScanBounds(date, shift.start, shift.end)
         const scannedAt = new Date(payload.new.scanned_at)
@@ -108,7 +113,7 @@ export function useClientSiteData(siteId, date, shift) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [siteId, date, shift.start, shift.end, shift.isClosed])
+  }, [siteId, date, shift.start, shift.end, shift.isClosed, guardId])
 
   const scansByCheckpoint = scans.reduce((acc, scan) => {
     if (!acc[scan.checkpoint_id] || new Date(scan.scanned_at) > new Date(acc[scan.checkpoint_id].scanned_at)) {
@@ -125,6 +130,7 @@ export function useClientSiteData(siteId, date, shift) {
   })
 
   const guardShifts = guards
+    .filter((guard) => !guardId || guard.id === guardId)
     .map((guard) => {
       const adjustment = adjustments[shiftAdjustmentKey(guard.id, date)]
       const dayShift = computeGuardShiftForDay(
@@ -170,5 +176,6 @@ export function useClientSiteData(siteId, date, shift) {
     patrolCheckpointCount,
     guardShifts,
     groupedByFloor,
+    reload: loadData,
   }
 }
