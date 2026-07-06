@@ -179,3 +179,19 @@ export async function getBestPosition(samples = 3) {
 export function getCurrentPosition() {
   return getBestPosition(1)
 }
+
+/** Best-effort GPS for incident reports — never blocks longer than timeoutMs. */
+export async function getOptionalPosition(timeoutMs = 5000, samples = 1) {
+  if (!navigator.geolocation) return null
+
+  try {
+    return await Promise.race([
+      getBestPosition(samples),
+      new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('GPS timeout')), timeoutMs)
+      }),
+    ])
+  } catch {
+    return null
+  }
+}

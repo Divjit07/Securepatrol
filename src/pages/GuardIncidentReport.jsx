@@ -4,7 +4,7 @@ import { CheckCircle2, FileUp, Loader2, MapPin, Send, X } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
-import { getBestPosition } from '../lib/gps.js'
+import { getOptionalPosition } from '../lib/gps.js'
 import {
   MAX_INCIDENT_ATTACHMENTS,
   formatFileSize,
@@ -13,6 +13,8 @@ import {
   validateIncidentAttachment,
 } from '../lib/incidentReports.js'
 
+const MIN_DESCRIPTION = 10
+
 export default function GuardIncidentReport() {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
@@ -20,6 +22,9 @@ export default function GuardIncidentReport() {
   const [files, setFiles] = useState([])
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState(null)
+
+  const trimmedLength = description.trim().length
+  const canSend = trimmedLength >= MIN_DESCRIPTION
 
   const addFiles = (incoming) => {
     const selected = [...incoming]
@@ -51,8 +56,11 @@ export default function GuardIncidentReport() {
     if (!user || submitting) return
 
     const trimmed = description.trim()
-    if (trimmed.length < 10) {
-      setMessage({ type: 'error', text: 'Please write at least 10 characters about the incident.' })
+    if (trimmed.length < MIN_DESCRIPTION) {
+      setMessage({
+        type: 'error',
+        text: `Please write at least ${MIN_DESCRIPTION} characters about the incident.`,
+      })
       return
     }
 
@@ -60,16 +68,9 @@ export default function GuardIncidentReport() {
     setMessage(null)
 
     try {
-      let guardLat = null
-      let guardLng = null
-
-      try {
-        const position = await getBestPosition(2)
-        guardLat = position.lat
-        guardLng = position.lng
-      } catch {
-        // GPS is helpful but optional for incident reports
-      }
+      const position = await getOptionalPosition(5000, 1)
+      const guardLat = position?.lat ?? null
+      const guardLng = position?.lng ?? null
 
       const attachments = files.length ? await uploadIncidentAttachments(user.id, files) : []
 
@@ -102,7 +103,11 @@ export default function GuardIncidentReport() {
         description={`Report an issue at ${profile?.sites?.name || 'your site'}. Attach photos, PDF, or DOCX (up to ${MAX_INCIDENT_ATTACHMENTS} files).`}
       />
 
-      <form onSubmit={handleSubmit} className="sp-card mx-auto max-w-2xl space-y-5 p-6">
+      <form
+        onSubmit={handleSubmit}
+        noValidate
+        className="sp-card relative z-10 mx-auto max-w-2xl space-y-5 p-6"
+      >
         <div>
           <label htmlFor="incident-description" className="sp-label">
             What happened?
@@ -114,11 +119,16 @@ export default function GuardIncidentReport() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Describe the incident, location on site, people involved, and any action taken…"
-            required
-            minLength={10}
             maxLength={5000}
           />
-          <p className="mt-1 text-xs text-slate-500">{description.trim().length}/5000 characters</p>
+          <p
+            className={`mt-1 text-xs ${
+              canSend ? 'text-slate-500' : 'font-medium text-amber-700'
+            }`}
+          >
+            {trimmedLength}/5000 characters
+            {!canSend ? ` · need at least ${MIN_DESCRIPTION} to send` : ''}
+          </p>
         </div>
 
         <div>
@@ -188,8 +198,8 @@ export default function GuardIncidentReport() {
         <div className="flex flex-wrap gap-3">
           <button
             type="submit"
-            disabled={submitting || description.trim().length < 10}
-            className="sp-btn-primary inline-flex items-center gap-2"
+            disabled={submitting}
+            className="sp-btn-primary inline-flex min-h-11 min-w-[12rem] touch-manipulation items-center justify-center gap-2"
           >
             {submitting ? (
               <>
@@ -203,7 +213,7 @@ export default function GuardIncidentReport() {
               </>
             )}
           </button>
-          <Link to="/guard" className="sp-btn-secondary inline-flex items-center">
+          <Link to="/guard" className="sp-btn-secondary inline-flex min-h-11 items-center touch-manipulation">
             Cancel
           </Link>
         </div>
