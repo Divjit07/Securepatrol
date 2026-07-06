@@ -292,6 +292,23 @@ export async function downloadIncidentPhoto(photoPath) {
   return data
 }
 
+/** Download a signed storage file on mobile and desktop. */
+export async function downloadAttachmentFromUrl(url, filename) {
+  const response = await fetch(url)
+  if (!response.ok) throw new Error('Could not download file')
+
+  const blob = await response.blob()
+  const objectUrl = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = objectUrl
+  anchor.download = filename || 'attachment'
+  anchor.rel = 'noopener'
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(objectUrl)
+}
+
 export function formatFileSize(bytes) {
   if (!bytes && bytes !== 0) return ''
   if (bytes < 1024) return `${bytes} B`

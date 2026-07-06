@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
-import { ExternalLink, FileText, Loader2 } from 'lucide-react'
+import { Download, ExternalLink, FileText, Loader2 } from 'lucide-react'
+import ImageLightbox, { ImageThumbnail } from './ImageLightbox.jsx'
 import {
+  downloadAttachmentFromUrl,
   getIncidentPhotoSignedUrl,
   isHeicPhotoPath,
   normalizeIncidentAttachments,
@@ -11,6 +13,8 @@ export default function IncidentReportAttachments({ report }) {
   const [urls, setUrls] = useState({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [lightbox, setLightbox] = useState(null)
+  const [downloading, setDownloading] = useState(null)
 
   useEffect(() => {
     if (!attachments.length) {
@@ -48,103 +52,144 @@ export default function IncidentReportAttachments({ report }) {
     }
   }, [report?.id, attachments.map((a) => a.path).join('|')])
 
+  const handleDownload = async (att) => {
+    const url = urls[att.path]
+    if (!url) return
+
+    setDownloading(att.path)
+    try {
+      await downloadAttachmentFromUrl(url, att.name)
+    } catch (err) {
+      setError(err.message || 'Could not download file')
+    } finally {
+      setDownloading(null)
+    }
+  }
+
   if (!attachments.length) return null
 
   const images = attachments.filter((a) => a.kind === 'image')
   const documents = attachments.filter((a) => a.kind === 'document')
 
   return (
-    <div className="space-y-4">
-      {loading && (
-        <div className="flex h-24 items-center justify-center rounded-lg bg-slate-50">
-          <Loader2 className="h-6 w-6 animate-spin text-brand-600" />
-        </div>
-      )}
-
-      {error && <p className="text-sm text-red-600">{error}</p>}
-
-      {images.length > 0 && (
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Photos ({images.length})
-          </p>
-          <div className="mt-2 space-y-3">
-            {images.map((att) => {
-              const url = urls[att.path]
-              if (!url) {
-                return (
-                  <p key={att.path} className="text-sm text-slate-500">
-                    {att.name} — could not load preview
-                  </p>
-                )
-              }
-              if (isHeicPhotoPath(att.path)) {
-                return (
-                  <a
-                    key={att.path}
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600"
-                  >
-                    {att.name} (open iPhone photo)
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </a>
-                )
-              }
-              return (
-                <div key={att.path}>
-                  <img
-                    src={url}
-                    alt={att.name}
-                    className="max-h-80 w-full rounded-lg border border-slate-200 object-contain"
-                  />
-                  <a
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-1 inline-flex items-center gap-1 text-xs text-slate-500 hover:text-brand-600"
-                  >
-                    {att.name}
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
-                </div>
-              )
-            })}
+    <>
+      <div className="space-y-4">
+        {loading && (
+          <div className="flex h-24 items-center justify-center rounded-lg bg-slate-50">
+            <Loader2 className="h-6 w-6 animate-spin text-brand-600" />
           </div>
-        </div>
-      )}
+        )}
 
-      {documents.length > 0 && (
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Documents ({documents.length})
-          </p>
-          <ul className="mt-2 space-y-2">
-            {documents.map((att) => {
-              const url = urls[att.path]
-              return (
-                <li key={att.path}>
-                  {url ? (
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50"
+        {error && <p className="text-sm text-red-600">{error}</p>}
+
+        {images.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Photos ({images.length})
+            </p>
+            <p className="mt-1 text-xs text-slate-500">Tap a photo to view full size</p>
+            <div className="mt-2 space-y-3">
+              {images.map((att) => {
+                const url = urls[att.path]
+                if (!url) {
+                  return (
+                    <p key={att.path} className="text-sm text-slate-500">
+                      {att.name} — could not load preview
+                    </p>
+                  )
+                }
+
+                if (isHeicPhotoPath(att.path)) {
+                  return (
+                    <div
+                      key={att.path}
+                      className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3"
                     >
-                      <FileText className="h-4 w-4 shrink-0" />
-                      {att.name}
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </a>
-                  ) : (
-                    <span className="text-sm text-slate-500">{att.name} — unavailable</span>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-        </div>
+                      <span className="text-sm text-slate-700">{att.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleDownload(att)}
+                        className="inline-flex items-center gap-1 text-sm font-medium text-brand-600"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        {downloading === att.path ? 'Saving…' : 'Save photo'}
+                      </button>
+                    </div>
+                  )
+                }
+
+                return (
+                  <div key={att.path} className="space-y-2">
+                    <ImageThumbnail
+                      src={url}
+                      alt={att.name}
+                      onOpen={() => setLightbox({ src: url, alt: att.name, att })}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleDownload(att)}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-600"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      {downloading === att.path ? 'Saving…' : 'Download photo'}
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {documents.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Documents ({documents.length})
+            </p>
+            <ul className="mt-2 space-y-2">
+              {documents.map((att) => {
+                const url = urls[att.path]
+                return (
+                  <li key={att.path}>
+                    {url ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleDownload(att)}
+                          className="inline-flex min-h-11 flex-1 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50 touch-manipulation"
+                        >
+                          <FileText className="h-4 w-4 shrink-0" />
+                          <span className="truncate">{att.name}</span>
+                          <Download className="ml-auto h-3.5 w-3.5 shrink-0" />
+                        </button>
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-600 touch-manipulation"
+                        >
+                          Open
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-slate-500">{att.name} — unavailable</span>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        )}
+      </div>
+
+      {lightbox && (
+        <ImageLightbox
+          src={lightbox.src}
+          alt={lightbox.alt}
+          onClose={() => setLightbox(null)}
+          onDownload={() => handleDownload(lightbox.att)}
+        />
       )}
-    </div>
+    </>
   )
 }
