@@ -1,44 +1,49 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Camera, CheckCircle2, Loader2, MapPin, Send } from 'lucide-react'
+import { CheckCircle2, FileUp, Loader2, MapPin, Send, X } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { getBestPosition } from '../lib/gps.js'
 import {
+  MAX_INCIDENT_ATTACHMENTS,
+  formatFileSize,
   submitIncidentReport,
-  uploadIncidentPhoto,
-  validateIncidentPhoto,
+  uploadIncidentAttachments,
+  validateIncidentAttachment,
 } from '../lib/incidentReports.js'
 
 export default function GuardIncidentReport() {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
   const [description, setDescription] = useState('')
-  const [photo, setPhoto] = useState(null)
-  const [photoPreview, setPhotoPreview] = useState(null)
+  const [files, setFiles] = useState([])
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState(null)
 
-  const handlePhotoChange = (event) => {
-    const file = event.target.files?.[0]
-    if (!file) {
-      setPhoto(null)
-      setPhotoPreview(null)
-      return
-    }
+  const addFiles = (incoming) => {
+    const selected = [...incoming]
+    if (!selected.length) return
 
     try {
-      validateIncidentPhoto(file)
-      setPhoto(file)
-      setPhotoPreview(URL.createObjectURL(file))
+      const next = [...files]
+      for (const file of selected) {
+        if (next.length >= MAX_INCIDENT_ATTACHMENTS) {
+          throw new Error(`You can attach up to ${MAX_INCIDENT_ATTACHMENTS} files`)
+        }
+        validateIncidentAttachment(file)
+        if (next.some((f) => f.name === file.name && f.size === file.size)) continue
+        next.push(file)
+      }
+      setFiles(next)
       setMessage(null)
     } catch (err) {
-      setPhoto(null)
-      setPhotoPreview(null)
       setMessage({ type: 'error', text: err.message })
-      event.target.value = ''
     }
+  }
+
+  const removeFile = (index) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index))
   }
 
   const handleSubmit = async (event) => {
@@ -66,14 +71,11 @@ export default function GuardIncidentReport() {
         // GPS is helpful but optional for incident reports
       }
 
-      let photoPath = null
-      if (photo) {
-        photoPath = await uploadIncidentPhoto(user.id, photo)
-      }
+      const attachments = files.length ? await uploadIncidentAttachments(user.id, files) : []
 
       const result = await submitIncidentReport({
         description: trimmed,
-        photoPath,
+        attachments,
         guardLat,
         guardLng,
       })
@@ -83,8 +85,7 @@ export default function GuardIncidentReport() {
         text: result.message || 'Report sent to admin.',
       })
       setDescription('')
-      setPhoto(null)
-      setPhotoPreview(null)
+      setFiles([])
 
       setTimeout(() => navigate('/guard'), 2000)
     } catch (err) {
@@ -98,7 +99,7 @@ export default function GuardIncidentReport() {
     <Layout variant="guard">
       <PageHeader
         title="Site incident report"
-        description={`Report an issue at ${profile?.sites?.name || 'your site'}. Admin receives this by email at admin@prodsec.ca.`}
+        description={`Report an issue at ${profile?.sites?.name || 'your site'}. Attach photos, PDF, or DOCX (up to ${MAX_INCIDENT_ATTACHMENTS} files).`}
       />
 
       <form onSubmit={handleSubmit} className="sp-card mx-auto max-w-2xl space-y-5 p-6">
@@ -121,34 +122,50 @@ export default function GuardIncidentReport() {
         </div>
 
         <div>
-          <label htmlFor="incident-photo" className="sp-label">
-            Photo (optional)
+          <label htmlFor="incident-files" className="sp-label">
+            Attachments (optional)
           </label>
-          <div className="mt-1.5 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <p className="mt-1 text-xs text-slate-500">
+            Photos, PDF, or DOCX · up to {MAX_INCIDENT_ATTACHMENTS} files · 10 MB each
+          </p>
+          <div className="mt-2">
             <label className="sp-btn-secondary inline-flex cursor-pointer items-center gap-2">
-              <Camera className="h-4 w-4" />
-              {photo ? 'Change photo' : 'Attach photo'}
+              <FileUp className="h-4 w-4" />
+              Add files
               <input
-                id="incident-photo"
+                id="incident-files"
                 type="file"
-                accept="image/*"
-                capture="environment"
+                multiple
+                accept="image/*,.pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 className="sr-only"
-                onChange={handlePhotoChange}
+                onChange={(e) => {
+                  addFiles(e.target.files || [])
+                  e.target.value = ''
+                }}
               />
             </label>
-            {photo && (
-              <span className="text-sm text-slate-600">
-                {photo.name} ({Math.round(photo.size / 1024)} KB)
-              </span>
-            )}
           </div>
-          {photoPreview && (
-            <img
-              src={photoPreview}
-              alt="Incident preview"
-              className="mt-3 max-h-48 rounded-lg border border-slate-200 object-cover"
-            />
+
+          {files.length > 0 && (
+            <ul className="mt-3 space-y-2">
+              {files.map((file, index) => (
+                <li
+                  key={`${file.name}-${file.size}-${index}`}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
+                >
+                  <span className="min-w-0 truncate font-medium text-slate-800">{file.name}</span>
+                  <span className="shrink-0 text-slate-500">{formatFileSize(file.size)}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeFile(index)}
+                    className="shrink-0 rounded p-1 text-slate-400 hover:bg-white hover:text-red-600"
+                    aria-label={`Remove ${file.name}`}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
 

@@ -13,13 +13,13 @@ import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { fetchSitesForAdmin } from '../lib/scans.js'
+import IncidentReportAttachments from '../components/IncidentReportAttachments.jsx'
 import {
   deleteIncidentReport,
   fetchIncidentReportsForSite,
   fetchIncidentReportsForSites,
   formatIncidentReportTime,
-  getIncidentPhotoSignedUrl,
-  isHeicPhotoPath,
+  incidentAttachmentCount,
   updateIncidentReportDescription,
 } from '../lib/incidentReports.js'
 
@@ -42,9 +42,6 @@ export default function AdminIncidents() {
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [message, setMessage] = useState(null)
-  const [photoUrl, setPhotoUrl] = useState(null)
-  const [photoLoading, setPhotoLoading] = useState(false)
-  const [photoError, setPhotoError] = useState(null)
 
   const siteIds = useMemo(() => sites.map((s) => s.id), [sites])
 
@@ -83,32 +80,16 @@ export default function AdminIncidents() {
     loadReports()
   }, [selectedSite, siteIds.join(',')])
 
-  const openReport = async (report) => {
+  const openReport = (report) => {
     setSelected(report)
     setEditing(false)
     setEditText(report.description)
     setMessage(null)
-    setPhotoUrl(null)
-    setPhotoError(null)
-
-    if (!report.photo_path) return
-
-    setPhotoLoading(true)
-    try {
-      const url = await getIncidentPhotoSignedUrl(report.photo_path)
-      setPhotoUrl(url)
-    } catch (err) {
-      setPhotoError(err.message || 'Could not load photo')
-    } finally {
-      setPhotoLoading(false)
-    }
   }
 
   const closeReport = () => {
     setSelected(null)
     setEditing(false)
-    setPhotoUrl(null)
-    setPhotoError(null)
     setMessage(null)
   }
 
@@ -138,7 +119,7 @@ export default function AdminIncidents() {
     setDeleting(true)
     setMessage(null)
     try {
-      await deleteIncidentReport(selected.id, selected.photo_path)
+      await deleteIncidentReport(selected.id, selected)
       setReports((prev) => prev.filter((r) => r.id !== selected.id))
       closeReport()
     } catch (err) {
@@ -210,9 +191,9 @@ export default function AdminIncidents() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  {report.photo_path && (
+                  {incidentAttachmentCount(report) > 0 && (
                     <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-700">
-                      Photo
+                      {incidentAttachmentCount(report)} file{incidentAttachmentCount(report) === 1 ? '' : 's'}
                     </span>
                   )}
                 </div>
@@ -315,36 +296,7 @@ export default function AdminIncidents() {
                 </a>
               )}
 
-              {selected.photo_path && (
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Photo</p>
-                  {photoLoading ? (
-                    <div className="mt-2 flex h-40 items-center justify-center rounded-lg bg-slate-50">
-                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
-                    </div>
-                  ) : photoUrl ? (
-                    isHeicPhotoPath(selected.photo_path) ? (
-                      <a
-                        href={photoUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-brand-600"
-                      >
-                        Open photo (iPhone format)
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
-                    ) : (
-                      <img
-                        src={photoUrl}
-                        alt="Incident"
-                        className="mt-2 max-h-80 w-full rounded-lg border border-slate-200 object-contain"
-                      />
-                    )
-                  ) : (
-                    <p className="mt-2 text-sm text-red-600">{photoError || 'Photo could not be loaded.'}</p>
-                  )}
-                </div>
-              )}
+              <IncidentReportAttachments report={selected} />
 
               {message && (
                 <p className={`text-sm ${message.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>

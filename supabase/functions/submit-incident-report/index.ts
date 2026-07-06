@@ -6,8 +6,16 @@ const corsHeaders = {
 }
 
 const MAX_DESCRIPTION = 5000
+const MAX_ATTACHMENTS = 5
 const ADMIN_EMAIL = Deno.env.get('INCIDENT_REPORT_TO') || 'admin@prodsec.ca'
 const FROM_EMAIL = Deno.env.get('INCIDENT_REPORT_FROM') || 'SecurePatrol <onboarding@resend.dev>'
+
+type AttachmentMeta = {
+  path: string
+  name: string
+  kind: 'image' | 'document'
+  mime_type?: string | null
+}
 
 function escapeHtml(text: string) {
   return text
@@ -15,6 +23,39 @@ function escapeHtml(text: string) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
+}
+
+function bytesToBase64(bytes: Uint8Array) {
+  let binary = ''
+  const chunk = 0x8000
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk))
+  }
+  return btoa(binary)
+}
+
+function normalizeAttachments(
+  attachmentPaths: AttachmentMeta[] | null | undefined,
+  legacyPhotoPath: string | null | undefined,
+): AttachmentMeta[] {
+  const fromBody = Array.isArray(attachmentPaths)
+    ? attachmentPaths.filter((item) => item?.path)
+    : []
+
+  if (fromBody.length) return fromBody.slice(0, MAX_ATTACHMENTS)
+
+  if (legacyPhotoPath) {
+    return [
+      {
+        path: legacyPhotoPath,
+        name: legacyPhotoPath.split('/').pop() || 'photo.jpg',
+        kind: 'image',
+        mime_type: 'image/jpeg',
+      },
+    ]
+  }
+
+  return []
 }
 
 async function sendIncidentEmail(opts: {
@@ -25,8 +66,7 @@ async function sendIncidentEmail(opts: {
   createdAt: string
   lat?: number | null
   lng?: number | null
-  photoBytes?: Uint8Array | null
-  photoFilename?: string | null
+  files: { filename: string; content: string }[]
 }) {
   const resendKey = Deno.env.get('RESEND_API_KEY')
   if (!resendKey) {
@@ -38,12 +78,17 @@ async function sendIncidentEmail(opts: {
       ? `<p><strong>Location:</strong> ${opts.lat.toFixed(6)}, ${opts.lng.toFixed(6)}</p>`
       : ''
 
+  const attachmentLine = opts.files.length
+    ? `<p><strong>Attachments:</strong> ${opts.files.length} file(s) included with this email.</p>`
+    : ''
+
   const html = `
     <h2>Guard incident report</h2>
     <p><strong>Site:</strong> ${escapeHtml(opts.siteName)}</p>
     <p><strong>Guard:</strong> ${escapeHtml(opts.guardName)} (${escapeHtml(opts.guardEmail)})</p>
     <p><strong>Submitted:</strong> ${escapeHtml(opts.createdAt)}</p>
     ${locationLine}
+    ${attachmentLine}
     <p><strong>Report:</strong></p>
     <pre style="white-space:pre-wrap;font-family:inherit;background:#f8fafc;padding:12px;border-radius:8px;">${escapeHtml(opts.description)}</pre>
   `
@@ -55,18 +100,8 @@ async function sendIncidentEmail(opts: {
     html,
   }
 
-  if (opts.photoBytes?.length && opts.photoFilename) {
-    let binary = ''
-    const chunk = 0x8000
-    for (let i = 0; i < opts.photoBytes.length; i += chunk) {
-      binary += String.fromCharCode(...opts.photoBytes.subarray(i, i + chunk))
-    }
-    payload.attachments = [
-      {
-        filename: opts.photoFilename,
-        content: btoa(binary),
-      },
-    ]
+  if (opts.files.length) {
+    payload.attachments = opts.files
   }
 
   const response = await fetch('https://api.resend.com/emails', {
@@ -129,7 +164,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    const { description, photo_path, guard_lat, guard_lng } = await req.json()
+    const { description, photo_path, attachment_paths, guard_lat, guard_lng } = await req.json()
 
     const trimmed = description?.trim()
     if (!trimmed || trimmed.length < 10) {
@@ -146,15 +181,26 @@ Deno.serve(async (req) => {
       })
     }
 
-    if (photo_path) {
-      const expectedPrefix = `${user.id}/`
-      if (!photo_path.startsWith(expectedPrefix)) {
-        return new Response(JSON.stringify({ error: 'Invalid photo path' }), {
+    const attachments = normalizeAttachments(attachment_paths, photo_path)
+    if (attachments.length > MAX_ATTACHMENTS) {
+      return new Response(JSON.stringify({ error: `Maximum ${MAX_ATTACHMENTS} attachments allowed` }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const expectedPrefix = `${user.id}/`
+    for (const att of attachments) {
+      if (!att.path?.startsWith(expectedPrefix)) {
+        return new Response(JSON.stringify({ error: 'Invalid attachment path' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       }
     }
+
+    const firstImage = attachments.find((a) => a.kind === 'image')
+    const legacyPhotoPath = firstImage?.path || photo_path || null
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
@@ -168,7 +214,8 @@ Deno.serve(async (req) => {
         description: trimmed,
         guard_lat: guard_lat ?? null,
         guard_lng: guard_lng ?? null,
-        photo_path: photo_path || null,
+        photo_path: legacyPhotoPath,
+        attachments,
       })
       .select('id, created_at')
       .single()
@@ -180,17 +227,19 @@ Deno.serve(async (req) => {
       })
     }
 
-    let photoBytes: Uint8Array | null = null
-    let photoFilename: string | null = null
+    const emailFiles: { filename: string; content: string }[] = []
 
-    if (photo_path) {
+    for (const att of attachments) {
       const { data: fileData, error: downloadError } = await adminClient.storage
         .from('incident-photos')
-        .download(photo_path)
+        .download(att.path)
 
       if (!downloadError && fileData) {
-        photoBytes = new Uint8Array(await fileData.arrayBuffer())
-        photoFilename = photo_path.split('/').pop() || 'incident-photo.jpg'
+        const bytes = new Uint8Array(await fileData.arrayBuffer())
+        emailFiles.push({
+          filename: att.name || att.path.split('/').pop() || 'attachment',
+          content: bytesToBase64(bytes),
+        })
       }
     }
 
@@ -209,8 +258,7 @@ Deno.serve(async (req) => {
       createdAt,
       lat: guard_lat,
       lng: guard_lng,
-      photoBytes,
-      photoFilename,
+      files: emailFiles,
     })
 
     if (emailResult.sent) {
@@ -230,6 +278,7 @@ Deno.serve(async (req) => {
         success: true,
         report_id: report.id,
         email_sent: emailResult.sent,
+        attachment_count: attachments.length,
         message: emailResult.sent
           ? 'Report sent to admin.'
           : 'Report saved. Email could not be sent — admin has been notified in the system.',

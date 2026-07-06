@@ -4,7 +4,8 @@ import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { supabase } from '../lib/supabase.js'
-import { fetchIncidentReportsForSite, getIncidentPhotoSignedUrl, isHeicPhotoPath } from '../lib/incidentReports.js'
+import IncidentReportAttachments from '../components/IncidentReportAttachments.jsx'
+import { fetchIncidentReportsForSite, incidentAttachmentCount } from '../lib/incidentReports.js'
 
 function formatReportTime(iso) {
   return new Date(iso).toLocaleString('en-CA', {
@@ -25,9 +26,6 @@ export default function ClientIncidents() {
   const [reports, setReports] = useState([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
-  const [photoUrl, setPhotoUrl] = useState(null)
-  const [photoLoading, setPhotoLoading] = useState(false)
-  const [photoError, setPhotoError] = useState(null)
 
   useEffect(() => {
     if (!siteId) return
@@ -44,29 +42,12 @@ export default function ClientIncidents() {
       .finally(() => setLoading(false))
   }, [siteId])
 
-  const openReport = async (report) => {
+  const openReport = (report) => {
     setSelected(report)
-    setPhotoUrl(null)
-    setPhotoError(null)
-
-    if (!report.photo_path) return
-
-    setPhotoLoading(true)
-    try {
-      const url = await getIncidentPhotoSignedUrl(report.photo_path)
-      setPhotoUrl(url)
-    } catch (err) {
-      console.error(err)
-      setPhotoError(err.message || 'Could not load photo')
-    } finally {
-      setPhotoLoading(false)
-    }
   }
 
   const closeReport = () => {
     setSelected(null)
-    setPhotoUrl(null)
-    setPhotoError(null)
   }
 
   if (!siteId) {
@@ -118,9 +99,9 @@ export default function ClientIncidents() {
                   <p className="mt-0.5 text-sm text-slate-500">{formatReportTime(report.created_at)}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  {report.photo_path && (
+                  {incidentAttachmentCount(report) > 0 && (
                     <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-700">
-                      Photo
+                      {incidentAttachmentCount(report)} file{incidentAttachmentCount(report) === 1 ? '' : 's'}
                     </span>
                   )}
                   {(report.guard_lat != null && report.guard_lng != null) && (
@@ -181,49 +162,7 @@ export default function ClientIncidents() {
                 </a>
               )}
 
-              {selected.photo_path && (
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Photo</p>
-                  {photoLoading ? (
-                    <div className="mt-2 flex h-40 items-center justify-center rounded-lg bg-slate-50">
-                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
-                    </div>
-                  ) : photoUrl ? (
-                    isHeicPhotoPath(selected.photo_path) ? (
-                      <a
-                        href={photoUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:text-brand-700"
-                      >
-                        Open photo (iPhone format)
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
-                    ) : (
-                      <>
-                        <img
-                          src={photoUrl}
-                          alt="Incident"
-                          className="mt-2 max-h-80 w-full rounded-lg border border-slate-200 object-contain"
-                        />
-                        <a
-                          href={photoUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mt-2 inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-brand-600"
-                        >
-                          Open full size
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      </>
-                    )
-                  ) : (
-                    <p className="mt-2 text-sm text-red-600">
-                      {photoError || 'Photo could not be loaded.'}
-                    </p>
-                  )}
-                </div>
-              )}
+              <IncidentReportAttachments report={selected} />
             </div>
           </div>
         </div>
