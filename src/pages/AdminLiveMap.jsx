@@ -349,12 +349,6 @@ export default function AdminLiveMap() {
         </form>
       )}
 
-      {geocodedSites.length === 0 && !loading && (
-        <div className="mb-4 rounded-xl border border-accent-orange/30 bg-accent-orange/10 px-4 py-3 text-sm text-accent-orange">
-          No sites have GPS coordinates yet. Set them from Overview → site card → clock icon → Location.
-        </div>
-      )}
-
       <div className="grid gap-5 xl:grid-cols-12">
         <div className="xl:col-span-8">
           <div ref={containerRef} className="h-[70dvh] w-full overflow-hidden rounded-2xl border border-white/10 bg-inset" />
