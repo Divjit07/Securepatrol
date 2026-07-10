@@ -4,30 +4,61 @@ import { useAuth } from './hooks/useAuth.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import Login from './pages/Login.jsx'
 import Signup from './pages/Signup.jsx'
+import AppErrorBoundary from './components/AppErrorBoundary.jsx'
 
-const GuardDashboard = lazy(() => import('./pages/GuardDashboard.jsx'))
-const ScanScreen = lazy(() => import('./pages/ScanScreen.jsx'))
-const ScanResult = lazy(() => import('./pages/ScanResult.jsx'))
-const GuardHistory = lazy(() => import('./pages/GuardHistory.jsx'))
-const GuardIncidentReport = lazy(() => import('./pages/GuardIncidentReport.jsx'))
-const AdminDashboard = lazy(() => import('./pages/AdminDashboard.jsx'))
-const SiteDashboard = lazy(() => import('./pages/SiteDashboard.jsx'))
-const LiveFeedPage = lazy(() => import('./pages/LiveFeedPage.jsx'))
-const CheckpointManager = lazy(() => import('./pages/CheckpointManager.jsx'))
-const GuardManager = lazy(() => import('./pages/GuardManager.jsx'))
-const ClientManager = lazy(() => import('./pages/ClientManager.jsx'))
-const Reports = lazy(() => import('./pages/Reports.jsx'))
-const Alerts = lazy(() => import('./pages/Alerts.jsx'))
-const ScanApproval = lazy(() => import('./pages/ScanApproval.jsx'))
-const AdminShiftClock = lazy(() => import('./pages/AdminShiftClock.jsx'))
-const AdminIncidents = lazy(() => import('./pages/AdminIncidents.jsx'))
-const ClientDashboard = lazy(() => import('./pages/ClientDashboard.jsx'))
-const ClientCheckpoints = lazy(() => import('./pages/ClientCheckpoints.jsx'))
-const ClientReports = lazy(() => import('./pages/ClientReports.jsx'))
-const ClientIncidents = lazy(() => import('./pages/ClientIncidents.jsx'))
-const AdminRoster = lazy(() => import('./pages/AdminRoster.jsx'))
-const ClientCoverage = lazy(() => import('./pages/ClientCoverage.jsx'))
-const GuardSchedule = lazy(() => import('./pages/GuardSchedule.jsx'))
+
+/**
+ * Lazy route that survives redeploys: if a chunk 404s because the phone has a
+ * stale index.html (Vercel purged old hashed assets), force one full reload to
+ * pick up the fresh build instead of leaving a blank screen.
+ */
+function lazyRetry(importer) {
+  return lazy(() =>
+    importer()
+      .then((mod) => {
+        try {
+          sessionStorage.removeItem('sp-chunk-failed')
+        } catch { /* ignore */ }
+        return mod
+      })
+      .catch((err) => {
+        let alreadyReloaded = false
+        try {
+          alreadyReloaded = sessionStorage.getItem('sp-chunk-failed') === '1'
+          sessionStorage.setItem('sp-chunk-failed', '1')
+        } catch { /* ignore */ }
+        if (!alreadyReloaded) {
+          window.location.reload()
+          return new Promise(() => {})
+        }
+        throw err
+      }),
+  )
+}
+
+const GuardDashboard = lazyRetry(() => import('./pages/GuardDashboard.jsx'))
+const ScanScreen = lazyRetry(() => import('./pages/ScanScreen.jsx'))
+const ScanResult = lazyRetry(() => import('./pages/ScanResult.jsx'))
+const GuardHistory = lazyRetry(() => import('./pages/GuardHistory.jsx'))
+const GuardIncidentReport = lazyRetry(() => import('./pages/GuardIncidentReport.jsx'))
+const AdminDashboard = lazyRetry(() => import('./pages/AdminDashboard.jsx'))
+const SiteDashboard = lazyRetry(() => import('./pages/SiteDashboard.jsx'))
+const LiveFeedPage = lazyRetry(() => import('./pages/LiveFeedPage.jsx'))
+const CheckpointManager = lazyRetry(() => import('./pages/CheckpointManager.jsx'))
+const GuardManager = lazyRetry(() => import('./pages/GuardManager.jsx'))
+const ClientManager = lazyRetry(() => import('./pages/ClientManager.jsx'))
+const Reports = lazyRetry(() => import('./pages/Reports.jsx'))
+const Alerts = lazyRetry(() => import('./pages/Alerts.jsx'))
+const ScanApproval = lazyRetry(() => import('./pages/ScanApproval.jsx'))
+const AdminShiftClock = lazyRetry(() => import('./pages/AdminShiftClock.jsx'))
+const AdminIncidents = lazyRetry(() => import('./pages/AdminIncidents.jsx'))
+const ClientDashboard = lazyRetry(() => import('./pages/ClientDashboard.jsx'))
+const ClientCheckpoints = lazyRetry(() => import('./pages/ClientCheckpoints.jsx'))
+const ClientReports = lazyRetry(() => import('./pages/ClientReports.jsx'))
+const ClientIncidents = lazyRetry(() => import('./pages/ClientIncidents.jsx'))
+const AdminRoster = lazyRetry(() => import('./pages/AdminRoster.jsx'))
+const ClientCoverage = lazyRetry(() => import('./pages/ClientCoverage.jsx'))
+const GuardSchedule = lazyRetry(() => import('./pages/GuardSchedule.jsx'))
 const RosterPreview = import.meta.env.DEV ? lazy(() => import('./pages/dev/RosterPreview.jsx')) : null
 const AdminPreview = import.meta.env.DEV ? lazy(() => import('./pages/dev/AdminPreview.jsx')) : null
 
@@ -50,7 +81,8 @@ function HomeRedirect() {
 
 export default function App() {
   return (
-    <Suspense fallback={<PageLoader />}>
+    <AppErrorBoundary>
+      <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
@@ -248,6 +280,7 @@ export default function App() {
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </Suspense>
+      </Suspense>
+    </AppErrorBoundary>
   )
 }
