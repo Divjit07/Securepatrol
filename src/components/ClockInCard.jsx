@@ -300,8 +300,9 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
         <QrCode className="h-3.5 w-3.5" />
         Backup:{' '}
         <Link to="/guard/scan" className="font-semibold text-ink-2 underline underline-offset-2 hover:text-ink">
-          scan the clock-in NFC/QR tag
-        </Link>
+          tap the clock-in NFC tag
+        </Link>{' '}
+        (QR won’t work for clock-in)
       </p>
     </div>
   )

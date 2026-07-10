@@ -39,12 +39,23 @@ export async function submitScan({
 }) {
   const { data: checkpoint, error: cpError } = await supabase
     .from('checkpoints')
-    .select('id, latitude, longitude, radius_metres, altitude_metres, name, floors(floor_number, elevation_metres)')
+    .select('id, latitude, longitude, radius_metres, altitude_metres, name, checkpoint_role, floors(floor_number, elevation_metres)')
     .eq('id', checkpointId)
     .single()
 
   if (cpError || !checkpoint) {
     throw new Error('Checkpoint not found')
+  }
+
+  // Clock punches are never accepted by QR — Face ID (dashboard) or a physical
+  // NFC tap only. A photographed QR code must not start a shift.
+  if (
+    scanInputMethod === 'qr' &&
+    ['shift_clock_in', 'shift_clock_out'].includes(checkpoint.checkpoint_role)
+  ) {
+    throw new Error(
+      'QR can’t be used to clock in or out. Use Face ID on your dashboard, or tap the NFC tag.',
+    )
   }
 
   const floorNumber = checkpoint.floors?.floor_number ?? 1
