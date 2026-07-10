@@ -17,10 +17,6 @@ export const THEME_GROUPS = [
     label: 'Dark',
     themes: [
       { id: 'forest', label: 'Forest', dot: PALETTE.lime },
-      { id: 'moss', label: 'Moss', dot: PALETTE.moss },
-      { id: 'lagoon', label: 'Lagoon', dot: PALETTE.sky },
-      { id: 'orchid', label: 'Orchid', dot: PALETTE.lavender },
-      { id: 'rose', label: 'Rosé', dot: PALETTE.blossom },
       { id: 'matte', label: 'Matte Black', dot: '#171717' },
       { id: 'graphite', label: 'Graphite', dot: PALETTE.graphite },
     ],
@@ -28,11 +24,8 @@ export const THEME_GROUPS = [
   {
     label: 'Light',
     themes: [
-      { id: 'meadow', label: 'Meadow', dot: PALETTE.meadow },
       { id: 'sky', label: 'Sky', dot: PALETTE.sky },
-      { id: 'lavender', label: 'Lavender', dot: PALETTE.lavender },
-      { id: 'blossom', label: 'Blossom', dot: PALETTE.blossom },
-      { id: 'mint', label: 'Mint', dot: PALETTE.mint },
+      { id: 'ivory', label: 'Ivory', dot: 'linear-gradient(135deg, #fbf9f4, #e6ddcc)' },
     ],
   },
 ]
@@ -44,7 +37,9 @@ const ALL_THEMES = THEME_GROUPS.flatMap((g) => g.themes)
 export default function ThemeSwitcher({ menuPlacement = 'up' }) {
   const [theme, setTheme] = useState(() => {
     try {
-      return localStorage.getItem('sp-theme') || 'forest'
+      const saved = localStorage.getItem('sp-theme')
+      // Retired moods (moss, lagoon, meadow, …) fall back to the default.
+      return ALL_THEMES.some((t) => t.id === saved) ? saved : 'forest'
     } catch {
       return 'forest'
     }

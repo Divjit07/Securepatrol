@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { CheckCircle2, ScanLine, AlertTriangle } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
+import ClockInCard from '../components/ClockInCard.jsx'
 import ClientShiftBar from '../components/ClientShiftBar.jsx'
 import GuardClockedInPanel from '../components/GuardClockedInPanel.jsx'
 import NextShiftCard from '../components/NextShiftCard.jsx'
@@ -69,6 +70,13 @@ export default function GuardDashboard() {
         guardShift={myShiftWithDate}
         publishedShift={publishedShift}
         loading={loading}
+      />
+
+      <ClockInCard
+        guardId={user?.id}
+        siteId={siteId}
+        clockedIn={Boolean(myShiftWithDate)}
+        onPunched={reload}
       />
 
       <NextShiftCard guardId={user?.id} />

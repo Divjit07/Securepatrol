@@ -3,6 +3,7 @@ import { AlertTriangle, Download, ExternalLink, Loader2, MapPin, X } from 'lucid
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock.js'
 import { supabase } from '../lib/supabase.js'
 import IncidentReportAttachments from '../components/IncidentReportAttachments.jsx'
 import { downloadIncidentReportPdf } from '../lib/incidentReportPdf.js'
@@ -28,6 +29,8 @@ export default function ClientIncidents() {
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
   const [pdfLoading, setPdfLoading] = useState(false)
+
+  useBodyScrollLock(Boolean(selected))
 
   useEffect(() => {
     if (!siteId) return
@@ -142,7 +145,7 @@ export default function ClientIncidents() {
           onClick={closeReport}
         >
           <div
-            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-surface shadow-xl"
+            className="max-h-[90vh] w-full max-w-lg overflow-y-auto overscroll-contain rounded-2xl bg-surface shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-3 border-b border-white/5 px-5 py-4">

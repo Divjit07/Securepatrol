@@ -118,7 +118,7 @@ export default function ShiftSheet({ initial, guards, templates = [], onSave, on
                 key={t.id}
                 type="button"
                 onClick={() => applyTemplate(t)}
-                className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-ink-2 transition hover:border-accent-cyan-line/40 hover:bg-accent-cyan/10 hover:text-accent-cyan-line"
+                className="inline-flex items-center gap-1.5 rounded-full border border-ink/10 bg-ink/5 px-3 py-1.5 text-xs font-medium text-ink-2 transition hover:border-accent-cyan-line/40 hover:bg-accent-cyan/10 hover:text-accent-cyan-line"
               >
                 <Clock className="h-3 w-3" /> {t.name}
               </button>
@@ -176,7 +176,7 @@ export default function ShiftSheet({ initial, guards, templates = [], onSave, on
                     onClick={() => setColor(c)}
                     aria-label={`Color ${c}`}
                     className={`h-7 w-7 rounded-full transition ${COLOR_DOTS[c]} ${
-                      color === c ? 'ring-2 ring-white/70 ring-offset-2 ring-offset-surface' : 'opacity-40 hover:opacity-80'
+                      color === c ? 'ring-2 ring-ink/70 ring-offset-2 ring-offset-surface' : 'opacity-40 hover:opacity-80'
                     }`}
                   />
                 ))}

@@ -12,23 +12,37 @@ import {
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock.js'
 import { fetchSitesForAdmin } from '../lib/scans.js'
 import IncidentReportAttachments from '../components/IncidentReportAttachments.jsx'
+import ImageLightbox from '../components/ImageLightbox.jsx'
 import {
   deleteIncidentReport,
   fetchIncidentReportsForSite,
   fetchIncidentReportsForSites,
   formatIncidentReportTime,
+  getIncidentPhotoSignedUrl,
   incidentAttachmentCount,
+  isHeicPhotoPath,
+  normalizeIncidentAttachments,
   updateIncidentReportDescription,
 } from '../lib/incidentReports.js'
+
+/** First browser-renderable photo of a report (skips HEIC + documents). */
+function previewImagePath(report) {
+  return (
+    normalizeIncidentAttachments(report).find(
+      (a) => a.kind === 'image' && !isHeicPhotoPath(a.path),
+    )?.path || null
+  )
+}
 
 function mapsUrl(lat, lng) {
   return `https://www.google.com/maps?q=${lat},${lng}`
 }
 
 export default function AdminIncidents() {
-  const { user, isSuperAdmin, canApproveScans, canManageShiftClock } = useAuth()
+  const { user, isSuperAdmin, canApproveScans, canManageShiftClock, privilegesLoading } = useAuth()
   const canView = canApproveScans || canManageShiftClock || isSuperAdmin
   const canEdit = canApproveScans || isSuperAdmin
 
@@ -42,8 +56,38 @@ export default function AdminIncidents() {
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [message, setMessage] = useState(null)
+  const [previews, setPreviews] = useState({})
+  const [lightbox, setLightbox] = useState(null)
+
+  useBodyScrollLock(Boolean(selected))
 
   const siteIds = useMemo(() => sites.map((s) => s.id), [sites])
+
+  // Sign a preview URL for each report's first photo so rows show a thumbnail.
+  useEffect(() => {
+    const withImages = reports
+      .map((r) => [r.id, previewImagePath(r)])
+      .filter(([, path]) => path)
+    if (!withImages.length) {
+      setPreviews({})
+      return undefined
+    }
+    let cancelled = false
+    Promise.all(
+      withImages.map(async ([id, path]) => {
+        try {
+          return [id, await getIncidentPhotoSignedUrl(path)]
+        } catch {
+          return [id, null]
+        }
+      }),
+    ).then((entries) => {
+      if (!cancelled) setPreviews(Object.fromEntries(entries.filter(([, url]) => url)))
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [reports])
 
   const loadReports = async () => {
     if (!siteIds.length) {
@@ -130,6 +174,16 @@ export default function AdminIncidents() {
   }
 
   if (!canView) {
+    // Access flags resolve async (DB checks) — don't bounce until they land.
+    if (privilegesLoading) {
+      return (
+        <Layout>
+          <div className="flex justify-center py-24">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent-orange border-t-transparent" />
+          </div>
+        </Layout>
+      )
+    }
     return <Navigate to="/admin" replace />
   }
 
@@ -181,24 +235,36 @@ export default function AdminIncidents() {
               onClick={() => openReport(report)}
               className="sp-card w-full p-5 text-left transition hover:border-accent-cyan-line/20 hover:shadow-md"
             >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="font-display text-base font-semibold text-ink">
-                    {report.guard?.name || 'Guard'}
-                  </p>
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-display text-base font-semibold text-ink">
+                      {report.guard?.name || 'Guard'}
+                    </p>
+                    {incidentAttachmentCount(report) > 0 && (
+                      <span className="rounded-full bg-accent-cyan/10 px-2.5 py-0.5 text-xs font-medium text-accent-cyan-line">
+                        {incidentAttachmentCount(report)} file{incidentAttachmentCount(report) === 1 ? '' : 's'}
+                      </span>
+                    )}
+                  </div>
                   <p className="mt-0.5 text-sm text-ink-2">
                     {report.site?.name || 'Site'} · {formatIncidentReportTime(report.created_at)}
                   </p>
+                  <p className="mt-3 line-clamp-2 text-sm text-ink-2">{report.description}</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  {incidentAttachmentCount(report) > 0 && (
-                    <span className="rounded-full bg-accent-cyan/10 px-2.5 py-0.5 text-xs font-medium text-accent-cyan-line">
-                      {incidentAttachmentCount(report)} file{incidentAttachmentCount(report) === 1 ? '' : 's'}
-                    </span>
-                  )}
-                </div>
+                {previews[report.id] && (
+                  <img
+                    src={previews[report.id]}
+                    alt="Report photo preview"
+                    loading="lazy"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setLightbox({ src: previews[report.id], alt: `${report.guard?.name || 'Guard'} — report photo` })
+                    }}
+                    className="h-20 w-20 shrink-0 cursor-zoom-in rounded-xl border border-white/10 object-cover transition hover:brightness-110 sm:h-24 sm:w-24"
+                  />
+                )}
               </div>
-              <p className="mt-3 line-clamp-2 text-sm text-ink-2">{report.description}</p>
             </button>
           ))}
         </div>
@@ -210,7 +276,7 @@ export default function AdminIncidents() {
           onClick={closeReport}
         >
           <div
-            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-surface shadow-xl"
+            className="max-h-[90vh] w-full max-w-lg overflow-y-auto overscroll-contain rounded-2xl bg-surface shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between border-b border-white/5 px-5 py-4">
@@ -318,6 +384,10 @@ export default function AdminIncidents() {
             </div>
           </div>
         </div>
+      )}
+
+      {lightbox && (
+        <ImageLightbox src={lightbox.src} alt={lightbox.alt} onClose={() => setLightbox(null)} />
       )}
     </Layout>
   )

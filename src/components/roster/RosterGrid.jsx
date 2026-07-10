@@ -80,9 +80,9 @@ function DayCell({ date, guardId, shifts, conflicts, isToday, onCellClick, onShi
         const shiftId = e.dataTransfer.getData('text/shift-id')
         if (shiftId) onShiftDrop?.(shiftId, guardId, date)
       }}
-      className={`group min-h-[64px] cursor-pointer space-y-1 border-b border-l border-white/5 p-1 transition ${
+      className={`group min-h-[64px] cursor-pointer space-y-1 border-b border-l border-ink/10 p-1 transition ${
         isToday ? 'bg-accent-cyan/5' : ''
-      } ${shifts.length === 0 ? 'hatch-empty' : ''} ${dragOver ? 'bg-accent-cyan/10 ring-2 ring-inset ring-accent-cyan-line/60' : 'hover:bg-white/5'}`}
+      } ${shifts.length === 0 ? 'hatch-empty' : ''} ${dragOver ? 'bg-accent-cyan/10 ring-2 ring-inset ring-accent-cyan-line/60' : 'hover:bg-ink/5'}`}
     >
       {shifts.map((s) => (
         <ShiftChip key={s.id} shift={s} conflicts={conflicts} onClick={onShiftClick} />
@@ -111,9 +111,9 @@ export default function RosterGrid({
   const gridTemplate = { gridTemplateColumns: `170px repeat(${days.length}, minmax(140px, 1fr))` }
 
   const headBase =
-    'sticky top-0 z-10 border-b border-white/5 bg-surface/95 px-2 py-2.5 backdrop-blur'
+    'sticky top-0 z-10 border-b border-ink/10 bg-surface/95 px-2 py-2.5 backdrop-blur'
   const rowLabelBase =
-    'sticky left-0 z-[5] flex flex-col justify-center border-b border-white/5 bg-surface px-3 py-2'
+    'sticky left-0 z-[5] flex flex-col justify-center border-b border-ink/10 bg-surface px-3 py-2'
 
   return (
     <div className="sp-card overflow-hidden">
@@ -124,7 +124,7 @@ export default function RosterGrid({
           {days.map((d) => {
             const isToday = sameDay(d, today)
             return (
-              <div key={d.toISOString()} className={`${headBase} border-l border-white/5 text-center`}>
+              <div key={d.toISOString()} className={`${headBase} border-l border-ink/10 text-center`}>
                 <p className={`text-[10px] font-semibold uppercase tracking-wider ${isToday ? 'text-accent-orange' : 'text-ink-3'}`}>
                   {d.toLocaleDateString([], { weekday: 'short' })}
                 </p>

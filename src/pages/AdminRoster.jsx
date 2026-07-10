@@ -296,14 +296,14 @@ export default function AdminRoster() {
           </select>
         )}
 
-        <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 p-1">
-          <button type="button" onClick={() => setWeekStart(addDays(weekStart, -numDays))} className="rounded-lg p-2 text-ink-2 hover:bg-white/10" aria-label="Previous">
+        <div className="flex items-center gap-1 rounded-xl border border-ink/10 bg-ink/5 p-1">
+          <button type="button" onClick={() => setWeekStart(addDays(weekStart, -numDays))} className="rounded-lg p-2 text-ink-2 hover:bg-ink/10" aria-label="Previous">
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <button type="button" onClick={() => setWeekStart(startOfWeek(new Date()))} className="rounded-lg px-3 py-1.5 text-sm font-medium text-ink-2 hover:bg-white/10">
+          <button type="button" onClick={() => setWeekStart(startOfWeek(new Date()))} className="rounded-lg px-3 py-1.5 text-sm font-medium text-ink-2 hover:bg-ink/10">
             Today
           </button>
-          <button type="button" onClick={() => setWeekStart(addDays(weekStart, numDays))} className="rounded-lg p-2 text-ink-2 hover:bg-white/10" aria-label="Next">
+          <button type="button" onClick={() => setWeekStart(addDays(weekStart, numDays))} className="rounded-lg p-2 text-ink-2 hover:bg-ink/10" aria-label="Next">
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
@@ -311,7 +311,7 @@ export default function AdminRoster() {
         <span className="text-sm font-semibold text-ink">{weekLabel}</span>
 
         <div className="ml-auto flex items-center gap-2">
-          <div className="flex rounded-full border border-white/10 bg-white/5 p-1">
+          <div className="flex rounded-full border border-ink/10 bg-ink/5 p-1">
             {[7, 14].map((n) => (
               <button
                 key={n}
@@ -376,7 +376,7 @@ export default function AdminRoster() {
           <div>
             <h3 className="mb-2 text-sm font-semibold text-ink">Optimizations</h3>
             {conflictList.length === 0 ? (
-              <div className="rounded-2xl border border-white/5 bg-white/5 p-4 text-sm text-ink-2">
+              <div className="rounded-2xl border border-ink/10 bg-ink/5 p-4 text-sm text-ink-2">
                 No conflicts — {rows.filter((r) => r.shifts.length).length} of {rows.length} guards scheduled.
               </div>
             ) : (
@@ -386,7 +386,7 @@ export default function AdminRoster() {
                     key={c.id}
                     type="button"
                     onClick={() => setSheet(c.shift)}
-                    className="w-full rounded-2xl border border-white/5 bg-white/5 p-4 text-left transition hover:bg-white/10"
+                    className="w-full rounded-2xl border border-ink/10 bg-ink/5 p-4 text-left transition hover:bg-ink/10"
                   >
                     <p className="text-sm font-semibold text-ink">{c.title}</p>
                     <p className="mt-0.5 text-xs text-ink-2">{c.detail}</p>

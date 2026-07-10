@@ -1,10 +1,20 @@
 // Dev-only visual harness for the Dark Ops Overview (/dev/admin) — mirrors the
 // reference dashboard geometry with mock data.
-import { Building2, ScanLine, Gauge, ShieldCheck, Clock, Trash2, ChevronRight, Plus, BellRing, Check, Search, Download } from 'lucide-react'
+import { Building2, Clock, Trash2, ChevronRight, Plus, Check, Search, Download } from 'lucide-react'
 import Layout from '../../components/Layout.jsx'
 import PageHeader from '../../components/PageHeader.jsx'
-import KpiCard from '../../components/KpiCard.jsx'
-import { RatioBar, CoverageChart, ActivityLine, FeedTimeline, ExpandChip, LegendDot } from '../../components/overview/widgets.jsx'
+import { CoverageChart, ActivityLine, FeedTimeline, ExpandChip, LegendDot } from '../../components/overview/widgets.jsx'
+import {
+  ComplianceTile,
+  RoundsTile,
+  ScansTile,
+  ClockTile,
+  FeedTile,
+  CoverageTile,
+  WorkforceTile,
+  AlertsCountTile,
+  ActionsTile,
+} from '../../components/overview/HomeWidgets.jsx'
 import { CHART } from '../../lib/brandPalette.js'
 
 const COVERAGE = Array.from({ length: 13 }, (_, i) => {
@@ -51,41 +61,31 @@ export default function AdminPreview() {
         }
       />
 
+      {/* Widget board — iOS-style tiles (mirrors AdminDashboard additions) */}
+      <div className="mb-8 grid grid-cols-2 gap-x-5 gap-y-8 lg:grid-cols-4">
+        <ComplianceTile value={78} siteLabel="all sites" delay={0} />
+        <RoundsTile rounds={2} scansIntoRound={9} checkpointCount={18} delay={60} />
+        <ScansTile count={45} points={ACTIVITY.points} delay={120} />
+        <ClockTile code="ALL" sub="All sites" delay={180} />
+        <FeedTile count={45} items={FEED.map((f) => ({ ...f, detail: f.detail }))} delay={240} />
+        <CoverageTile hours={COVERAGE} delay={300} />
+        <WorkforceTile
+          total={12}
+          segments={[
+            { label: 'On patrol', value: 5, color: CHART.onPatrol },
+            { label: 'Up next', value: 3, color: CHART.upNext },
+            { label: 'No-show', value: 1, color: CHART.noShow },
+            { label: 'Unscheduled', value: 3, color: CHART.unscheduledBar },
+          ]}
+          to="/dev/roster"
+          delay={360}
+        />
+        <ActionsTile initial="D" onNewSite={() => {}} delay={420} />
+        <AlertsCountTile count={3} summary="No-show · Stale patrol · Late" delay={480} />
+      </div>
+
       <div className="grid gap-5 xl:grid-cols-12">
         <div className="space-y-5 xl:col-span-8">
-          <div className="grid gap-5 lg:grid-cols-5">
-            <div className="grid grid-cols-2 gap-4 lg:col-span-3">
-              <KpiCard icon={Gauge} label="Compliance Score" value="78" tone="sky" />
-              <KpiCard icon={ShieldCheck} label="Guards on duty" value="02" tone="lime" />
-              <KpiCard icon={ScanLine} label="Scans Today" value="45" tone="lavender" />
-              <KpiCard icon={BellRing} label="Open Alerts" value="03" tone="blossom" />
-            </div>
-
-            <div className="dk-card p-5 lg:col-span-2">
-              <div className="flex items-start justify-between">
-                <h2 className="text-sm font-semibold text-ink">Workforce Summary</h2>
-                <ExpandChip to="/dev/roster" />
-              </div>
-              <div className="mt-2 grid grid-cols-2 justify-end gap-x-3 gap-y-1 pl-16">
-                <LegendDot color={CHART.onPatrol} label="On patrol" />
-                <LegendDot color={CHART.upNext} label="Up next" />
-                <LegendDot color={CHART.noShow} label="No-show" />
-                <LegendDot color={CHART.unscheduledBar} label="Unscheduled" />
-              </div>
-              <div className="mt-4">
-                <RatioBar
-                  total={12}
-                  segments={[
-                    { label: 'On patrol', value: 5, color: CHART.onPatrol },
-                    { label: 'Up next', value: 3, color: CHART.upNext },
-                    { label: 'No-show', value: 1, color: CHART.noShow },
-                    { label: 'Unscheduled', value: 3, color: CHART.unscheduledBar },
-                  ]}
-                />
-              </div>
-            </div>
-          </div>
-
           <div className="dk-inset p-5">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-ink">Patrol Coverage</h2>

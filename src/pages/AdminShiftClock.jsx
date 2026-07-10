@@ -38,7 +38,7 @@ function findClockInScan(guardScans, checkpoints, dateStr, shift) {
 }
 
 export default function AdminShiftClock() {
-  const { user, isSuperAdmin, canManageShiftClock } = useAuth()
+  const { user, isSuperAdmin, canManageShiftClock, privilegesLoading } = useAuth()
   const [sites, setSites] = useState([])
   const [guards, setGuards] = useState([])
   const [selectedSite, setSelectedSite] = useState('')
@@ -145,6 +145,16 @@ export default function AdminShiftClock() {
   }, [selectedSite, date])
 
   if (!canManageShiftClock) {
+    // Access flags resolve async (DB checks) — don't bounce until they land.
+    if (privilegesLoading) {
+      return (
+        <Layout>
+          <div className="flex justify-center py-24">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent-orange border-t-transparent" />
+          </div>
+        </Layout>
+      )
+    }
     return <Navigate to="/admin" replace />
   }
 

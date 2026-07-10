@@ -11,6 +11,9 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [canApproveScans, setCanApproveScans] = useState(false)
   const [canManageShiftClock, setCanManageShiftClock] = useState(false)
+  // True until the approve-scans / shift-clock checks (incl. DB round trips)
+  // finish — gated pages must not redirect away while this is set.
+  const [privilegesLoading, setPrivilegesLoading] = useState(true)
 
   const loadProfile = useCallback(async (userId) => {
     const { data, error } = await supabase
@@ -102,6 +105,7 @@ export function AuthProvider({ children }) {
         if (!cancelled) {
           setCanApproveScans(false)
           setCanManageShiftClock(false)
+          if (!loading) setPrivilegesLoading(false)
         }
         return
       }
@@ -114,12 +118,18 @@ export function AuthProvider({ children }) {
       }
 
       if (isShiftClockAdmin(user, profile)) {
-        if (!cancelled) setCanManageShiftClock(true)
+        if (!cancelled) {
+          setCanManageShiftClock(true)
+          setPrivilegesLoading(false)
+        }
         return
       }
 
       const shiftFromDb = await checkShiftClockAdminFromDb()
-      if (!cancelled) setCanManageShiftClock(shiftFromDb === true)
+      if (!cancelled) {
+        setCanManageShiftClock(shiftFromDb === true)
+        setPrivilegesLoading(false)
+      }
     }
 
     resolvePrivilegedAccess()
@@ -135,6 +145,7 @@ export function AuthProvider({ children }) {
     profile?.can_approve_scans,
     profile?.can_manage_shift_clock,
     isAdmin,
+    loading,
   ])
 
   return (
@@ -152,6 +163,7 @@ export function AuthProvider({ children }) {
         isSuperAdmin,
         canApproveScans,
         canManageShiftClock,
+        privilegesLoading,
         refreshProfile: () => loadProfile(user?.id).then(setProfile),
       }}
     >

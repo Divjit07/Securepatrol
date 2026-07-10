@@ -6,18 +6,24 @@ import {
   ChevronRight,
   Trash2,
   Clock,
-  ScanLine,
-  Gauge,
-  ShieldCheck,
-  BellRing,
   Check,
 } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
-import KpiCard from '../components/KpiCard.jsx'
 import SiteSearchInput from '../components/SiteSearchInput.jsx'
 import SiteHoursModal from '../components/SiteHoursModal.jsx'
-import { RatioBar, CoverageChart, ActivityLine, FeedTimeline, ExpandChip, LegendDot } from '../components/overview/widgets.jsx'
+import { CoverageChart, ActivityLine, FeedTimeline, ExpandChip, LegendDot } from '../components/overview/widgets.jsx'
+import {
+  ComplianceTile,
+  RoundsTile,
+  ScansTile,
+  ClockTile,
+  FeedTile,
+  CoverageTile,
+  WorkforceTile,
+  AlertsCountTile,
+  ActionsTile,
+} from '../components/overview/HomeWidgets.jsx'
 import { CHART } from '../lib/brandPalette.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { describeOperatingHours, getScheduledShiftForDate } from '../hooks/useClientShift.js'
@@ -78,7 +84,7 @@ function AlertCard({ alert, primary, onAcknowledge, busy }) {
 }
 
 export default function AdminDashboard() {
-  const { user, isSuperAdmin } = useAuth()
+  const { user, profile, isSuperAdmin } = useAuth()
   const [sites, setSites] = useState([])
   const [guards, setGuards] = useState([])
   const [stats, setStats] = useState({})
@@ -449,35 +455,58 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {/* Widget board — iOS-style tiles (additions; existing cards untouched) */}
+      <div className="mb-8 grid grid-cols-2 gap-x-5 gap-y-8 lg:grid-cols-4">
+        <ComplianceTile
+          value={avgCompliance}
+          siteLabel={matchedSites.length === 1 ? matchedSites[0].name : 'all sites'}
+          delay={0}
+        />
+        <RoundsTile
+          rounds={Object.values(scopedStats).reduce(
+            (sum, s) => sum + (s.checkpoints ? Math.floor((s.scannedToday || 0) / s.checkpoints) : 0),
+            0,
+          )}
+          scansIntoRound={Object.values(scopedStats).reduce(
+            (sum, s) => sum + (s.checkpoints ? (s.scannedToday || 0) % s.checkpoints : 0),
+            0,
+          )}
+          checkpointCount={Object.values(scopedStats).reduce((sum, s) => sum + (s.checkpoints || 0), 0)}
+          delay={60}
+        />
+        <ScansTile count={totalScansToday} points={activity.points} delay={120} />
+        <ClockTile
+          code={
+            matchedSites.length === 1
+              ? (matchedSites[0].name || 'SITE').replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase() || 'SIT'
+              : 'ALL'
+          }
+          sub={matchedSites.length === 1 ? matchedSites[0].name : 'All sites'}
+          delay={180}
+        />
+        <FeedTile
+          count={totalScansToday}
+          items={feedItems}
+          to={matchedSites[0] ? `/admin/site/${matchedSites[0].id}/live` : '#'}
+          delay={240}
+        />
+        <CoverageTile hours={coverageHours} delay={300} />
+        <WorkforceTile total={activeGuards.length} segments={summarySegments} delay={360} />
+        <ActionsTile
+          initial={(profile?.name || 'A')[0].toUpperCase()}
+          onNewSite={() => setShowNewSite(true)}
+          delay={420}
+        />
+        <AlertsCountTile
+          count={scopedAlerts.length}
+          summary={[...new Set(scopedAlerts.map((a) => ALERT_TYPE_LABELS[a.event_type] || a.event_type))].join(' · ')}
+          delay={480}
+        />
+      </div>
+
       <div className="grid gap-5 xl:grid-cols-12">
         {/* ============ Main column ============ */}
         <div className="space-y-5 xl:col-span-8">
-          {/* KPI 2×2 + Workforce Summary */}
-          <div className="grid gap-5 lg:grid-cols-5">
-            <div className="grid grid-cols-2 gap-4 lg:col-span-3">
-              <KpiCard icon={Gauge} label="Compliance Score" value={`${avgCompliance}`} tone="sky" />
-              <KpiCard icon={ShieldCheck} label="Guards on duty" value={String(onDutyGuardIds.size).padStart(2, '0')} tone="lime" />
-              <KpiCard icon={ScanLine} label="Scans Today" value={String(totalScansToday).padStart(2, '0')} tone="lavender" />
-              <KpiCard icon={BellRing} label="Open Alerts" value={String(scopedAlerts.length).padStart(2, '0')} tone="blossom" />
-            </div>
-
-            <div className="dk-card p-5 lg:col-span-2">
-              <div className="flex items-start justify-between">
-                <h2 className="text-sm font-semibold text-ink">Workforce Summary</h2>
-                <ExpandChip to="/admin/roster" />
-              </div>
-              <div className="mt-2 grid grid-cols-2 justify-end gap-x-3 gap-y-1 pl-16">
-                <LegendDot color={CHART.onPatrol} label="On patrol" />
-                <LegendDot color={CHART.upNext} label="Up next" />
-                <LegendDot color={CHART.noShow} label="No-show" />
-                <LegendDot color={CHART.unscheduledBar} label="Unscheduled" />
-              </div>
-              <div className="mt-4">
-                <RatioBar total={activeGuards.length} segments={summarySegments} />
-              </div>
-            </div>
-          </div>
-
           {/* Patrol Coverage — dark inset chart */}
           <div className="dk-inset p-5">
             <div className="mb-2 flex items-center justify-between">

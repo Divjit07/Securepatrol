@@ -1,6 +1,8 @@
 import { Download, X, ZoomIn } from 'lucide-react'
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock.js'
 
 export default function ImageLightbox({ src, alt, onClose, onDownload }) {
+  useBodyScrollLock(Boolean(src))
   if (!src) return null
 
   return (
@@ -35,7 +37,7 @@ export default function ImageLightbox({ src, alt, onClose, onDownload }) {
       </div>
 
       <div
-        className="flex flex-1 items-center justify-center overflow-auto p-4"
+        className="flex flex-1 items-center justify-center overflow-auto overscroll-contain p-4"
         onClick={onClose}
       >
         <img

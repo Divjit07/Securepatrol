@@ -13,7 +13,7 @@ import {
 } from '../lib/scanApproval.js'
 
 export default function ScanApproval() {
-  const { user, isSuperAdmin, canApproveScans } = useAuth()
+  const { user, isSuperAdmin, canApproveScans, privilegesLoading } = useAuth()
   const [sites, setSites] = useState([])
   const [selectedSite, setSelectedSite] = useState('')
   const [checkpoints, setCheckpoints] = useState([])
@@ -81,6 +81,16 @@ export default function ScanApproval() {
   }, [selectedSite])
 
   if (!canApproveScans) {
+    // Access flags resolve async (DB checks) — don't bounce until they land.
+    if (privilegesLoading) {
+      return (
+        <Layout>
+          <div className="flex justify-center py-24">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent-orange border-t-transparent" />
+          </div>
+        </Layout>
+      )
+    }
     return <Navigate to="/admin" replace />
   }
 

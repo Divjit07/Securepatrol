@@ -1,9 +1,15 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Sans:wght@500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Sans:wght@500;600;700&family=Instrument+Serif:ital@0;1&display=swap");
 @import "tailwindcss";
 
 @theme {
   --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Instrument Sans", "DM Sans", sans-serif;
+  --font-serif: "Instrument Serif", Georgia, serif;
+
+  /* Apple palette (widget-board experiment) */
+  --color-apple-blue: #0066cc;
+  --color-apple-shark: #1d1d1f;
+  --color-apple-athens: #f5f5f7;
 
   /* Dark Ops surfaces */
   --color-canvas: #0d110c;
@@ -51,12 +57,6 @@
 }
 
 /* ---- Theme moods (user palette) — switched via data-theme on <html> ---- */
-[data-theme='midnight'] {
-  --color-canvas: #0a0e09;
-  --color-surface: #13170f;
-  --color-surface-2: #1f261c;
-}
-
 /* ---- Accent-led dark moods: each palette color leads the whole system ---- */
 [data-theme='forest'] {
   --color-canvas: #0d110c;
@@ -70,56 +70,6 @@
   --color-accent-green: #7fd09f;
   --color-ink-2: #a3aa9e;
   --color-ink-3: #565e52;
-}
-
-[data-theme='moss'] {
-  --color-canvas: #0c120e;
-  --color-surface: #151b17;
-  --color-surface-2: #212b24;
-  --color-inset: #090f0b;
-  --color-accent-orange: #7fd09f;
-  --color-accent-cyan: #ecfab5;
-  --color-accent-cyan-line: #7fd09f;
-  --color-accent-green: #7fd09f;
-}
-
-[data-theme='lagoon'] {
-  --color-canvas: #0b1015;
-  --color-surface: #141a21;
-  --color-surface-2: #1f2a33;
-  --color-inset: #080d12;
-  --color-accent-orange: #d9f0ff;
-  --color-accent-cyan: #eceefe;
-  --color-accent-cyan-line: #a5dcf8;
-  --color-accent-green: #a5dcf8;
-  --color-ink-2: #9fa9b3;
-  --color-ink-3: #525c66;
-}
-
-[data-theme='orchid'] {
-  --color-canvas: #0e0d16;
-  --color-surface: #171623;
-  --color-surface-2: #242238;
-  --color-inset: #0b0a12;
-  --color-accent-orange: #eceefe;
-  --color-accent-cyan: #fbe4e3;
-  --color-accent-cyan-line: #bfc6f9;
-  --color-accent-green: #bfc6f9;
-  --color-ink-2: #a2a3b3;
-  --color-ink-3: #565766;
-}
-
-[data-theme='rose'] {
-  --color-canvas: #150e0e;
-  --color-surface: #201616;
-  --color-surface-2: #302222;
-  --color-inset: #100a0a;
-  --color-accent-orange: #fbe4e3;
-  --color-accent-cyan: #eceefe;
-  --color-accent-cyan-line: #f0aca6;
-  --color-accent-green: #f0aca6;
-  --color-ink-2: #b3a2a0;
-  --color-ink-3: #665656;
 }
 
 [data-theme='matte'] {
@@ -151,18 +101,19 @@
   --color-ink-3: #6e6e6e;
 }
 
-[data-theme='meadow'] {
-  --color-canvas: #ecfab5;
-  --color-surface: #ffffff;
-  --color-surface-2: #e0f2a0;
+/* Ivory — premium cream: warm off-white canvas + champagne-gold accent */
+[data-theme='ivory'] {
+  --color-canvas: #f1ece2;
+  --color-surface: #fbf9f4;
+  --color-surface-2: #e6ddcc;
   --color-paper: #ffffff;
-  --color-ink: #0a0e09;
-  --color-ink-2: #4d5442;
-  --color-ink-3: #98a184;
-  --color-accent-orange: #96ee60;
-  --color-accent-cyan: #ecfab5;
-  --color-accent-cyan-line: #7fd09f;
-  --color-accent-green: #7fd09f;
+  --color-ink: #211d14;
+  --color-ink-2: #5f5748;
+  --color-ink-3: #a99f8a;
+  --color-accent-orange: #b8962e;
+  --color-accent-cyan: #efe7d6;
+  --color-accent-cyan-line: #b8962e;
+  --color-accent-green: #4f9e6f;
 }
 
 [data-theme='sky'] {
@@ -176,46 +127,6 @@
   --color-accent-orange: #d9f0ff;
   --color-accent-cyan: #eceefe;
   --color-accent-cyan-line: #a5dcf8;
-}
-
-[data-theme='lavender'] {
-  --color-canvas: #eceefe;
-  --color-surface: #ffffff;
-  --color-surface-2: #dde0f8;
-  --color-paper: #ffffff;
-  --color-ink: #0a0e09;
-  --color-ink-2: #474b66;
-  --color-ink-3: #989dbf;
-  --color-accent-orange: #eceefe;
-  --color-accent-cyan: #fbe4e3;
-  --color-accent-cyan-line: #bfc6f9;
-}
-
-[data-theme='blossom'] {
-  --color-canvas: #fbe4e3;
-  --color-surface: #ffffff;
-  --color-surface-2: #f4d2d0;
-  --color-paper: #ffffff;
-  --color-ink: #0a0e09;
-  --color-ink-2: #5c4a48;
-  --color-ink-3: #b39a97;
-  --color-accent-orange: #fbe4e3;
-  --color-accent-cyan: #eceefe;
-  --color-accent-cyan-line: #f0aca6;
-}
-
-[data-theme='mint'] {
-  --color-canvas: #7fd09f;
-  --color-surface: #ffffff;
-  --color-surface-2: #6dbf8e;
-  --color-paper: #ffffff;
-  --color-ink: #0a0e09;
-  --color-ink-2: #2b4a37;
-  --color-ink-3: #6d9a7f;
-  --color-accent-orange: #7fd09f;
-  --color-accent-cyan: #ecfab5;
-  --color-accent-cyan-line: #5fbf84;
-  --color-accent-green: #5fbf84;
 }
 
 /* Studio Glass — optional surface: gray gradient + frosted cards + jet-black chrome */
@@ -422,8 +333,10 @@
   background: rgba(255, 255, 255, 0.08);
 }
 
-[data-theme='meadow'] .dk-inset, [data-theme='sky'] .dk-inset, [data-theme='lavender'] .dk-inset,
-[data-theme='blossom'] .dk-inset, [data-theme='mint'] .dk-inset {
+[data-theme='sky'] .dk-inset,
+[data-theme='sky'] .bg-inset,
+[data-theme='ivory'] .dk-inset,
+[data-theme='ivory'] .bg-inset {
   --color-ink: #ffffff;
   --color-ink-2: #a3aa9e;
   --color-ink-3: #6b7365;
@@ -431,10 +344,18 @@
 }
 
 /* Light moods: borders/hovers flip to black-based so cards keep definition */
-[data-theme='meadow'] .dk-card, [data-theme='sky'] .dk-card, [data-theme='lavender'] .dk-card,
-[data-theme='blossom'] .dk-card, [data-theme='mint'] .dk-card,
-[data-theme='meadow'] .sp-card, [data-theme='sky'] .sp-card, [data-theme='lavender'] .sp-card,
-[data-theme='blossom'] .sp-card, [data-theme='mint'] .sp-card {
+/* Light moods: form fields flip to paper-white with dark hairlines */
+[data-theme='sky'] .sp-input,
+[data-theme='ivory'] .sp-input {
+  background: var(--color-paper);
+  border-color: color-mix(in srgb, var(--color-ink) 15%, transparent);
+  color-scheme: light;
+}
+
+[data-theme='sky'] .dk-card,
+[data-theme='sky'] .sp-card,
+[data-theme='ivory'] .dk-card,
+[data-theme='ivory'] .sp-card {
   border-color: rgba(10, 14, 9, 0.08);
   box-shadow: 0 2px 12px -6px rgba(10, 14, 9, 0.08);
 }
@@ -562,10 +483,15 @@
     @apply inline-flex items-center gap-1.5 rounded-full bg-accent-red/15 px-2.5 py-0.5 text-xs font-medium text-accent-red;
   }
 
+  /* ---- Apple widget-board experiment (/dev/apple) ---- */
+  .ios-rise {
+    animation: ios-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
   .hatch-empty {
     background-image: repeating-linear-gradient(
       45deg,
-      rgba(255, 255, 255, 0.03) 0 1px,
+      color-mix(in srgb, var(--color-ink) 4%, transparent) 0 1px,
       transparent 1px 7px
     );
   }
@@ -849,5 +775,16 @@
 
   .kratos-auth-alert {
     @apply flex items-start gap-2 rounded-xl border border-amber-300/25 bg-amber-950/35 px-4 py-3 text-sm text-amber-100;
+  }
+}
+
+@keyframes ios-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
