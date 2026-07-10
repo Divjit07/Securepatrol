@@ -661,8 +661,10 @@
     @apply pointer-events-none opacity-0;
   }
 
-  .kratos-auth-bg--animate {
-    animation: kratos-bg-kenburns 28s ease-in-out infinite;
+  @media (prefers-reduced-motion: no-preference) {
+    .kratos-auth-bg--animate {
+      animation: kratos-bg-kenburns 28s ease-in-out infinite;
+    }
   }
 
   @keyframes kratos-bg-kenburns {
