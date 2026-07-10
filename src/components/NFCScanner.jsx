@@ -67,10 +67,10 @@ export default function NFCScanner({ onScan, disabled }) {
 
   if (!supported) {
     return (
-      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
-        <Nfc className="mx-auto h-10 w-10 text-slate-400" />
-        <p className="mt-2 text-sm text-slate-500">
-          Web NFC is not available on this device. iPhone does not support NFC in browsers — tap <strong>QR Code</strong> above.
+      <div className="dk-inset p-6 text-center">
+        <Nfc className="mx-auto h-10 w-10 text-ink-3" />
+        <p className="mt-2 text-sm text-ink-2">
+          Web NFC is not available on this device. iPhone does not support NFC in browsers — tap <strong className="text-ink">QR Code</strong> above.
           Android users: use Chrome for NFC tap-to-scan.
         </p>
       </div>
@@ -78,17 +78,17 @@ export default function NFCScanner({ onScan, disabled }) {
   }
 
   return (
-    <div className="rounded-xl border border-brand-200 bg-brand-50 p-6 text-center">
-      <Nfc className={`mx-auto h-12 w-12 text-brand-600 ${scanning ? 'animate-pulse' : ''}`} />
-      <p className="mt-3 font-medium text-brand-900">
+    <div className="dk-card p-6 text-center">
+      <Nfc className={`mx-auto h-12 w-12 text-accent-cyan-line ${scanning ? 'animate-pulse' : ''}`} />
+      <p className="mt-3 font-medium text-ink">
         {scanning ? 'Hold phone near NFC tag…' : 'Tap to start NFC scan'}
       </p>
-      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      {error && <p className="mt-2 text-sm text-accent-red">{error}</p>}
       <button
         type="button"
         onClick={scanning ? stopScan : startScan}
         disabled={disabled}
-        className="mt-4 rounded-lg bg-brand-600 px-6 py-3 font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+        className="dk-cta mt-4 px-6 py-3"
       >
         {scanning ? 'Cancel Scan' : 'Start NFC Scan'}
       </button>

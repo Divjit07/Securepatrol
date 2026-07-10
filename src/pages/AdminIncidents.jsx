@@ -165,12 +165,12 @@ export default function AdminIncidents() {
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-600 border-t-transparent" />
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent-orange border-t-transparent" />
         </div>
       ) : reports.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center">
-          <AlertTriangle className="mx-auto h-10 w-10 text-slate-300" />
-          <p className="mt-3 font-medium text-slate-700">No incident reports</p>
+        <div className="rounded-xl border border-dashed border-white/10 bg-surface p-10 text-center">
+          <AlertTriangle className="mx-auto h-10 w-10 text-ink-3" />
+          <p className="mt-3 font-medium text-ink-2">No incident reports</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -179,26 +179,26 @@ export default function AdminIncidents() {
               key={report.id}
               type="button"
               onClick={() => openReport(report)}
-              className="sp-card w-full p-5 text-left transition hover:border-brand-200 hover:shadow-md"
+              className="sp-card w-full p-5 text-left transition hover:border-accent-cyan-line/20 hover:shadow-md"
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="font-display text-base font-semibold text-slate-900">
+                  <p className="font-display text-base font-semibold text-ink">
                     {report.guard?.name || 'Guard'}
                   </p>
-                  <p className="mt-0.5 text-sm text-slate-500">
+                  <p className="mt-0.5 text-sm text-ink-2">
                     {report.site?.name || 'Site'} · {formatIncidentReportTime(report.created_at)}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
                   {incidentAttachmentCount(report) > 0 && (
-                    <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-700">
+                    <span className="rounded-full bg-accent-cyan/10 px-2.5 py-0.5 text-xs font-medium text-accent-cyan-line">
                       {incidentAttachmentCount(report)} file{incidentAttachmentCount(report) === 1 ? '' : 's'}
                     </span>
                   )}
                 </div>
               </div>
-              <p className="mt-3 line-clamp-2 text-sm text-slate-700">{report.description}</p>
+              <p className="mt-3 line-clamp-2 text-sm text-ink-2">{report.description}</p>
             </button>
           ))}
         </div>
@@ -210,20 +210,20 @@ export default function AdminIncidents() {
           onClick={closeReport}
         >
           <div
-            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-xl"
+            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-surface shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between border-b border-slate-100 px-5 py-4">
+            <div className="flex items-start justify-between border-b border-white/5 px-5 py-4">
               <div>
                 <h2 className="font-display text-lg font-semibold">{selected.guard?.name || 'Guard'}</h2>
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-ink-2">
                   {selected.site?.name || 'Site'} · {formatIncidentReportTime(selected.created_at)}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={closeReport}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                className="rounded-lg p-1 text-ink-3 hover:bg-white/10 hover:text-ink-2"
                 aria-label="Close"
               >
                 <X className="h-5 w-5" />
@@ -233,12 +233,12 @@ export default function AdminIncidents() {
             <div className="space-y-4 px-5 py-4">
               <div>
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Report</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-ink-2">Report</p>
                   {canEdit && !editing && (
                     <button
                       type="button"
                       onClick={() => setEditing(true)}
-                      className="inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700"
+                      className="inline-flex items-center gap-1 text-xs font-medium text-accent-cyan-line hover:text-accent-cyan-line"
                     >
                       <Pencil className="h-3.5 w-3.5" />
                       Edit text
@@ -277,7 +277,7 @@ export default function AdminIncidents() {
                     </div>
                   </>
                 ) : (
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ink">
                     {selected.description}
                   </p>
                 )}
@@ -288,7 +288,7 @@ export default function AdminIncidents() {
                   href={mapsUrl(selected.guard_lat, selected.guard_lng)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:text-brand-700"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-accent-cyan-line hover:text-accent-cyan-line"
                 >
                   <MapPin className="h-4 w-4" />
                   View location on map
@@ -299,7 +299,7 @@ export default function AdminIncidents() {
               <IncidentReportAttachments report={selected} />
 
               {message && (
-                <p className={`text-sm ${message.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                <p className={`text-sm ${message.type === 'success' ? 'text-accent-green' : 'text-accent-red'}`}>
                   {message.text}
                 </p>
               )}
@@ -309,7 +309,7 @@ export default function AdminIncidents() {
                   type="button"
                   onClick={handleDelete}
                   disabled={deleting}
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-red-600 hover:text-red-700"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-accent-red hover:text-accent-red"
                 >
                   <Trash2 className="h-4 w-4" />
                   {deleting ? 'Deleting…' : 'Delete report'}

@@ -28,8 +28,8 @@ export default function SyncIndicator({ dark = false }) {
   if (pending === 0 && navigator.onLine) return null
 
   const baseClass = dark
-    ? 'bg-amber-500/15 text-amber-300 ring-amber-500/20'
-    : 'bg-amber-100 text-amber-800'
+    ? 'bg-accent-orange/100/15 text-amber-300 ring-amber-500/20'
+    : 'bg-accent-orange/15 text-accent-orange'
 
   return (
     <button

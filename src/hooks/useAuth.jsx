@@ -66,6 +66,23 @@ export function AuthProvider({ children }) {
     return { user: data.user, profile: p }
   }
 
+  const signUp = async (email, password, name) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { name: name?.trim() || email.split('@')[0] } },
+    })
+    if (error) throw error
+    const needsEmailConfirmation = !data.session
+    if (data.session && data.user) {
+      const p = await loadProfile(data.user.id)
+      setProfile(p)
+      setUser(data.user)
+      return { user: data.user, profile: p, needsEmailConfirmation: false }
+    }
+    return { user: data.user, profile: null, needsEmailConfirmation }
+  }
+
   const signOut = async () => {
     await supabase.auth.signOut()
     setUser(null)
@@ -127,6 +144,7 @@ export function AuthProvider({ children }) {
         profile,
         loading,
         signIn,
+        signUp,
         signOut,
         isAdmin,
         isGuard,

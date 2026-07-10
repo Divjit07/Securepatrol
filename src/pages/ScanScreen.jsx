@@ -21,7 +21,7 @@ export default function ScanScreen() {
     setError(null)
 
     try {
-      const result = await submitScanWithGps(checkpointId, user.id)
+      const result = await submitScanWithGps(checkpointId, user.id, { scanInputMethod: mode })
 
       navigate('/guard/scan/result', {
         state: {
@@ -46,26 +46,28 @@ export default function ScanScreen() {
     <Layout variant="guard">
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Scan Checkpoint</h1>
-        <p className="mt-1 flex items-center gap-1 text-sm text-slate-600">
+        <p className="mt-1 flex items-center gap-1 text-sm text-ink-2">
           <MapPin className="h-4 w-4" />
-          GPS will be captured at scan time
+          {mode === 'nfc'
+            ? 'NFC tap verifies the visit — GPS logged when available'
+            : 'GPS will be captured at scan time'}
         </p>
       </div>
 
       {isIOS() && (
-        <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-          <strong>iPhone:</strong> Use <strong>QR Code</strong> to scan checkpoints. Apple does not allow NFC scanning in web apps — only Android supports tap-to-scan.
+        <div className="mb-4 rounded-xl border border-accent-cyan-line/30 bg-accent-cyan/10 px-4 py-3 text-sm text-ink">
+          <strong className="text-accent-cyan-line">iPhone:</strong> Use <strong>QR Code</strong> to scan checkpoints. Apple does not allow NFC scanning in web apps — only Android supports tap-to-scan.
         </div>
       )}
 
-      <div className="mb-4 flex rounded-lg border border-slate-200 bg-white p-1">
+      <div className="mb-4 flex rounded-xl border border-white/10 bg-white/5 p-1">
         {['nfc', 'qr'].map((m) => (
           <button
             key={m}
             type="button"
             onClick={() => setMode(m)}
-            className={`flex-1 rounded-md py-2 text-sm font-medium ${
-              mode === m ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-50'
+            className={`flex-1 rounded-lg py-2 text-sm font-semibold transition ${
+              mode === m ? 'bg-white text-black' : 'text-ink-2 hover:bg-white/10'
             }`}
           >
             {m === 'nfc' ? 'NFC Tag' : 'QR Code'}
@@ -74,13 +76,15 @@ export default function ScanScreen() {
       </div>
 
       {error && (
-        <div className="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-700">{error}</div>
+        <div className="mb-4 rounded-lg bg-accent-red/15 p-4 text-sm text-accent-red">{error}</div>
       )}
 
       {processing ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-slate-200 bg-white py-16">
-          <Loader2 className="h-10 w-10 animate-spin text-brand-600" />
-          <p className="mt-4 font-medium">Getting GPS fix (hold still)…</p>
+        <div className="flex flex-col items-center justify-center rounded-xl border border-white/10 bg-surface py-16">
+          <Loader2 className="h-10 w-10 animate-spin text-accent-cyan-line" />
+          <p className="mt-4 font-medium">
+            {mode === 'nfc' ? 'Recording NFC scan…' : 'Getting GPS fix (hold still)…'}
+          </p>
         </div>
       ) : mode === 'nfc' ? (
         <NFCScanner onScan={handleScan} disabled={processing} />

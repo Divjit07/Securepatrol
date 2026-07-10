@@ -103,7 +103,7 @@ export default function Alerts() {
         <select
           value={selectedSite}
           onChange={(e) => setSelectedSite(e.target.value)}
-          className="mb-4 rounded-lg border border-slate-300 px-3 py-2"
+          className="mb-4 rounded-lg border border-white/10 px-3 py-2"
         >
           {sites.map((s) => (
             <option key={s.id} value={s.id}>{s.name}</option>
@@ -113,12 +113,12 @@ export default function Alerts() {
 
       <div className="mb-8">
         <h2 className="mb-3 text-lg font-semibold">Checkpoint Alert Windows</h2>
-        <p className="mb-4 text-sm text-slate-600">
+        <p className="mb-4 text-sm text-ink-2">
           Set how many minutes after shift start before a checkpoint is considered missed.
         </p>
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <div className="overflow-hidden rounded-xl border border-white/10 bg-surface">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left text-slate-600">
+            <thead className="bg-white/5 text-left text-ink-2">
               <tr>
                 <th className="px-4 py-3 font-medium">Checkpoint</th>
                 <th className="px-4 py-3 font-medium">Floor</th>
@@ -126,7 +126,7 @@ export default function Alerts() {
                 <th className="px-4 py-3 font-medium">Enabled</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-white/5">
               {checkpoints.map((cp) => {
                 const cfg = configs[cp.id] || { minutes_until_alert: 60, enabled: true }
                 return (
@@ -142,7 +142,7 @@ export default function Alerts() {
                         onChange={(e) =>
                           updateConfig(cp.id, parseInt(e.target.value, 10) || 60, cfg.enabled)
                         }
-                        className="w-20 rounded border border-slate-300 px-2 py-1"
+                        className="w-20 rounded border border-white/10 px-2 py-1"
                       />
                     </td>
                     <td className="px-4 py-3">
@@ -151,7 +151,7 @@ export default function Alerts() {
                         onClick={() =>
                           updateConfig(cp.id, cfg.minutes_until_alert, !cfg.enabled)
                         }
-                        className={cfg.enabled ? 'text-green-600' : 'text-slate-400'}
+                        className={cfg.enabled ? 'text-accent-green' : 'text-ink-3'}
                       >
                         {cfg.enabled ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
                       </button>
@@ -162,7 +162,7 @@ export default function Alerts() {
             </tbody>
           </table>
           {checkpoints.length === 0 && (
-            <p className="p-8 text-center text-slate-500">No checkpoints for this site.</p>
+            <p className="p-8 text-center text-ink-2">No checkpoints for this site.</p>
           )}
         </div>
       </div>
@@ -171,7 +171,7 @@ export default function Alerts() {
         <h2 className="mb-3 text-lg font-semibold">Recent Alerts</h2>
         <div className="space-y-2">
           {recentAlerts.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-slate-500">
+            <p className="rounded-xl border border-dashed border-white/10 p-6 text-center text-ink-2">
               No alerts triggered yet.
             </p>
           ) : (
@@ -179,13 +179,13 @@ export default function Alerts() {
               <div
                 key={alert.id}
                 className={`flex items-center justify-between rounded-xl border p-4 ${
-                  alert.acknowledged ? 'border-slate-200 bg-slate-50' : 'border-red-200 bg-red-50'
+                  alert.acknowledged ? 'border-white/10 bg-white/5' : 'border-red-200 bg-accent-red/15'
                 }`}
               >
                 <div>
                   <p className="font-medium">{alert.checkpoints?.name || 'Checkpoint'}</p>
-                  <p className="text-sm text-slate-600">{alert.message}</p>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-sm text-ink-2">{alert.message}</p>
+                  <p className="text-xs text-ink-3">
                     {new Date(alert.triggered_at).toLocaleString()}
                   </p>
                 </div>
@@ -193,7 +193,7 @@ export default function Alerts() {
                   <button
                     type="button"
                     onClick={() => acknowledgeAlert(alert.id)}
-                    className="rounded-lg bg-white px-3 py-1.5 text-sm font-medium ring-1 ring-slate-200 hover:bg-slate-50"
+                    className="rounded-lg bg-surface px-3 py-1.5 text-sm font-medium ring-1 ring-slate-200 hover:bg-white/5"
                   >
                     Acknowledge
                   </button>

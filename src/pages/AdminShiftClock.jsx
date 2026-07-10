@@ -51,7 +51,14 @@ export default function AdminShiftClock() {
   const [editing, setEditing] = useState(null)
   const [saving, setSaving] = useState(false)
 
-  const scheduled = useMemo(() => getScheduledShiftForDate(date), [date])
+  const selectedSiteHours = useMemo(
+    () => sites.find((s) => s.id === selectedSite)?.operating_hours || null,
+    [sites, selectedSite],
+  )
+  const scheduled = useMemo(
+    () => getScheduledShiftForDate(date, selectedSiteHours),
+    [date, selectedSiteHours],
+  )
 
   const siteGuards = useMemo(
     () => guards.filter((g) => g.site_id === selectedSite && g.active),
@@ -144,7 +151,11 @@ export default function AdminShiftClock() {
   const rows = siteGuards.map((guard) => {
     const guardScans = scans.filter((s) => s.guard_id === guard.id)
     const adjustment = adjustments[shiftAdjustmentKey(guard.id, date)]
-    const dayShift = computeGuardShiftForDay(guardScans, checkpoints, { date, adjustment })
+    const dayShift = computeGuardShiftForDay(guardScans, checkpoints, {
+      date,
+      adjustment,
+      operatingHours: selectedSiteHours,
+    })
     const clockInScan = findClockInScan(guardScans, checkpoints, date, scheduled)
 
     return {
@@ -248,7 +259,7 @@ export default function AdminShiftClock() {
 
       <div className="sp-card mb-6 flex flex-wrap items-end gap-4 p-6">
         <div className="min-w-[220px] flex-1">
-          <label className="mb-1.5 block text-sm font-medium text-slate-700">Site</label>
+          <label className="mb-1.5 block text-sm font-medium text-ink-2">Site</label>
           <select
             className="sp-input w-full"
             value={selectedSite}
@@ -263,7 +274,7 @@ export default function AdminShiftClock() {
         </div>
 
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-slate-700">Date</label>
+          <label className="mb-1.5 block text-sm font-medium text-ink-2">Date</label>
           <input
             type="date"
             className="sp-input"
@@ -274,19 +285,19 @@ export default function AdminShiftClock() {
       </div>
 
       {scheduled.isClosed ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-slate-600">
+        <div className="rounded-xl border border-white/10 bg-surface p-8 text-center text-ink-2">
           {scheduled.scheduleLabel}
         </div>
       ) : (
         <>
-          <p className="mb-4 text-sm text-slate-600">
+          <p className="mb-4 text-sm text-ink-2">
             {scheduled.scheduleLabel}. Use <strong>Add holiday</strong> on a guard to credit hours
             (e.g. 11:00 AM–8:00 PM) with a statutory holiday note — it will show on the client portal.
           </p>
 
           {message && (
             <p
-              className={`mb-4 text-sm ${message.type === 'success' ? 'text-green-600' : 'text-red-600'}`}
+              className={`mb-4 text-sm ${message.type === 'success' ? 'text-accent-green' : 'text-accent-red'}`}
             >
               {message.text}
             </p>
@@ -294,13 +305,13 @@ export default function AdminShiftClock() {
 
           {loading ? (
             <div className="flex justify-center py-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-600 border-t-transparent" />
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent-orange border-t-transparent" />
             </div>
           ) : (
             <div className="sp-card overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50 text-slate-500">
+                  <thead className="bg-white/5 text-ink-2">
                     <tr>
                       <th className="px-6 py-3 font-medium">Guard</th>
                       <th className="px-6 py-3 font-medium">Main Entrance scan</th>
@@ -310,16 +321,16 @@ export default function AdminShiftClock() {
                       <th className="px-6 py-3 font-medium">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-white/5">
                     {rows.map(({ guard, dayShift, adjustment, clockInScan }) => {
                       const isEditing = editing?.guardId === guard.id
 
                       return (
                         <tr key={guard.id}>
                           <td className="px-6 py-4">
-                            <p className="font-medium text-slate-900">{guard.name}</p>
+                            <p className="font-medium text-ink">{guard.name}</p>
                             {dayShift?.isAdjusted && !isStatutoryHolidayAdjustment(adjustment) && (
-                              <span className="mt-1 inline-block rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                              <span className="mt-1 inline-block rounded bg-accent-orange/15 px-2 py-0.5 text-xs font-medium text-accent-orange">
                                 Adjusted
                               </span>
                             )}
@@ -329,12 +340,12 @@ export default function AdminShiftClock() {
                               </span>
                             )}
                             {dayShift?.onShift && (
-                              <span className="mt-1 ml-1 inline-block rounded bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-800">
+                              <span className="mt-1 ml-1 inline-block rounded bg-accent-cyan/15 px-2 py-0.5 text-xs font-medium text-brand-800">
                                 On shift
                               </span>
                             )}
                           </td>
-                          <td className="px-6 py-4 text-slate-600">
+                          <td className="px-6 py-4 text-ink-2">
                             {clockInScan
                               ? formatShiftTime(new Date(clockInScan.scanned_at))
                               : '—'}
@@ -375,7 +386,7 @@ export default function AdminShiftClock() {
                           <td className="px-6 py-4">
                             {isEditing ? (
                               <div className="space-y-2">
-                                <label className="flex items-center gap-2 text-xs font-medium text-slate-700">
+                                <label className="flex items-center gap-2 text-xs font-medium text-ink-2">
                                   <input
                                     type="checkbox"
                                     checked={editing.statutoryHoliday}
@@ -423,7 +434,7 @@ export default function AdminShiftClock() {
                                   <button
                                     type="button"
                                     onClick={cancelEdit}
-                                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
+                                    className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium hover:bg-white/5"
                                   >
                                     Cancel
                                   </button>
@@ -437,7 +448,7 @@ export default function AdminShiftClock() {
                                     onClick={() =>
                                       startEdit({ guard, dayShift, adjustment }, { statutoryHoliday: true })
                                     }
-                                    className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-medium text-emerald-800 hover:bg-emerald-50"
+                                    className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-medium text-emerald-800 hover:bg-accent-green/15"
                                   >
                                     <CalendarHeart className="h-3.5 w-3.5" />
                                     Add holiday
@@ -446,7 +457,7 @@ export default function AdminShiftClock() {
                                 <button
                                   type="button"
                                   onClick={() => startEdit({ guard, dayShift, adjustment })}
-                                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
+                                  className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium hover:bg-white/5"
                                 >
                                   <Clock className="h-3.5 w-3.5" />
                                   {dayShift ? 'Edit times' : 'Set times'}
@@ -456,7 +467,7 @@ export default function AdminShiftClock() {
                                     type="button"
                                     disabled={saving}
                                     onClick={() => handleReset(guard.id)}
-                                    className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-50"
+                                    className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-medium text-accent-orange hover:bg-accent-orange/10"
                                   >
                                     <RotateCcw className="h-3.5 w-3.5" />
                                     Reset
@@ -473,7 +484,7 @@ export default function AdminShiftClock() {
               </div>
 
               {siteGuards.length === 0 && (
-                <p className="p-8 text-center text-slate-500">No active guards at this site.</p>
+                <p className="p-8 text-center text-ink-2">No active guards at this site.</p>
               )}
             </div>
           )}

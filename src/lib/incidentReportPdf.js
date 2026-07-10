@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf'
+import { BRAND } from '../lib/brand.js'
 import {
   formatIncidentReportTime,
   getIncidentPhotoSignedUrl,
@@ -23,7 +24,7 @@ function pdfImageFormat(dataUrl, path) {
 function safeFilename(siteName, createdAt) {
   const date = new Date(createdAt).toISOString().slice(0, 10)
   const slug = (siteName || 'site').replace(/[^\w]+/g, '-').replace(/^-|-$/g, '')
-  return `securepatrol-incident-${slug}-${date}.pdf`
+  return `kratos-incident-${slug}-${date}.pdf`
 }
 
 export async function downloadIncidentReportPdf({ report, siteName }) {
@@ -38,12 +39,12 @@ export async function downloadIncidentReportPdf({ report, siteName }) {
   const attachments = normalizeIncidentAttachments(report)
 
   doc.setFontSize(18)
-  doc.text('SecurePatrol Incident Report', margin, y)
+  doc.text(`${BRAND.name} Incident Report`, margin, y)
   y += 8
 
   doc.setFontSize(9)
   doc.setTextColor(100)
-  doc.text('Productive Security Inc.', margin, y)
+  doc.text(BRAND.tagline, margin, y)
   y += 10
 
   doc.setFontSize(11)

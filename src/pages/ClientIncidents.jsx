@@ -72,9 +72,9 @@ export default function ClientIncidents() {
   if (!siteId) {
     return (
       <Layout variant="client">
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-8 text-center">
-          <h1 className="text-lg font-semibold text-amber-900">No site assigned</h1>
-          <p className="mt-2 text-sm text-amber-800">
+        <div className="rounded-xl border border-accent-orange/30 bg-accent-orange/10 p-8 text-center">
+          <h1 className="text-lg font-semibold text-accent-orange">No site assigned</h1>
+          <p className="mt-2 text-sm text-accent-orange">
             Contact your administrator to link your account to a patrol site.
           </p>
         </div>
@@ -91,13 +91,13 @@ export default function ClientIncidents() {
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-600 border-t-transparent" />
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent-orange border-t-transparent" />
         </div>
       ) : reports.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center">
-          <AlertTriangle className="mx-auto h-10 w-10 text-slate-300" />
-          <p className="mt-3 font-medium text-slate-700">No incident reports yet</p>
-          <p className="mt-1 text-sm text-slate-500">
+        <div className="rounded-xl border border-dashed border-white/10 bg-surface p-10 text-center">
+          <AlertTriangle className="mx-auto h-10 w-10 text-ink-3" />
+          <p className="mt-3 font-medium text-ink-2">No incident reports yet</p>
+          <p className="mt-1 text-sm text-ink-2">
             When a guard submits a report from the field, it will appear here.
           </p>
         </div>
@@ -108,29 +108,29 @@ export default function ClientIncidents() {
               key={report.id}
               type="button"
               onClick={() => openReport(report)}
-              className="sp-card w-full p-5 text-left transition hover:border-brand-200 hover:shadow-md"
+              className="sp-card w-full p-5 text-left transition hover:border-accent-cyan-line/20 hover:shadow-md"
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="font-display text-base font-semibold text-slate-900">
+                  <p className="font-display text-base font-semibold text-ink">
                     {report.guard?.name || 'Guard'}
                   </p>
-                  <p className="mt-0.5 text-sm text-slate-500">{formatReportTime(report.created_at)}</p>
+                  <p className="mt-0.5 text-sm text-ink-2">{formatReportTime(report.created_at)}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   {incidentAttachmentCount(report) > 0 && (
-                    <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-700">
+                    <span className="rounded-full bg-accent-cyan/10 px-2.5 py-0.5 text-xs font-medium text-accent-cyan-line">
                       {incidentAttachmentCount(report)} file{incidentAttachmentCount(report) === 1 ? '' : 's'}
                     </span>
                   )}
                   {(report.guard_lat != null && report.guard_lng != null) && (
-                    <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+                    <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-medium text-ink-2">
                       GPS
                     </span>
                   )}
                 </div>
               </div>
-              <p className="mt-3 line-clamp-2 text-sm text-slate-700">{report.description}</p>
+              <p className="mt-3 line-clamp-2 text-sm text-ink-2">{report.description}</p>
             </button>
           ))}
         </div>
@@ -142,20 +142,20 @@ export default function ClientIncidents() {
           onClick={closeReport}
         >
           <div
-            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-xl"
+            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-surface shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
+            <div className="flex items-start justify-between gap-3 border-b border-white/5 px-5 py-4">
               <div className="min-w-0">
                 <h2 className="font-display text-lg font-semibold">{selected.guard?.name || 'Guard'}</h2>
-                <p className="text-sm text-slate-500">{formatReportTime(selected.created_at)}</p>
+                <p className="text-sm text-ink-2">{formatReportTime(selected.created_at)}</p>
               </div>
               <div className="flex shrink-0 items-center gap-1">
                 <button
                   type="button"
                   onClick={handleDownloadPdf}
                   disabled={pdfLoading}
-                  className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-brand-50 px-3 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-100 disabled:opacity-50 touch-manipulation"
+                  className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-accent-cyan/10 px-3 py-2 text-xs font-semibold text-accent-cyan-line hover:bg-accent-cyan/15 disabled:opacity-50 touch-manipulation"
                 >
                   {pdfLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -167,7 +167,7 @@ export default function ClientIncidents() {
                 <button
                   type="button"
                   onClick={closeReport}
-                  className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 touch-manipulation"
+                  className="rounded-lg p-2 text-ink-3 hover:bg-white/10 hover:text-ink-2 touch-manipulation"
                   aria-label="Close"
                 >
                   <X className="h-5 w-5" />
@@ -177,8 +177,8 @@ export default function ClientIncidents() {
 
             <div className="space-y-4 px-5 py-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Report</p>
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-2">Report</p>
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ink">
                   {selected.description}
                 </p>
               </div>
@@ -188,7 +188,7 @@ export default function ClientIncidents() {
                   href={mapsUrl(selected.guard_lat, selected.guard_lng)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:text-brand-700"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-accent-cyan-line hover:text-accent-cyan-line"
                 >
                   <MapPin className="h-4 w-4" />
                   View location on map

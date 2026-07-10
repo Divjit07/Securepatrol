@@ -2,31 +2,86 @@ import { useState } from 'react'
 
 export const DEFAULT_CLIENT_SHIFT = { start: '11:00', end: '20:00' }
 
-/** Fixed site schedule: Mon–Fri 11am–8pm, Sat 10am–5pm, Sunday closed. */
-export function getScheduledShiftForDate(dateStr) {
+/**
+ * Company default schedule: Mon–Fri 11am–8pm, Sat 10am–5pm, Sunday closed.
+ * Sites can override per-day via sites.operating_hours (JSONB, same shape —
+ * null day = closed). Edited in Admin Overview → site card → Hours.
+ */
+export const DEFAULT_OPERATING_HOURS = {
+  mon: { start: '11:00', end: '20:00' },
+  tue: { start: '11:00', end: '20:00' },
+  wed: { start: '11:00', end: '20:00' },
+  thu: { start: '11:00', end: '20:00' },
+  fri: { start: '11:00', end: '20:00' },
+  sat: { start: '10:00', end: '17:00' },
+  sun: null,
+}
+
+export const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+export function normalizeOperatingHours(operatingHours) {
+  if (!operatingHours || typeof operatingHours !== 'object') return DEFAULT_OPERATING_HOURS
+  return { ...DEFAULT_OPERATING_HOURS, ...operatingHours }
+}
+
+export function formatTimeLabel(time) {
+  if (!time) return ''
+  const [h, m] = time.split(':').map(Number)
+  const suffix = h >= 12 ? 'PM' : 'AM'
+  const hour12 = h % 12 || 12
+  return `${hour12}:${String(m).padStart(2, '0')} ${suffix}`
+}
+
+export function getScheduledShiftForDate(dateStr, operatingHours) {
   const [y, m, d] = dateStr.split('-').map(Number)
   const day = new Date(y, m - 1, d).getDay()
+  const dayHours = normalizeOperatingHours(operatingHours)[DAY_KEYS[day]]
 
-  if (day === 0) {
+  if (!dayHours?.start || !dayHours?.end) {
     return {
       start: '11:00',
       end: '20:00',
       endLabel: null,
-      scheduleLabel: 'Sunday · Building closed (no shift)',
-      isSaturday: false,
+      scheduleLabel: `${DAY_NAMES[day]} · Closed (no shift)`,
+      isSaturday: day === 6,
       isClosed: true,
     }
   }
 
-  const isSaturday = day === 6
-  const start = isSaturday ? '10:00' : '11:00'
-  const end = isSaturday ? '17:00' : '20:00'
-  const endLabel = isSaturday ? '5:00 PM' : '8:00 PM'
-  const scheduleLabel = isSaturday
-    ? 'Saturday · 10:00 AM – 5:00 PM'
-    : 'Monday–Friday · 11:00 AM – 8:00 PM'
+  return {
+    start: dayHours.start,
+    end: dayHours.end,
+    endLabel: formatTimeLabel(dayHours.end),
+    scheduleLabel: `${DAY_NAMES[day]} · ${formatTimeLabel(dayHours.start)} – ${formatTimeLabel(dayHours.end)}`,
+    isSaturday: day === 6,
+    isClosed: false,
+  }
+}
 
-  return { start, end, endLabel, scheduleLabel, isSaturday, isClosed: false }
+/** Compact weekly summary, e.g. "Mon–Fri 11:00 AM–8:00 PM · Sat 10:00 AM–5:00 PM · Sun closed" */
+export function describeOperatingHours(operatingHours) {
+  const hours = normalizeOperatingHours(operatingHours)
+  const week = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+  const short = { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun' }
+  const valueOf = (k) => (hours[k]?.start ? `${hours[k].start}-${hours[k].end}` : 'closed')
+
+  const runs = []
+  for (const key of week) {
+    const value = valueOf(key)
+    const last = runs[runs.length - 1]
+    if (last && last.value === value) last.to = key
+    else runs.push({ from: key, to: key, value })
+  }
+
+  return runs
+    .map(({ from, to, value }) => {
+      const days = from === to ? short[from] : `${short[from]}–${short[to]}`
+      if (value === 'closed') return `${days} closed`
+      const [start, end] = value.split('-')
+      return `${days} ${formatTimeLabel(start)}–${formatTimeLabel(end)}`
+    })
+    .join(' · ')
 }
 
 const SHIFT_KEY = 'client-portal-shift'
@@ -58,17 +113,17 @@ export function shiftScanBounds(dateStr, startTime, endTime) {
   return { start, end }
 }
 
-export function scheduledShiftBounds(dateStr) {
-  const schedule = getScheduledShiftForDate(dateStr)
+export function scheduledShiftBounds(dateStr, operatingHours) {
+  const schedule = getScheduledShiftForDate(dateStr, operatingHours)
   if (schedule.isClosed) return null
   return shiftBounds(dateStr, schedule.start, schedule.end)
 }
 
-export function useClientShift() {
+export function useClientShift(operatingHours) {
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [shift, setShift] = useState(loadShift)
 
-  const scheduled = getScheduledShiftForDate(date)
+  const scheduled = getScheduledShiftForDate(date, operatingHours)
 
   const updateShift = (patch) => {
     setShift((prev) => {

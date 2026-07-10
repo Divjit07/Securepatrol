@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Printer, Download, X, Shield } from 'lucide-react'
 import { buildCheckpointQrDataUrl, getCheckpointQrPayload } from '../lib/qr.js'
+import { BRAND } from '../lib/brand.js'
 import {
-  buildFullLabelPng,
   downloadDataUrl,
   FOOTER_LINE,
   PROVIDER_LINE,
@@ -29,7 +29,7 @@ function labelCardHtml({ siteName, label }) {
       <div class="checkpoint">${escapeHtml(label.name)}</div>
       <div class="label-footer">
         <div class="protected">${FOOTER_LINE}</div>
-        <div class="hint">Scan with SecurePatrol guard app</div>
+        <div class="hint">Scan with ${BRAND.name} guard app</div>
       </div>
     </div>`
 }
@@ -41,7 +41,7 @@ function buildPrintHtml({ siteName, labels }) {
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>SecurePatrol QR Labels</title>
+  <title>${BRAND.name} QR Labels</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: Arial, Helvetica, sans-serif; padding: 16px; color: #0f172a; }
@@ -144,7 +144,7 @@ function LabelPreview({ siteName, label }) {
             <Shield className="h-3.5 w-3.5" />
             {FOOTER_LINE}
           </p>
-          <p className="mt-1.5 text-[9px] text-slate-500">Scan with SecurePatrol guard app</p>
+          <p className="mt-1.5 text-[9px] text-slate-500">Scan with {BRAND.name} guard app</p>
         </div>
       </div>
     </div>
@@ -213,7 +213,7 @@ export default function QrPrintModal({ checkpoints, siteName, title, onClose }) 
           <div>
             <h3 className="font-display text-lg font-semibold">{title || 'QR checkpoint label'}</h3>
             <p className="mt-1 text-sm text-slate-500">
-              Labels include site name, checkpoint, and Productive Security branding — ready to print and stick.
+              Labels include site name, checkpoint, and {BRAND.name} branding — ready to print and stick.
             </p>
           </div>
           <button type="button" onClick={onClose} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100">

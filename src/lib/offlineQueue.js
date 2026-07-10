@@ -1,5 +1,5 @@
 import { supabase } from './supabase.js'
-import { getBestPosition, validateScanProximity, defaultRadiusForFloor } from './gps.js'
+import { getBestPosition, getOptionalPosition, validateScanProximity, defaultRadiusForFloor } from './gps.js'
 
 const QUEUE_KEY = 'securepatrol_offline_scans'
 
@@ -31,6 +31,7 @@ export async function submitScan({
   gpsAccuracy = null,
   scannedAt,
   syncMethod = 'realtime',
+  scanInputMethod = 'qr',
 }) {
   const { data: checkpoint, error: cpError } = await supabase
     .from('checkpoints')
@@ -57,6 +58,7 @@ export async function submitScan({
     distance_metres: 0,
     status: 'fail',
     sync_method: syncMethod,
+    scan_input_method: scanInputMethod,
   }
 
   if (!navigator.onLine) {
@@ -72,17 +74,20 @@ export async function submitScan({
   const { data, error } = await supabase.from('scans').insert(scanRecord).select().single()
   if (error) throw error
 
-  const clientCheck = validateScanProximity({
-    guardLat,
-    guardLng,
-    guardAltitude,
-    gpsAccuracy,
-    checkpointLat: checkpoint.latitude,
-    checkpointLng: checkpoint.longitude,
-    checkpointAltitude,
-    floorNumber,
-    radiusMetres: checkpoint.radius_metres ?? defaultRadiusForFloor(floorNumber),
-  })
+  const clientCheck =
+    scanInputMethod === 'nfc'
+      ? { passed: true, message: null }
+      : validateScanProximity({
+          guardLat,
+          guardLng,
+          guardAltitude,
+          gpsAccuracy,
+          checkpointLat: checkpoint.latitude,
+          checkpointLng: checkpoint.longitude,
+          checkpointAltitude,
+          floorNumber,
+          radiusMetres: checkpoint.radius_metres ?? defaultRadiusForFloor(floorNumber),
+        })
 
   return {
     ...data,
@@ -116,6 +121,7 @@ export async function flushOfflineQueue() {
         distance_metres: 0,
         status: 'fail',
         sync_method: 'offline_sync',
+        scan_input_method: scan.scan_input_method ?? 'qr',
       })
       if (error) throw error
       synced++
@@ -129,8 +135,12 @@ export async function flushOfflineQueue() {
   return { synced, failed }
 }
 
-export async function submitScanWithGps(checkpointId, guardId) {
-  const position = await getBestPosition(3)
+export async function submitScanWithGps(checkpointId, guardId, { scanInputMethod = 'qr' } = {}) {
+  const position =
+    scanInputMethod === 'nfc'
+      ? (await getOptionalPosition(8000, 2)) ?? (await getBestPosition(1))
+      : await getBestPosition(3)
+
   return submitScan({
     checkpointId,
     guardId,
@@ -140,6 +150,7 @@ export async function submitScanWithGps(checkpointId, guardId) {
     gpsAccuracy: position.accuracy,
     scannedAt: new Date().toISOString(),
     syncMethod: navigator.onLine ? 'realtime' : 'offline_sync',
+    scanInputMethod,
   })
 }
 

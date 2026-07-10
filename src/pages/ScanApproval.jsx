@@ -114,7 +114,7 @@ export default function ScanApproval() {
 
       <form onSubmit={handleApprove} className="sp-card max-w-xl space-y-5 p-6">
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-slate-700">Site</label>
+          <label className="mb-1.5 block text-sm font-medium text-ink-2">Site</label>
           <select
             className="sp-input w-full"
             value={selectedSite}
@@ -130,7 +130,7 @@ export default function ScanApproval() {
         </div>
 
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-slate-700">Checkpoint</label>
+          <label className="mb-1.5 block text-sm font-medium text-ink-2">Checkpoint</label>
           <select
             className="sp-input w-full"
             value={selectedCheckpoint}
@@ -148,7 +148,7 @@ export default function ScanApproval() {
         </div>
 
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-slate-700">Guard</label>
+          <label className="mb-1.5 block text-sm font-medium text-ink-2">Guard</label>
           <select
             className="sp-input w-full"
             value={selectedGuard}
@@ -164,12 +164,12 @@ export default function ScanApproval() {
             ))}
           </select>
           {selectedSite && siteGuards.length === 0 && (
-            <p className="mt-1 text-sm text-amber-600">No active guards assigned to this site.</p>
+            <p className="mt-1 text-sm text-accent-orange">No active guards assigned to this site.</p>
           )}
         </div>
 
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-slate-700">Note (optional)</label>
+          <label className="mb-1.5 block text-sm font-medium text-ink-2">Note (optional)</label>
           <textarea
             className="sp-input w-full"
             rows={3}
@@ -180,7 +180,7 @@ export default function ScanApproval() {
         </div>
 
         {message && (
-          <p className={`text-sm ${message.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+          <p className={`text-sm ${message.type === 'success' ? 'text-accent-green' : 'text-accent-red'}`}>
             {message.text}
           </p>
         )}
@@ -197,12 +197,12 @@ export default function ScanApproval() {
 
       {recent.length > 0 && (
         <div className="sp-card mt-8 overflow-hidden">
-          <div className="border-b border-slate-200 px-6 py-4">
+          <div className="border-b border-white/10 px-6 py-4">
             <h2 className="text-lg font-semibold">Recent approvals</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-slate-500">
+              <thead className="bg-white/5 text-ink-2">
                 <tr>
                   <th className="px-6 py-3 font-medium">Time</th>
                   <th className="px-6 py-3 font-medium">Site</th>
@@ -211,10 +211,10 @@ export default function ScanApproval() {
                   <th className="px-6 py-3 font-medium">Note</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-white/5">
                 {recent.map((row) => (
                   <tr key={row.id}>
-                    <td className="whitespace-nowrap px-6 py-3 text-slate-600">
+                    <td className="whitespace-nowrap px-6 py-3 text-ink-2">
                       {new Date(row.scanned_at).toLocaleString()}
                     </td>
                     <td className="px-6 py-3">{row.checkpoints?.floors?.sites?.name || '—'}</td>
@@ -225,7 +225,7 @@ export default function ScanApproval() {
                         : ''}
                     </td>
                     <td className="px-6 py-3">{row.guard?.name || '—'}</td>
-                    <td className="px-6 py-3 text-slate-500">{row.approval_note || '—'}</td>
+                    <td className="px-6 py-3 text-ink-2">{row.approval_note || '—'}</td>
                   </tr>
                 ))}
               </tbody>

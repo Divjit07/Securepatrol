@@ -60,21 +60,21 @@ export default function QRScanner({ onScan, disabled }) {
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4">
+    <div className="dk-card p-4">
       <div className="mb-3 flex items-center gap-2">
-        <QrCode className="h-5 w-5 text-slate-600" />
-        <span className="font-medium">QR Code Scanner</span>
+        <QrCode className="h-5 w-5 text-accent-cyan-line" />
+        <span className="font-medium text-ink">QR Code Scanner</span>
       </div>
 
       <div id={containerId} className="overflow-hidden rounded-lg" />
 
-      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      {error && <p className="mt-2 text-sm text-accent-red">{error}</p>}
 
       <button
         type="button"
         onClick={active ? stopScanner : startScanner}
         disabled={disabled}
-        className="mt-3 w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium hover:bg-slate-50 disabled:opacity-50"
+        className="dk-btn-2 mt-3 w-full py-2.5"
       >
         {active ? 'Stop Camera' : 'Open QR Scanner'}
       </button>

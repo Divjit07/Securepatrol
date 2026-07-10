@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy:client-functions": "supabase functions deploy create-client --project-ref vktxadadhnrcuxtubzxr && supabase functions deploy list-clients --project-ref vktxadadhnrcuxtubzxr && supabase functions deploy delete-client --project-ref vktxadadhnrcuxtubzxr"
+    "deploy:client-functions": "supabase functions deploy create-client --project-ref vktxadadhnrcuxtubzxr && supabase functions deploy list-clients --project-ref vktxadadhnrcuxtubzxr && supabase functions deploy delete-client --project-ref vktxadadhnrcuxtubzxr",
+    "deploy:schedule-function": "supabase functions deploy publish-schedule --project-ref vktxadadhnrcuxtubzxr",
+    "deploy:alerts-function": "supabase functions deploy roster-alerts --project-ref vktxadadhnrcuxtubzxr"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.1",

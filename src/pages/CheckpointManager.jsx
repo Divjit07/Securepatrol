@@ -358,7 +358,7 @@ export default function CheckpointManager() {
       {showFloorForm && (
         <form onSubmit={createFloor} className="sp-card mb-6 p-6">
           <h3 className="font-display text-lg font-semibold">New floor</h3>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-ink-2">
             Floors group checkpoints. QR labels are generated per checkpoint after you add them.
           </p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -395,7 +395,7 @@ export default function CheckpointManager() {
       {showForm && (
         <form onSubmit={createCheckpoint} className="sp-card mb-6 p-6">
           <h3 className="font-display text-lg font-semibold">New checkpoint</h3>
-          <p className="mb-4 text-sm text-slate-600">
+          <p className="mb-4 text-sm text-ink-2">
             Stand at the tag location, tap <strong>Use my GPS</strong>, or paste coordinates from any maps app.
             Upper floors: use a spot away from the lobby.
           </p>
@@ -440,7 +440,7 @@ export default function CheckpointManager() {
                 onChange={(e) => setForm({ ...form, radius_metres: e.target.value })}
                 className="sp-input"
               />
-          <p className="mt-1 text-xs text-slate-500">Default 20m + indoor GPS tolerance.</p>
+          <p className="mt-1 text-xs text-ink-2">Default 20m + indoor GPS tolerance.</p>
             </div>
             <div>
               <label className="sp-label">Checkpoint type</label>
@@ -453,7 +453,7 @@ export default function CheckpointManager() {
                 <option value="shift_clock_in">Shift clock-in (Main Entrance · 11am)</option>
                 <option value="shift_clock_out">Shift clock-out tag (optional — hours auto-end at 8pm weekdays / 5pm Sat)</option>
               </select>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-ink-2">
                 Guards only need to scan Main Entrance to clock in. Clock-out is automatic at shift end.
               </p>
             </div>
@@ -508,14 +508,14 @@ export default function CheckpointManager() {
                   </button>
                 )}
               </div>
-              <p className="mt-1 text-xs text-slate-500">Floor 1 = 0m, floor 2 = 3.5m, floor 5 = 14m, etc.</p>
+              <p className="mt-1 text-xs text-ink-2">Floor 1 = 0m, floor 2 = 3.5m, floor 5 = 14m, etc.</p>
             </div>
           </div>
           <button
             type="button"
             onClick={useCurrentLocation}
             disabled={gpsLoading}
-            className="mt-3 rounded-lg border border-brand-200 bg-brand-50 px-4 py-2 text-sm font-medium text-brand-800 hover:bg-brand-100 disabled:opacity-60"
+            className="mt-3 rounded-lg border border-accent-cyan-line/20 bg-accent-cyan/10 px-4 py-2 text-sm font-medium text-brand-800 hover:bg-accent-cyan/15 disabled:opacity-60"
           >
             {gpsLoading ? 'Getting GPS…' : 'Use my current GPS location'}
           </button>
@@ -523,25 +523,25 @@ export default function CheckpointManager() {
             <p
               className={`mt-2 text-sm ${
                 gpsMessage.type === 'error'
-                  ? 'text-red-700'
+                  ? 'text-accent-red'
                   : gpsMessage.type === 'success'
-                    ? 'text-green-700'
-                    : 'text-slate-600'
+                    ? 'text-accent-green'
+                    : 'text-ink-2'
               }`}
             >
               {gpsMessage.text}
             </p>
           )}
-          <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+          <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm text-ink-2">
             <input
               type="checkbox"
               checked={generateQrAfterSave}
               onChange={(e) => setGenerateQrAfterSave(e.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-brand-600"
+              className="h-4 w-4 rounded border-white/10 text-accent-cyan-line"
             />
             Generate printable QR label after saving
           </label>
-          <p className="mt-2 text-xs text-slate-500">
+          <p className="mt-2 text-xs text-ink-2">
             Also copy the checkpoint UUID to write NFC tags with NFC Tools.
           </p>
           <div className="mt-5 flex gap-3">
@@ -554,10 +554,10 @@ export default function CheckpointManager() {
       )}
 
       <div className="sp-card mb-6 overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/5 px-5 py-4">
           <div>
             <h2 className="font-display font-semibold">Floors</h2>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-ink-2">
               Manage floors, print QR labels, or remove a floor added by mistake.
             </p>
           </div>
@@ -567,28 +567,28 @@ export default function CheckpointManager() {
         </div>
 
         {floors.length === 0 ? (
-          <p className="px-5 py-8 text-center text-sm text-slate-500">
+          <p className="px-5 py-8 text-center text-sm text-ink-2">
             No floors yet. Click <strong>Add floor</strong> above to get started.
           </p>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left text-slate-600">
+            <thead className="bg-white/5 text-left text-ink-2">
               <tr>
                 <th className="px-5 py-3 font-medium">Floor</th>
                 <th className="px-5 py-3 font-medium">Checkpoints</th>
                 <th className="px-5 py-3 font-medium text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-white/5">
               {floors.map((floor) => {
                 const count = checkpoints.filter((cp) => cp.floor_id === floor.id).length
                 return (
                   <tr key={floor.id}>
                     <td className="px-5 py-3">
                       <p className="font-medium">{floor.floor_name}</p>
-                      <p className="text-xs text-slate-500">Level {floor.floor_number}</p>
+                      <p className="text-xs text-ink-2">Level {floor.floor_number}</p>
                     </td>
-                    <td className="px-5 py-3 text-slate-600">
+                    <td className="px-5 py-3 text-ink-2">
                       {count} checkpoint{count === 1 ? '' : 's'}
                     </td>
                     <td className="px-5 py-3">
@@ -604,7 +604,7 @@ export default function CheckpointManager() {
                         <button
                           type="button"
                           onClick={() => deleteFloor(floor)}
-                          className="inline-flex items-center gap-1.5 rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100"
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-red-300 bg-accent-red/15 px-3 py-2 text-xs font-semibold text-accent-red transition hover:bg-accent-red/15"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                           Delete floor
@@ -620,11 +620,11 @@ export default function CheckpointManager() {
       </div>
 
       <div className="sp-card overflow-hidden">
-        <div className="border-b border-slate-100 px-5 py-4">
+        <div className="border-b border-white/5 px-5 py-4">
           <h2 className="font-display font-semibold">Checkpoints</h2>
         </div>
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left text-slate-600">
+          <thead className="bg-white/5 text-left text-ink-2">
             <tr>
               <th className="px-4 py-3 font-medium">Name</th>
               <th className="px-4 py-3 font-medium">Floor</th>
@@ -635,7 +635,7 @@ export default function CheckpointManager() {
               <th className="px-4 py-3 font-medium">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-white/5">
             {checkpoints.map((cp) => (
               <tr key={cp.id}>
                 <td className="px-4 py-3">
@@ -654,7 +654,7 @@ export default function CheckpointManager() {
                       <button
                         type="button"
                         onClick={() => saveRename(cp.id)}
-                        className="rounded-lg p-1.5 text-green-600 hover:bg-green-50"
+                        className="rounded-lg p-1.5 text-accent-green hover:bg-accent-green/15"
                         title="Save name"
                       >
                         <Check className="h-4 w-4" />
@@ -662,7 +662,7 @@ export default function CheckpointManager() {
                       <button
                         type="button"
                         onClick={cancelRename}
-                        className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"
+                        className="rounded-lg p-1.5 text-ink-2 hover:bg-white/10"
                         title="Cancel"
                       >
                         <X className="h-4 w-4" />
@@ -674,7 +674,7 @@ export default function CheckpointManager() {
                       <button
                         type="button"
                         onClick={() => startRename(cp)}
-                        className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-brand-600"
+                        className="rounded-lg p-1 text-ink-3 hover:bg-white/10 hover:text-accent-cyan-line"
                         title="Rename checkpoint"
                       >
                         <Pencil className="h-3.5 w-3.5" />
@@ -685,7 +685,7 @@ export default function CheckpointManager() {
                 <td className="px-4 py-3">{cp.floors?.floor_name}</td>
                 <td className="px-4 py-3 text-xs">{cp.latitude?.toFixed(4)}, {cp.longitude?.toFixed(4)}</td>
                 <td className="px-4 py-3">{cp.radius_metres}m</td>
-                <td className="px-4 py-3 text-xs text-slate-600">
+                <td className="px-4 py-3 text-xs text-ink-2">
                   {cp.checkpoint_role === 'shift_clock_in'
                     ? 'Clock in'
                     : cp.checkpoint_role === 'shift_clock_out'
@@ -698,10 +698,10 @@ export default function CheckpointManager() {
                     <button
                       type="button"
                       onClick={() => copyCheckpointId(cp.id)}
-                      className="text-slate-500 hover:text-brand-600"
+                      className="text-ink-2 hover:text-accent-cyan-line"
                       title="Copy full UUID for NFC tag"
                     >
-                      {copiedId === cp.id ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                      {copiedId === cp.id ? <Check className="h-4 w-4 text-accent-green" /> : <Copy className="h-4 w-4" />}
                     </button>
                   </div>
                 </td>
@@ -710,7 +710,7 @@ export default function CheckpointManager() {
                     <button
                       type="button"
                       onClick={() => openQrModal(cp, `${cp.name} — QR label`)}
-                      className="rounded-lg p-1.5 text-brand-600 hover:bg-brand-50"
+                      className="rounded-lg p-1.5 text-accent-cyan-line hover:bg-accent-cyan/10"
                       title="Generate & print QR label"
                     >
                       <QrCode className="h-4 w-4" />
@@ -718,7 +718,7 @@ export default function CheckpointManager() {
                     <button
                       type="button"
                       onClick={() => deleteCheckpoint(cp.id)}
-                      className="rounded-lg p-1.5 text-red-500 hover:bg-red-50"
+                      className="rounded-lg p-1.5 text-accent-red hover:bg-accent-red/15"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -729,7 +729,7 @@ export default function CheckpointManager() {
           </tbody>
         </table>
         {checkpoints.length === 0 && (
-          <p className="p-8 text-center text-slate-500">No checkpoints yet. Add a floor, then add checkpoints.</p>
+          <p className="p-8 text-center text-ink-2">No checkpoints yet. Add a floor, then add checkpoints.</p>
         )}
       </div>
 

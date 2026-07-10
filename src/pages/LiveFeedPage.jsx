@@ -17,7 +17,7 @@ export default function LiveFeedPage() {
 
   return (
     <Layout variant="admin">
-      <Link to={`/admin/site/${id}`} className="mb-4 inline-flex items-center gap-1 text-sm text-brand-600 hover:underline">
+      <Link to={`/admin/site/${id}`} className="mb-4 inline-flex items-center gap-1 text-sm text-accent-cyan-line hover:underline">
         <ArrowLeft className="h-4 w-4" /> Back to site
       </Link>
       <h1 className="mb-6 text-2xl font-bold">Live Feed — {siteName}</h1>

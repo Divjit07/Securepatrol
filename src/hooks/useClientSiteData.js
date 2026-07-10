@@ -84,6 +84,13 @@ export function useClientSiteData(siteId, date, shift, guardId = null) {
   }, [loadData])
 
   useEffect(() => {
+    if (!siteId) return undefined
+    const onFocus = () => loadData()
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [siteId, loadData])
+
+  useEffect(() => {
     if (!siteId || shift.isClosed) return undefined
 
     const channel = supabase
@@ -136,7 +143,7 @@ export function useClientSiteData(siteId, date, shift, guardId = null) {
       const dayShift = computeGuardShiftForDay(
         scans.filter((s) => s.guard_id === guard.id),
         checkpoints,
-        { date, adjustment },
+        { date, adjustment, operatingHours: site?.operating_hours },
       )
       if (!dayShift) return null
       return {

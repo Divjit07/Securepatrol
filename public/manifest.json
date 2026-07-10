@@ -1,11 +1,11 @@
 {
-  "name": "SecurePatrol by Productive Security",
-  "short_name": "SecurePatrol",
-  "description": "NFC-based guard patrol verification by Productive Security Inc.",
+  "name": "Kratos",
+  "short_name": "Kratos",
+  "description": "Global workforce command for security patrol, scheduling, and compliance.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#2563eb",
+  "background_color": "#0b1220",
+  "theme_color": "#0b1220",
   "orientation": "portrait",
   "icons": [
     {

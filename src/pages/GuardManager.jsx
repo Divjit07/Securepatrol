@@ -116,28 +116,28 @@ export default function GuardManager() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Guard Manager</h1>
-          <p className="text-slate-600">Assign each guard to exactly one site</p>
+          <p className="text-ink-2">Assign each guard to exactly one site</p>
         </div>
         <button
           type="button"
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+          className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-200"
         >
           <Plus className="h-4 w-4" /> Add Guard
         </button>
       </div>
 
       {showForm && (
-        <form onSubmit={createGuard} className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
+        <form onSubmit={createGuard} className="mb-6 rounded-xl border border-white/10 bg-surface p-4">
           <h3 className="font-semibold">Create Guard Account</h3>
-          {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+          {error && <p className="mt-2 text-sm text-accent-red">{error}</p>}
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <input
               placeholder="Full name"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               required
-              className="rounded-lg border border-slate-300 px-3 py-2"
+              className="rounded-lg border border-white/10 px-3 py-2"
             />
             <input
               type="email"
@@ -145,7 +145,7 @@ export default function GuardManager() {
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               required
-              className="rounded-lg border border-slate-300 px-3 py-2"
+              className="rounded-lg border border-white/10 px-3 py-2"
             />
             <input
               type="password"
@@ -154,13 +154,13 @@ export default function GuardManager() {
               onChange={(e) => setForm({ ...form, password: e.target.value })}
               required
               minLength={6}
-              className="rounded-lg border border-slate-300 px-3 py-2"
+              className="rounded-lg border border-white/10 px-3 py-2"
             />
             <select
               value={form.site_id}
               onChange={(e) => setForm({ ...form, site_id: e.target.value })}
               required
-              className="rounded-lg border border-slate-300 px-3 py-2"
+              className="rounded-lg border border-white/10 px-3 py-2"
             >
               <option value="">Assign to site</option>
               {sites.map((s) => (
@@ -179,9 +179,9 @@ export default function GuardManager() {
         </form>
       )}
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="overflow-hidden rounded-xl border border-white/10 bg-surface">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left text-slate-600">
+          <thead className="bg-white/5 text-left text-ink-2">
             <tr>
               <th className="px-4 py-3 font-medium">Guard</th>
               <th className="px-4 py-3 font-medium">Email</th>
@@ -190,15 +190,15 @@ export default function GuardManager() {
               <th className="px-4 py-3 font-medium">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-white/5">
             {guards.map((guard) => (
-              <tr key={guard.id} className={guard.unassigned ? 'bg-amber-50/60' : ''}>
+              <tr key={guard.id} className={guard.unassigned ? 'bg-accent-orange/10' : ''}>
                 <td className="px-4 py-3 font-medium">{guard.name}</td>
-                <td className="px-4 py-3 text-slate-600">{guard.email}</td>
+                <td className="px-4 py-3 text-ink-2">{guard.email}</td>
                 <td className="px-4 py-3">
                   <select
                     className={`max-w-xs rounded border px-2 py-1.5 text-sm ${
-                      guard.unassigned ? 'border-amber-300 bg-amber-50' : 'border-slate-200 bg-white'
+                      guard.unassigned ? 'border-amber-300 bg-accent-orange/10' : 'border-white/10 bg-surface'
                     }`}
                     value={guard.site_id || ''}
                     disabled={assigningId === guard.id}
@@ -212,11 +212,11 @@ export default function GuardManager() {
                     ))}
                   </select>
                   {!guard.unassigned && (
-                    <p className="mt-1 text-xs text-slate-500">{formatSiteLabel(guard)}</p>
+                    <p className="mt-1 text-xs text-ink-2">{formatSiteLabel(guard)}</p>
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${guard.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${guard.active ? 'bg-accent-green/15 text-accent-green' : 'bg-accent-red/15 text-accent-red'}`}>
                     {guard.active ? 'Active' : 'Inactive'}
                   </span>
                 </td>
@@ -225,7 +225,7 @@ export default function GuardManager() {
                     <button
                       type="button"
                       onClick={() => toggleActive(guard)}
-                      className="text-slate-500 hover:text-slate-700"
+                      className="text-ink-2 hover:text-ink-2"
                       title={guard.active ? 'Deactivate' : 'Activate'}
                       disabled={removingId === guard.id}
                     >
@@ -234,7 +234,7 @@ export default function GuardManager() {
                     <button
                       type="button"
                       onClick={() => handleRemoveGuard(guard)}
-                      className="text-red-500 hover:text-red-700 disabled:opacity-40"
+                      className="text-accent-red hover:text-accent-red disabled:opacity-40"
                       title="Remove guard permanently"
                       disabled={removingId === guard.id}
                     >
@@ -247,7 +247,7 @@ export default function GuardManager() {
           </tbody>
         </table>
         {guards.length === 0 && (
-          <p className="p-8 text-center text-slate-500">No guards yet.</p>
+          <p className="p-8 text-center text-ink-2">No guards yet.</p>
         )}
       </div>
     </Layout>

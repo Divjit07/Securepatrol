@@ -123,7 +123,7 @@ export default function GuardIncidentReport() {
           />
           <p
             className={`mt-1 text-xs ${
-              canSend ? 'text-slate-500' : 'font-medium text-amber-700'
+              canSend ? 'text-ink-2' : 'font-medium text-accent-orange'
             }`}
           >
             {trimmedLength}/5000 characters
@@ -135,7 +135,7 @@ export default function GuardIncidentReport() {
           <label htmlFor="incident-files" className="sp-label">
             Attachments (optional)
           </label>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-ink-2">
             Photos, PDF, or DOCX · up to {MAX_INCIDENT_ATTACHMENTS} files · 10 MB each
           </p>
           <div className="mt-2">
@@ -161,14 +161,14 @@ export default function GuardIncidentReport() {
               {files.map((file, index) => (
                 <li
                   key={`${file.name}-${file.size}-${index}`}
-                  className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
+                  className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm"
                 >
-                  <span className="min-w-0 truncate font-medium text-slate-800">{file.name}</span>
-                  <span className="shrink-0 text-slate-500">{formatFileSize(file.size)}</span>
+                  <span className="min-w-0 truncate font-medium text-ink">{file.name}</span>
+                  <span className="shrink-0 text-ink-2">{formatFileSize(file.size)}</span>
                   <button
                     type="button"
                     onClick={() => removeFile(index)}
-                    className="shrink-0 rounded p-1 text-slate-400 hover:bg-white hover:text-red-600"
+                    className="shrink-0 rounded p-1 text-ink-3 hover:bg-surface hover:text-accent-red"
                     aria-label={`Remove ${file.name}`}
                   >
                     <X className="h-4 w-4" />
@@ -179,15 +179,17 @@ export default function GuardIncidentReport() {
           )}
         </div>
 
-        <p className="flex items-center gap-1.5 text-xs text-slate-500">
+        <p className="flex items-center gap-1.5 text-xs text-ink-2">
           <MapPin className="h-3.5 w-3.5" />
           Your location is included when GPS is available.
         </p>
 
         {message && (
           <p
-            className={`flex items-center gap-2 text-sm ${
-              message.type === 'success' ? 'text-green-600' : 'text-red-600'
+            className={`flex items-center gap-2 rounded-xl px-4 py-3 text-sm ${
+              message.type === 'success'
+                ? 'border border-accent-orange/20 bg-accent-orange/10 text-accent-orange'
+                : 'border border-accent-red/20 bg-accent-red/15 text-accent-red'
             }`}
           >
             {message.type === 'success' && <CheckCircle2 className="h-4 w-4 shrink-0" />}

@@ -7,14 +7,25 @@ import PageHeader from '../components/PageHeader.jsx'
 import { supabase } from '../lib/supabase.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { fetchSitesForAdmin } from '../lib/scans.js'
+import { BRAND } from '../lib/brand.js'
 import {
-  computeGuardHoursReport,
   dateRangeDays,
   defaultPayPeriodEnd,
   defaultPayPeriodStart,
   formatShiftTime,
 } from '../lib/clientStats.js'
 import { fetchShiftAdjustmentsForSite, mapShiftAdjustments } from '../lib/shiftAdjustments.js'
+import { describeOperatingHours } from '../hooks/useClientShift.js'
+import {
+  ROUNDING_MODES,
+  applyRounding,
+  computeWeeklyPayroll,
+  overtimeByGuard,
+  buildAccountingCsv,
+  downloadCsv,
+  formatMinutes,
+  fetchApprovalsForSite,
+} from '../lib/payroll.js'
 
 function localDayStart(dateStr) {
   const [y, m, d] = dateStr.split('-').map(Number)
@@ -46,6 +57,7 @@ export default function Reports() {
   const [hoursScans, setHoursScans] = useState([])
   const [hoursAdjustments, setHoursAdjustments] = useState({})
   const [loading, setLoading] = useState(false)
+  const [rounding, setRounding] = useState('exact')
 
   const activeSiteId = tab === 'scans' ? scanFilters.siteId : hoursFilters.siteId
   const selectedSite = sites.find((s) => s.id === activeSiteId)
@@ -190,9 +202,9 @@ export default function Reports() {
   const exportScanPdf = () => {
     const doc = new jsPDF()
     doc.setFontSize(18)
-    doc.text('SecurePatrol Patrol Report', 14, 20)
+    doc.text(`${BRAND.name} Patrol Report`, 14, 20)
     doc.setFontSize(9)
-    doc.text('Productive Security Inc.', 14, 26)
+    doc.text(BRAND.tagline, 14, 26)
     doc.setFontSize(11)
     doc.text(`Site: ${selectedSite?.name || ''}`, 14, 33)
     doc.text(`Period: ${scanFilters.fromDate} to ${scanFilters.toDate}`, 14, 40)
@@ -220,16 +232,35 @@ export default function Reports() {
     guards,
     dates: dateRangeDays(hoursFilters.fromDate, hoursFilters.toDate),
     adjustmentsByKey: hoursAdjustments,
+    operatingHours: selectedSite?.operating_hours,
   })
+  const hoursSummary = describeOperatingHours(selectedSite?.operating_hours)
+
+  const payRows = applyRounding(hoursReport.rows, rounding)
+  const weeklyPayroll = computeWeeklyPayroll(payRows)
+  const otByGuard = overtimeByGuard(weeklyPayroll)
+
+  const exportAccountingCsv = async () => {
+    let approvals = {}
+    try {
+      approvals = await fetchApprovalsForSite(hoursFilters.siteId, hoursFilters.fromDate, hoursFilters.toDate)
+    } catch {
+      // approvals table not migrated yet — export without the column data
+    }
+    downloadCsv(
+      `securepatrol-payroll-${hoursFilters.fromDate}-${hoursFilters.toDate}.csv`,
+      buildAccountingCsv(weeklyPayroll, approvals),
+    )
+  }
 
   const exportHoursCsv = () => {
     const headers = ['Date', 'Guard', 'Clock In', 'Clock Out', 'Hours', 'Day type']
-    const rows = hoursReport.rows.map((row) => [
+    const rows = payRows.map((row) => [
       row.date,
       row.guardName,
-      formatShiftTime(row.clockIn),
-      formatShiftTime(row.clockOut),
-      row.hoursLabel,
+      formatShiftTime(row.payClockIn),
+      formatShiftTime(row.payClockOut),
+      formatMinutes(row.payMinutes),
       row.statutoryHolidayLabel || 'Regular shift',
     ])
     const summaryRows = [
@@ -250,24 +281,24 @@ export default function Reports() {
   const exportHoursPdf = () => {
     const doc = new jsPDF()
     doc.setFontSize(18)
-    doc.text('SecurePatrol Guard Hours Report', 14, 20)
+    doc.text(`${BRAND.name} Guard Hours Report`, 14, 20)
     doc.setFontSize(9)
-    doc.text('Productive Security Inc.', 14, 26)
+    doc.text(BRAND.tagline, 14, 26)
     doc.setFontSize(11)
     doc.text(`Site: ${selectedSite?.name || ''}`, 14, 33)
     doc.text(`Pay period: ${hoursFilters.fromDate} to ${hoursFilters.toDate}`, 14, 40)
-    doc.text('Schedule: Mon–Fri 11:00 AM–8:00 PM (9 hrs) · Sat 10:00 AM–5:00 PM (7 hrs) · Sun closed', 14, 47)
+    doc.text(`Schedule: ${hoursSummary}`, 14, 47)
     doc.text('Payroll report · Includes statutory holidays and manual adjustments', 14, 54)
 
     autoTable(doc, {
       startY: 62,
       head: [['Date', 'Guard', 'Clock In', 'Clock Out', 'Hours', 'Day type']],
-      body: hoursReport.rows.map((row) => [
+      body: payRows.map((row) => [
         row.date,
         row.guardName,
-        row.clockIn.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
-        row.clockOut.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
-        String(row.hoursLabel),
+        row.payClockIn.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+        row.payClockOut.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+        formatMinutes(row.payMinutes),
         row.statutoryHolidayLabel || 'Regular shift',
       ]),
     })
@@ -302,7 +333,7 @@ export default function Reports() {
         description="Patrol scan history and guard hours for payroll. Export PDF or CSV for any site."
       />
 
-      <div className="mb-6 flex gap-2 rounded-lg border border-slate-200 bg-white p-1">
+      <div className="mb-6 flex gap-2 rounded-lg border border-white/10 bg-surface p-1">
         {[
           { id: 'scans', label: 'Patrol scans' },
           { id: 'hours', label: 'Guard hours (payroll)' },
@@ -312,7 +343,7 @@ export default function Reports() {
             type="button"
             onClick={() => setTab(id)}
             className={`flex-1 rounded-md px-4 py-2 text-sm font-medium ${
-              tab === id ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-50'
+              tab === id ? 'bg-surface text-black' : 'text-ink-2 hover:bg-white/5'
             }`}
           >
             {label}
@@ -320,11 +351,11 @@ export default function Reports() {
         ))}
       </div>
 
-      <div className="mb-6 flex flex-wrap gap-4 rounded-xl border border-slate-200 bg-white p-4">
+      <div className="mb-6 flex flex-wrap gap-4 rounded-xl border border-white/10 bg-surface p-4">
         <select
           value={activeSiteId}
           onChange={(e) => syncSiteSelection(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2"
+          className="rounded-lg border border-white/10 px-3 py-2"
         >
           {sites.map((s) => (
             <option key={s.id} value={s.id}>
@@ -338,13 +369,13 @@ export default function Reports() {
               type="date"
               value={scanFilters.fromDate}
               onChange={(e) => setScanFilters({ ...scanFilters, fromDate: e.target.value })}
-              className="rounded-lg border border-slate-300 px-3 py-2"
+              className="rounded-lg border border-white/10 px-3 py-2"
             />
             <input
               type="date"
               value={scanFilters.toDate}
               onChange={(e) => setScanFilters({ ...scanFilters, toDate: e.target.value })}
-              className="rounded-lg border border-slate-300 px-3 py-2"
+              className="rounded-lg border border-white/10 px-3 py-2"
             />
           </>
         ) : (
@@ -353,13 +384,13 @@ export default function Reports() {
               type="date"
               value={hoursFilters.fromDate}
               onChange={(e) => setHoursFilters({ ...hoursFilters, fromDate: e.target.value })}
-              className="rounded-lg border border-slate-300 px-3 py-2"
+              className="rounded-lg border border-white/10 px-3 py-2"
             />
             <input
               type="date"
               value={hoursFilters.toDate}
               onChange={(e) => setHoursFilters({ ...hoursFilters, toDate: e.target.value })}
-              className="rounded-lg border border-slate-300 px-3 py-2"
+              className="rounded-lg border border-white/10 px-3 py-2"
             />
           </>
         )}
@@ -372,7 +403,7 @@ export default function Reports() {
               type="button"
               onClick={exportScanCsv}
               disabled={!scans.length}
-              className="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50 disabled:opacity-50"
+              className="flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-sm font-medium hover:bg-white/5 disabled:opacity-50"
             >
               <Download className="h-4 w-4" /> CSV
             </button>
@@ -380,35 +411,35 @@ export default function Reports() {
               type="button"
               onClick={exportScanPdf}
               disabled={!scans.length}
-              className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+              className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-200 disabled:opacity-50"
             >
               <FileText className="h-4 w-4" /> PDF
             </button>
           </div>
 
           <div className="mb-4 grid gap-4 sm:grid-cols-3">
-            <div className="rounded-xl border border-slate-200 bg-white p-4">
-              <p className="text-sm text-slate-500">Total scans</p>
+            <div className="rounded-xl border border-white/10 bg-surface p-4">
+              <p className="text-sm text-ink-2">Total scans</p>
               <p className="text-2xl font-bold">{scans.length}</p>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-white p-4">
-              <p className="text-sm text-slate-500">Passed</p>
-              <p className="text-2xl font-bold text-green-600">{passed}</p>
+            <div className="rounded-xl border border-white/10 bg-surface p-4">
+              <p className="text-sm text-ink-2">Passed</p>
+              <p className="text-2xl font-bold text-accent-green">{passed}</p>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-white p-4">
-              <p className="text-sm text-slate-500">Failed</p>
-              <p className="text-2xl font-bold text-red-600">{scans.length - passed}</p>
+            <div className="rounded-xl border border-white/10 bg-surface p-4">
+              <p className="text-sm text-ink-2">Failed</p>
+              <p className="text-2xl font-bold text-accent-red">{scans.length - passed}</p>
             </div>
           </div>
 
           {loading ? (
             <div className="flex justify-center py-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-600 border-t-transparent" />
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent-orange border-t-transparent" />
             </div>
           ) : (
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <div className="overflow-hidden rounded-xl border border-white/10 bg-surface">
               <table className="w-full text-sm">
-                <thead className="bg-slate-50 text-left text-slate-600">
+                <thead className="bg-white/5 text-left text-ink-2">
                   <tr>
                     <th className="px-4 py-3 font-medium">Date/Time</th>
                     <th className="px-4 py-3 font-medium">Checkpoint</th>
@@ -417,7 +448,7 @@ export default function Reports() {
                     <th className="px-4 py-3 font-medium">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-white/5">
                   {scans.map((scan) => (
                     <tr key={scan.id}>
                       <td className="px-4 py-3">{new Date(scan.scanned_at).toLocaleString()}</td>
@@ -427,7 +458,7 @@ export default function Reports() {
                       <td className="px-4 py-3">
                         <span
                           className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                            scan.status === 'pass' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            scan.status === 'pass' ? 'bg-accent-green/15 text-accent-green' : 'bg-accent-red/15 text-accent-red'
                           }`}
                         >
                           {scan.status.toUpperCase()}
@@ -438,25 +469,46 @@ export default function Reports() {
                 </tbody>
               </table>
               {scans.length === 0 && (
-                <p className="p-8 text-center text-slate-500">No scans found for this period.</p>
+                <p className="p-8 text-center text-ink-2">No scans found for this period.</p>
               )}
             </div>
           )}
         </>
       ) : (
         <>
-          <div className="mb-4 rounded-xl border border-brand-100 bg-brand-50 p-4 text-sm text-brand-900">
-            Payroll hours for <strong>{selectedSite?.name || 'selected site'}</strong>. Mon–Fri{' '}
-            <strong>9 hours</strong> (11:00 AM–8:00 PM), Saturday <strong>7 hours</strong> (10:00 AM–5:00 PM).
-            Includes statutory holidays and shift clock edits.
+          <div className="mb-4 rounded-xl border border-accent-cyan-line/20 bg-accent-cyan/10 p-4 text-sm text-accent-cyan">
+            Payroll hours for <strong>{selectedSite?.name || 'selected site'}</strong>. Site hours:{' '}
+            <strong>{hoursSummary}</strong>. Includes statutory holidays and shift clock edits.
           </div>
 
-          <div className="mb-4 flex justify-end gap-2">
+          <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
+            <div className="mr-auto flex rounded-lg border border-white/10 bg-white/5 p-1">
+              {ROUNDING_MODES.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => setRounding(m.id)}
+                  className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                    rounding === m.id ? 'bg-white text-black' : 'text-ink-2 hover:bg-white/10'
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={exportAccountingCsv}
+              disabled={!weeklyPayroll.length}
+              className="flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-sm font-medium hover:bg-white/5 disabled:opacity-50"
+            >
+              <Download className="h-4 w-4" /> Payroll CSV
+            </button>
             <button
               type="button"
               onClick={exportHoursCsv}
               disabled={!hoursReport.rows.length}
-              className="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50 disabled:opacity-50"
+              className="flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-sm font-medium hover:bg-white/5 disabled:opacity-50"
             >
               <Download className="h-4 w-4" /> CSV
             </button>
@@ -464,7 +516,7 @@ export default function Reports() {
               type="button"
               onClick={exportHoursPdf}
               disabled={!hoursReport.rows.length}
-              className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+              className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-200 disabled:opacity-50"
             >
               <FileText className="h-4 w-4" /> PDF
             </button>
@@ -472,23 +524,30 @@ export default function Reports() {
 
           {loading ? (
             <div className="flex justify-center py-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-600 border-t-transparent" />
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent-orange border-t-transparent" />
             </div>
           ) : (
             <>
               <div className="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {Object.values(hoursReport.totalByGuard).map((g) => (
-                  <div key={g.name} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <p className="text-sm text-slate-500">{g.name}</p>
+                {Object.entries(hoursReport.totalByGuard).map(([guardId, g]) => (
+                  <div key={guardId} className="rounded-xl border border-white/10 bg-surface p-4 shadow-sm">
+                    <p className="text-sm text-ink-2">{g.name}</p>
                     <p className="text-2xl font-bold">{g.hoursLabel}</p>
-                    <p className="text-xs text-slate-400">{g.days} days worked</p>
+                    <p className="text-xs text-ink-3">
+                      {g.days} days worked
+                      {otByGuard[guardId] ? (
+                        <span className="ml-2 font-semibold text-accent-orange">
+                          OT {formatMinutes(otByGuard[guardId])}
+                        </span>
+                      ) : null}
+                    </p>
                   </div>
                 ))}
               </div>
 
-              <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <div className="overflow-hidden rounded-xl border border-white/10 bg-surface">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50 text-left text-slate-600">
+                  <thead className="bg-white/5 text-left text-ink-2">
                     <tr>
                       <th className="px-4 py-3 font-medium">Date</th>
                       <th className="px-4 py-3 font-medium">Guard</th>
@@ -498,15 +557,15 @@ export default function Reports() {
                       <th className="px-4 py-3 font-medium">Day type</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {hoursReport.rows.map((row) => (
+                  <tbody className="divide-y divide-white/5">
+                    {payRows.map((row) => (
                       <tr key={`${row.date}-${row.guardId}`}>
                         <td className="px-4 py-3">{row.date}</td>
                         <td className="px-4 py-3 font-medium">{row.guardName}</td>
-                        <td className="px-4 py-3">{formatShiftTime(row.clockIn)}</td>
-                        <td className="px-4 py-3">{formatShiftTime(row.clockOut)}</td>
-                        <td className="px-4 py-3 font-semibold">{row.hoursLabel}</td>
-                        <td className="px-4 py-3 text-brand-700">
+                        <td className="px-4 py-3">{formatShiftTime(row.payClockIn)}</td>
+                        <td className="px-4 py-3">{formatShiftTime(row.payClockOut)}</td>
+                        <td className="px-4 py-3 font-semibold">{formatMinutes(row.payMinutes)}</td>
+                        <td className="px-4 py-3 text-accent-cyan-line">
                           {row.statutoryHolidayLabel || 'Regular shift'}
                         </td>
                       </tr>
@@ -514,7 +573,7 @@ export default function Reports() {
                   </tbody>
                 </table>
                 {hoursReport.rows.length === 0 && (
-                  <p className="p-8 text-center text-slate-500">No shift hours recorded for this period.</p>
+                  <p className="p-8 text-center text-ink-2">No shift hours recorded for this period.</p>
                 )}
               </div>
             </>

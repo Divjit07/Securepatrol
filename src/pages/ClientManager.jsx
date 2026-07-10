@@ -131,10 +131,10 @@ export default function ClientManager() {
       {showForm && (
         <form onSubmit={createClient} className="sp-card mb-6 p-6">
           <h3 className="font-display text-lg font-semibold">Create Client Account</h3>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-ink-2">
             Clients get a read-only patrol overview: green/red checkpoints, live feed, and shift history.
           </p>
-          {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+          {error && <p className="mt-2 text-sm text-accent-red">{error}</p>}
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <div>
               <label className="sp-label">Full name</label>
@@ -199,7 +199,7 @@ export default function ClientManager() {
 
       <div className="sp-card overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left text-slate-600">
+          <thead className="bg-white/5 text-left text-ink-2">
             <tr>
               <th className="px-4 py-3 font-medium">Client</th>
               <th className="px-4 py-3 font-medium">Email</th>
@@ -208,15 +208,15 @@ export default function ClientManager() {
               <th className="px-4 py-3 font-medium">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-white/5">
             {clients.map((client) => (
-              <tr key={client.id} className={client.unassigned ? 'bg-amber-50/60' : ''}>
+              <tr key={client.id} className={client.unassigned ? 'bg-accent-orange/10' : ''}>
                 <td className="px-4 py-3 font-medium">{client.name}</td>
-                <td className="px-4 py-3 text-slate-600">{client.email}</td>
+                <td className="px-4 py-3 text-ink-2">{client.email}</td>
                 <td className="px-4 py-3">
                   <select
                     className={`max-w-xs rounded border px-2 py-1.5 text-sm ${
-                      client.unassigned ? 'border-amber-300 bg-amber-50' : 'border-slate-200 bg-white'
+                      client.unassigned ? 'border-amber-300 bg-accent-orange/10' : 'border-white/10 bg-surface'
                     }`}
                     value={client.site_id || ''}
                     disabled={assigningId === client.id}
@@ -230,13 +230,13 @@ export default function ClientManager() {
                     ))}
                   </select>
                   {!client.unassigned && (
-                    <p className="mt-1 text-xs text-slate-500">{formatClientSiteLabel(client)}</p>
+                    <p className="mt-1 text-xs text-ink-2">{formatClientSiteLabel(client)}</p>
                   )}
                 </td>
                 <td className="px-4 py-3">
                   <span
                     className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      client.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                      client.active ? 'bg-accent-green/15 text-accent-green' : 'bg-accent-red/15 text-accent-red'
                     }`}
                   >
                     {client.active ? 'Active' : 'Inactive'}
@@ -247,7 +247,7 @@ export default function ClientManager() {
                     <button
                       type="button"
                       onClick={() => toggleActive(client)}
-                      className="text-slate-500 hover:text-slate-700"
+                      className="text-ink-2 hover:text-ink-2"
                       title={client.active ? 'Deactivate' : 'Activate'}
                       disabled={removingId === client.id}
                     >
@@ -256,7 +256,7 @@ export default function ClientManager() {
                     <button
                       type="button"
                       onClick={() => handleRemoveClient(client)}
-                      className="text-red-500 hover:text-red-700 disabled:opacity-40"
+                      className="text-accent-red hover:text-accent-red disabled:opacity-40"
                       title="Remove client permanently"
                       disabled={removingId === client.id}
                     >
@@ -269,7 +269,7 @@ export default function ClientManager() {
           </tbody>
         </table>
         {clients.length === 0 && (
-          <p className="p-8 text-center text-slate-500">No client accounts yet. Click Add Client to create one for Ali.</p>
+          <p className="p-8 text-center text-ink-2">No client accounts yet. Click Add Client to create one for Ali.</p>
         )}
       </div>
     </Layout>

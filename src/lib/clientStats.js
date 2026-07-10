@@ -39,10 +39,12 @@ function scheduledClockOutAt(dateStr, shiftEnd) {
   return new Date(y, m - 1, d, endH, endM, 0, 0)
 }
 
-export function fixedShiftHours(dateStr) {
-  const schedule = getScheduledShiftForDate(dateStr)
+export function fixedShiftHours(dateStr, operatingHours) {
+  const schedule = getScheduledShiftForDate(dateStr, operatingHours)
   if (schedule.isClosed) return 0
-  return schedule.isSaturday ? 7 : 9
+  const [startH, startM] = schedule.start.split(':').map(Number)
+  const [endH, endM] = schedule.end.split(':').map(Number)
+  return Math.round(((endH * 60 + endM - startH * 60 - startM) / 60) * 100) / 100
 }
 
 export function formatShiftTime(date) {
@@ -82,8 +84,8 @@ export function formatShiftDuration(clockInAt, clockOutAt) {
   return formatDurationFromMinutes(durationFromShiftTimes(clockInAt, clockOutAt).totalMinutes)
 }
 
-export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustment }) {
-  const schedule = getScheduledShiftForDate(date)
+export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustment, operatingHours }) {
+  const schedule = getScheduledShiftForDate(date, operatingHours)
   if (schedule.isClosed) return null
 
   const { start: shiftStart, end: shiftEnd } = schedule
@@ -113,7 +115,7 @@ export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustm
 
   let clockInAt = defaultClockIn
   let clockOutAt = defaultClockOut
-  let hoursWorked = fixedShiftHours(date)
+  let hoursWorked = fixedShiftHours(date, operatingHours)
   let isAdjusted = false
   const arrivedEarly = Boolean(clockInScan && signedInAt < defaultClockIn)
 
@@ -130,7 +132,7 @@ export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustm
     clockInAt = new Date(adjustment.clock_in_at)
     clockOutAt = new Date(adjustment.clock_out_at)
     hoursWorked = isStatutoryHolidayAdjustment(adjustment)
-      ? fixedShiftHours(date)
+      ? fixedShiftHours(date, operatingHours)
       : hoursFromShiftTimes(clockInAt, clockOutAt)
     isAdjusted = true
   }
@@ -162,6 +164,7 @@ export function computeGuardHoursReport({
   guards = [],
   dates = [],
   adjustmentsByKey = {},
+  operatingHours = null,
 }) {
   const rows = []
 
@@ -169,13 +172,13 @@ export function computeGuardHoursReport({
     for (const guard of guards) {
       const guardScans = scans.filter((s) => s.guard_id === guard.id)
       const adjustment = adjustmentsByKey[`${guard.id}-${date}`]
-      const dayShift = computeGuardShiftForDay(guardScans, checkpoints, { date, adjustment })
+      const dayShift = computeGuardShiftForDay(guardScans, checkpoints, { date, adjustment, operatingHours })
 
       if (!dayShift) continue
 
       const statutoryHoliday = isStatutoryHolidayAdjustment(adjustment)
       const durationMinutes = statutoryHoliday
-        ? fixedShiftHours(date) * 60
+        ? fixedShiftHours(date, operatingHours) * 60
         : durationFromShiftTimes(dayShift.clockInAt, dayShift.clockOutAt).totalMinutes
 
       rows.push({

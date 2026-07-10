@@ -75,25 +75,25 @@ export default function IncidentReportAttachments({ report }) {
     <>
       <div className="space-y-4">
         {loading && (
-          <div className="flex h-24 items-center justify-center rounded-lg bg-slate-50">
-            <Loader2 className="h-6 w-6 animate-spin text-brand-600" />
+          <div className="flex h-24 items-center justify-center rounded-lg bg-white/5">
+            <Loader2 className="h-6 w-6 animate-spin text-accent-cyan-line" />
           </div>
         )}
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-accent-red">{error}</p>}
 
         {images.length > 0 && (
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-2">
               Photos ({images.length})
             </p>
-            <p className="mt-1 text-xs text-slate-500">Tap a photo to view full size</p>
+            <p className="mt-1 text-xs text-ink-2">Tap a photo to view full size</p>
             <div className="mt-2 space-y-3">
               {images.map((att) => {
                 const url = urls[att.path]
                 if (!url) {
                   return (
-                    <p key={att.path} className="text-sm text-slate-500">
+                    <p key={att.path} className="text-sm text-ink-2">
                       {att.name} — could not load preview
                     </p>
                   )
@@ -103,13 +103,13 @@ export default function IncidentReportAttachments({ report }) {
                   return (
                     <div
                       key={att.path}
-                      className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3"
+                      className="flex flex-wrap items-center gap-2 rounded-lg border border-white/10 bg-white/5 p-3"
                     >
-                      <span className="text-sm text-slate-700">{att.name}</span>
+                      <span className="text-sm text-ink-2">{att.name}</span>
                       <button
                         type="button"
                         onClick={() => handleDownload(att)}
-                        className="inline-flex items-center gap-1 text-sm font-medium text-brand-600"
+                        className="inline-flex items-center gap-1 text-sm font-medium text-accent-cyan-line"
                       >
                         <Download className="h-3.5 w-3.5" />
                         {downloading === att.path ? 'Saving…' : 'Save photo'}
@@ -128,7 +128,7 @@ export default function IncidentReportAttachments({ report }) {
                     <button
                       type="button"
                       onClick={() => handleDownload(att)}
-                      className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-600"
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-accent-cyan-line"
                     >
                       <Download className="h-3.5 w-3.5" />
                       {downloading === att.path ? 'Saving…' : 'Download photo'}
@@ -142,7 +142,7 @@ export default function IncidentReportAttachments({ report }) {
 
         {documents.length > 0 && (
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-2">
               Documents ({documents.length})
             </p>
             <ul className="mt-2 space-y-2">
@@ -155,7 +155,7 @@ export default function IncidentReportAttachments({ report }) {
                         <button
                           type="button"
                           onClick={() => handleDownload(att)}
-                          className="inline-flex min-h-11 flex-1 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50 touch-manipulation"
+                          className="inline-flex min-h-11 flex-1 items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-accent-cyan-line hover:bg-accent-cyan/10 touch-manipulation"
                         >
                           <FileText className="h-4 w-4 shrink-0" />
                           <span className="truncate">{att.name}</span>
@@ -165,14 +165,14 @@ export default function IncidentReportAttachments({ report }) {
                           href={url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-600 touch-manipulation"
+                          className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-white/10 px-3 py-2 text-xs text-ink-2 touch-manipulation"
                         >
                           Open
                           <ExternalLink className="h-3 w-3" />
                         </a>
                       </div>
                     ) : (
-                      <span className="text-sm text-slate-500">{att.name} — unavailable</span>
+                      <span className="text-sm text-ink-2">{att.name} — unavailable</span>
                     )}
                   </li>
                 )

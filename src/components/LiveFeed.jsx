@@ -94,30 +94,30 @@ export default function LiveFeed({ siteId, limit = 20, passesOnly = false }) {
   }, [siteId, limit, passesOnly, loadRecent])
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white">
-      <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+    <div className="rounded-xl border border-white/10 bg-surface">
+      <div className="flex items-center justify-between border-b border-white/5 px-4 py-3">
         <h3 className="font-semibold">Live Feed</h3>
-        <span className={`flex items-center gap-1.5 text-xs ${connected ? 'text-green-600' : 'text-slate-400'}`}>
+        <span className={`flex items-center gap-1.5 text-xs ${connected ? 'text-accent-green' : 'text-ink-3'}`}>
           <Radio className={`h-3.5 w-3.5 ${connected ? 'animate-pulse' : ''}`} />
           {connected ? 'Live' : 'Connecting…'}
         </span>
       </div>
 
-      <div className="max-h-96 overflow-y-auto divide-y divide-slate-100">
+      <div className="max-h-96 overflow-y-auto divide-y divide-white/5">
         {scans.length === 0 ? (
-          <p className="p-4 text-sm text-slate-500">No scans yet. Waiting for guard check-ins…</p>
+          <p className="p-4 text-sm text-ink-2">No scans yet. Waiting for guard check-ins…</p>
         ) : (
           scans.map((scan) => (
             <div key={scan.id} className="flex items-center justify-between px-4 py-3">
               <div>
                 <p className="font-medium text-sm">{scan.checkpoints?.name || 'Checkpoint'}</p>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-ink-2">
                   {scan.profiles?.name || 'Guard'} · {new Date(scan.scanned_at).toLocaleString()}
                 </p>
               </div>
               <span
                 className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                  scan.status === 'pass' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                  scan.status === 'pass' ? 'bg-accent-green/15 text-accent-green' : 'bg-accent-red/15 text-accent-red'
                 }`}
               >
                 {scan.status === 'pass' ? 'PASS' : 'FAIL'}

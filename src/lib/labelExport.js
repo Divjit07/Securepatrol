@@ -1,5 +1,8 @@
-export const PROVIDER_LINE = 'SecurePatrol · Productive Security Inc.'
-export const FOOTER_LINE = 'Protected by Productive Security'
+/** Printable QR label export — site/checkpoint branding for Kratos. */
+import { BRAND } from './brand.js'
+
+export const PROVIDER_LINE = `${BRAND.name} · Workforce Command`
+export const FOOTER_LINE = `Protected by ${BRAND.name}`
 
 function loadImage(src) {
   return new Promise((resolve, reject) => {
@@ -94,7 +97,7 @@ export async function buildFullLabelPng(siteName, label) {
 
   ctx.fillStyle = '#64748b'
   ctx.font = '8px Arial, Helvetica, sans-serif'
-  ctx.fillText('Scan with SecurePatrol guard app', width / 2, footerY + 40)
+  ctx.fillText(`Scan with ${BRAND.name} guard app`, width / 2, footerY + 40)
 
   return canvas.toDataURL('image/png')
 }
