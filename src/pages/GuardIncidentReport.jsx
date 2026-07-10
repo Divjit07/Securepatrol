@@ -69,8 +69,8 @@ export default function GuardIncidentReport() {
 
     try {
       const position = await getOptionalPosition(5000, 1)
-      const guardLat = position?.lat ?? null
-      const guardLng = position?.lng ?? null
+      const guardLat = position?.latitude ?? null
+      const guardLng = position?.longitude ?? null
 
       const attachments = files.length ? await uploadIncidentAttachments(user.id, files) : []
 

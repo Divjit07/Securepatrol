@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabase.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { BRAND } from '../lib/brand.js'
 import {
+  computeGuardHoursReport,
   dateRangeDays,
   defaultPayPeriodEnd,
   defaultPayPeriodStart,

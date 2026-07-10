@@ -9,6 +9,7 @@ import { useAuth } from '../hooks/useAuth.jsx'
 import { fetchSitesForAdmin } from '../lib/scans.js'
 import { BRAND } from '../lib/brand.js'
 import {
+  computeGuardHoursReport,
   dateRangeDays,
   defaultPayPeriodEnd,
   defaultPayPeriodStart,

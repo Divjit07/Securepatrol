@@ -3,6 +3,7 @@ import { Printer, Download, X, Shield } from 'lucide-react'
 import { buildCheckpointQrDataUrl, getCheckpointQrPayload } from '../lib/qr.js'
 import { BRAND } from '../lib/brand.js'
 import {
+  buildFullLabelPng,
   downloadDataUrl,
   FOOTER_LINE,
   PROVIDER_LINE,

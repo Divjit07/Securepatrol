@@ -12,6 +12,7 @@ import { useClientShift } from '../hooks/useClientShift.js'
 import { useSiteHours } from '../hooks/useSiteHours.js'
 import { useClientSiteData } from '../hooks/useClientSiteData.js'
 import { getCheckpointStatus } from '../lib/scans.js'
+import { flushOfflineQueue } from '../lib/offlineQueue.js'
 import { useGuardPublishedShift } from '../hooks/useGuardPublishedShift.js'
 
 export default function GuardDashboard() {
