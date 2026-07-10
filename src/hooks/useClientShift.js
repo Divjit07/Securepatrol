@@ -128,7 +128,11 @@ export function useClientShift(operatingHours) {
   const updateShift = (patch) => {
     setShift((prev) => {
       const next = { ...prev, ...patch }
-      localStorage.setItem(SHIFT_KEY, JSON.stringify(next))
+      try {
+        localStorage.setItem(SHIFT_KEY, JSON.stringify(next))
+      } catch {
+        /* Safari private mode */
+      }
       return next
     })
   }

@@ -12,7 +12,11 @@ export function getOfflineQueue() {
 }
 
 function saveOfflineQueue(queue) {
-  localStorage.setItem(QUEUE_KEY, JSON.stringify(queue))
+  try {
+    localStorage.setItem(QUEUE_KEY, JSON.stringify(queue))
+  } catch {
+    /* Safari private mode — scans submit online-only */
+  }
 }
 
 export function queueOfflineScan(scan) {

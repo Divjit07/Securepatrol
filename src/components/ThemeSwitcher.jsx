@@ -42,14 +42,24 @@ const ALL_THEMES = THEME_GROUPS.flatMap((g) => g.themes)
 /** Theme mood dropdown — accent-led palettes + optional Studio Glass surface.
  *  @param {'up'|'down'} menuPlacement — sidebar opens up; top bar opens down */
 export default function ThemeSwitcher({ menuPlacement = 'up' }) {
-  const [theme, setTheme] = useState(() => localStorage.getItem('sp-theme') || 'forest')
+  const [theme, setTheme] = useState(() => {
+    try {
+      return localStorage.getItem('sp-theme') || 'forest'
+    } catch {
+      return 'forest'
+    }
+  })
   const [open, setOpen] = useState(false)
   const rootRef = useRef(null)
   const opensDown = menuPlacement === 'down'
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
-    localStorage.setItem('sp-theme', theme)
+    try {
+      localStorage.setItem('sp-theme', theme)
+    } catch {
+      /* Safari private mode */
+    }
     const meta = document.querySelector('meta[name="theme-color"]')
     if (meta) {
       const color = theme === 'studio'

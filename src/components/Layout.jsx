@@ -140,11 +140,21 @@ function SidebarLayout({ children, groups, roleLabel, homeTo }) {
   const { profile, signOut } = useAuth()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
-  const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) === '1')
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem(COLLAPSE_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
 
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
-      localStorage.setItem(COLLAPSE_KEY, prev ? '0' : '1')
+      try {
+        localStorage.setItem(COLLAPSE_KEY, prev ? '0' : '1')
+      } catch {
+        /* Safari private mode */
+      }
       return !prev
     })
   }
