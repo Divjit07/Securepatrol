@@ -15,6 +15,7 @@ import {
   CheckSquare,
   History,
   PanelLeft,
+  Radar,
 } from 'lucide-react'
 import Logo from './Logo.jsx'
 import { useMemo, useState } from 'react'
@@ -43,6 +44,7 @@ function buildAdminNavGroups({ canApproveScans, canManageShiftClock, isSuperAdmi
     {
       label: 'Site',
       items: [
+        { to: '/admin/map', label: 'Live Map', icon: Radar },
         { to: '/admin/checkpoints', label: 'Checkpoints', icon: MapPin },
         { to: '/admin/guards', label: 'Guards', icon: ShieldCheck },
         { to: '/admin/clients', label: 'Clients', icon: Building2 },
