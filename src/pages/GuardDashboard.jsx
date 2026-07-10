@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { CheckCircle2, ScanLine, AlertTriangle } from 'lucide-react'
+import { CheckCircle2, ScanLine, AlertTriangle, Lock } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import ClockInCard from '../components/ClockInCard.jsx'
@@ -77,6 +77,9 @@ export default function GuardDashboard() {
         siteId={siteId}
         clockedIn={Boolean(myShiftWithDate)}
         onPunched={reload}
+        publishedShift={publishedShift}
+        scheduled={scheduled}
+        date={date}
       />
 
       <NextShiftCard guardId={user?.id} />
@@ -86,16 +89,34 @@ export default function GuardDashboard() {
           <ScanLine className="h-5 w-5" />
           Scan checkpoint
         </Link>
-        <Link
-          to="/guard/incident"
-          className="sp-btn-secondary flex min-h-[3.5rem] items-center justify-center gap-2 text-base"
-        >
-          <AlertTriangle className="h-5 w-5" />
-          Report incident
-        </Link>
+        {myShiftWithDate ? (
+          <Link
+            to="/guard/incident"
+            className="sp-btn-secondary flex min-h-[3.5rem] items-center justify-center gap-2 text-base"
+          >
+            <AlertTriangle className="h-5 w-5" />
+            Report incident
+          </Link>
+        ) : (
+          <span className="sp-btn-secondary flex min-h-[3.5rem] cursor-not-allowed items-center justify-center gap-2 text-base opacity-40">
+            <Lock className="h-5 w-5" />
+            Report incident — clock in first
+          </span>
+        )}
       </div>
 
-      <ClientShiftBar
+      {!myShiftWithDate && !loading && (
+        <div className="mb-6 rounded-2xl border border-dashed border-white/10 p-6 text-center">
+          <Lock className="mx-auto h-6 w-6 text-ink-3" />
+          <p className="mt-2 text-sm font-semibold text-ink">Patrol tools unlock after you clock in</p>
+          <p className="mt-1 text-sm text-ink-2">
+            Scan history, checkpoints and incident reports open once your shift starts. Your schedule is
+            always available under <Link to="/guard/schedule" className="font-semibold text-accent-cyan-line underline underline-offset-2">Schedule</Link>.
+          </p>
+        </div>
+      )}
+
+      {myShiftWithDate && <ClientShiftBar
         date={date}
         setDate={setDate}
         scheduled={scheduled}
@@ -106,13 +127,13 @@ export default function GuardDashboard() {
           scannedCount,
           totalCheckpoints: checkpoints.length,
         }}
-      />
+      />}
 
       {loading ? (
         <div className="flex justify-center py-12">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent-orange border-t-transparent" />
         </div>
-      ) : (
+      ) : !myShiftWithDate ? null : (
         <>
           <div className="dk-card guard-history-card mb-8 overflow-hidden">
             <div className="border-b border-white/5 px-5 py-4">

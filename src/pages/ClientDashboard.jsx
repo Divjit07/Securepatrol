@@ -1,4 +1,5 @@
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, Clock } from 'lucide-react'
+import { formatShiftTime } from '../lib/clientStats.js'
 import Layout from '../components/Layout.jsx'
 import ClientShiftBar from '../components/ClientShiftBar.jsx'
 import LiveFeed from '../components/LiveFeed.jsx'
@@ -12,7 +13,7 @@ export default function ClientDashboard() {
   const siteId = profile?.site_id
   const operatingHours = useSiteHours(siteId)
   const { date, setDate, shift, scheduled } = useClientShift(operatingHours)
-  const { site, guards, scans, checkpoints, loading, rounds, patrolScanCount, patrolCheckpointCount, scannedCount } =
+  const { site, guards, scans, checkpoints, loading, rounds, patrolScanCount, patrolCheckpointCount, scannedCount, guardShifts } =
     useClientSiteData(siteId, date, shift)
 
   if (!siteId) {
@@ -48,6 +49,31 @@ export default function ClientDashboard() {
           totalCheckpoints: checkpoints.length,
         }}
       />
+
+      {/* When each guard clocked in on the selected date */}
+      <div className="dk-card mb-6 p-5">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
+          <Clock className="h-4 w-4 text-accent-orange" /> Guard clock-ins
+        </h2>
+        {guardShifts?.length ? (
+          <div className="mt-3 space-y-2">
+            {guardShifts.map((gs) => (
+              <div key={gs.guardId} className="flex items-center gap-3 rounded-xl bg-ink/5 px-3 py-2.5">
+                <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${gs.onShift ? 'bg-accent-green' : 'bg-zinc-500'}`} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold text-ink">{gs.guardName}</span>
+                  <span className="block text-xs text-ink-2">
+                    Clocked in {formatShiftTime(new Date(gs.signedInAt || gs.clockInAt))}
+                    {gs.onShift ? ' · on shift now' : gs.clockOutAt ? ` · until ${formatShiftTime(new Date(gs.clockOutAt))}` : ''}
+                  </span>
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-ink-3">No guard has clocked in for this date yet.</p>
+        )}
+      </div>
 
       {guards.length > 0 && (
         <div className="mb-6 flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-surface px-4 py-3 shadow-sm">

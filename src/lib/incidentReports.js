@@ -138,6 +138,16 @@ export function firstImageAttachmentPath(report) {
   return image?.path || attachments[0]?.path || null
 }
 
+/** First browser-renderable photo of a report (skips HEIC + documents) — used
+ *  for the thumbnail preview on report list rows. */
+export function previewImagePath(report) {
+  return (
+    normalizeIncidentAttachments(report).find(
+      (a) => a.kind === 'image' && !isHeicPhotoPath(a.path),
+    )?.path || null
+  )
+}
+
 /** @deprecated use validateIncidentAttachment */
 export function validateIncidentPhoto(file) {
   return validateIncidentAttachment(file)?.file ?? null

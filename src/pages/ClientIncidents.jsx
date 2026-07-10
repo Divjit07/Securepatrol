@@ -6,8 +6,14 @@ import { useAuth } from '../hooks/useAuth.jsx'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock.js'
 import { supabase } from '../lib/supabase.js'
 import IncidentReportAttachments from '../components/IncidentReportAttachments.jsx'
+import ImageLightbox from '../components/ImageLightbox.jsx'
 import { downloadIncidentReportPdf } from '../lib/incidentReportPdf.js'
-import { fetchIncidentReportsForSite, incidentAttachmentCount } from '../lib/incidentReports.js'
+import {
+  fetchIncidentReportsForSite,
+  getIncidentPhotoSignedUrl,
+  incidentAttachmentCount,
+  previewImagePath,
+} from '../lib/incidentReports.js'
 
 function formatReportTime(iso) {
   return new Date(iso).toLocaleString('en-CA', {
@@ -29,8 +35,36 @@ export default function ClientIncidents() {
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
   const [pdfLoading, setPdfLoading] = useState(false)
+  const [previews, setPreviews] = useState({})
+  const [lightbox, setLightbox] = useState(null)
 
   useBodyScrollLock(Boolean(selected))
+
+  // Sign a preview URL for each report's first photo so rows show a thumbnail.
+  useEffect(() => {
+    const withImages = reports
+      .map((r) => [r.id, previewImagePath(r)])
+      .filter(([, path]) => path)
+    if (!withImages.length) {
+      setPreviews({})
+      return undefined
+    }
+    let cancelled = false
+    Promise.all(
+      withImages.map(async ([id, path]) => {
+        try {
+          return [id, await getIncidentPhotoSignedUrl(path)]
+        } catch {
+          return [id, null]
+        }
+      }),
+    ).then((entries) => {
+      if (!cancelled) setPreviews(Object.fromEntries(entries.filter(([, url]) => url)))
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [reports])
 
   useEffect(() => {
     if (!siteId) return
@@ -113,27 +147,39 @@ export default function ClientIncidents() {
               onClick={() => openReport(report)}
               className="sp-card w-full p-5 text-left transition hover:border-accent-cyan-line/20 hover:shadow-md"
             >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="font-display text-base font-semibold text-ink">
-                    {report.guard?.name || 'Guard'}
-                  </p>
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-display text-base font-semibold text-ink">
+                      {report.guard?.name || 'Guard'}
+                    </p>
+                    {incidentAttachmentCount(report) > 0 && (
+                      <span className="rounded-full bg-accent-cyan/10 px-2.5 py-0.5 text-xs font-medium text-accent-cyan-line">
+                        {incidentAttachmentCount(report)} file{incidentAttachmentCount(report) === 1 ? '' : 's'}
+                      </span>
+                    )}
+                    {(report.guard_lat != null && report.guard_lng != null) && (
+                      <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-medium text-ink-2">
+                        GPS
+                      </span>
+                    )}
+                  </div>
                   <p className="mt-0.5 text-sm text-ink-2">{formatReportTime(report.created_at)}</p>
+                  <p className="mt-3 line-clamp-2 text-sm text-ink-2">{report.description}</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  {incidentAttachmentCount(report) > 0 && (
-                    <span className="rounded-full bg-accent-cyan/10 px-2.5 py-0.5 text-xs font-medium text-accent-cyan-line">
-                      {incidentAttachmentCount(report)} file{incidentAttachmentCount(report) === 1 ? '' : 's'}
-                    </span>
-                  )}
-                  {(report.guard_lat != null && report.guard_lng != null) && (
-                    <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-medium text-ink-2">
-                      GPS
-                    </span>
-                  )}
-                </div>
+                {previews[report.id] && (
+                  <img
+                    src={previews[report.id]}
+                    alt="Report photo preview"
+                    loading="lazy"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setLightbox({ src: previews[report.id], alt: `${report.guard?.name || 'Guard'} — report photo` })
+                    }}
+                    className="h-20 w-20 shrink-0 cursor-zoom-in rounded-xl border border-white/10 object-cover transition hover:brightness-110 sm:h-24 sm:w-24"
+                  />
+                )}
               </div>
-              <p className="mt-3 line-clamp-2 text-sm text-ink-2">{report.description}</p>
             </button>
           ))}
         </div>
@@ -203,6 +249,10 @@ export default function ClientIncidents() {
             </div>
           </div>
         </div>
+      )}
+
+      {lightbox && (
+        <ImageLightbox src={lightbox.src} alt={lightbox.alt} onClose={() => setLightbox(null)} />
       )}
     </Layout>
   )

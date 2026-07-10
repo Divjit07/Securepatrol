@@ -2,6 +2,8 @@
 // distance to the site, and arms the clock-in/out button only inside the
 // geofence. Punching = Face ID (passkey, verified server-side) + a face_gps
 // scan that the DB trigger re-validates against the site coordinates.
+// Button color tracks the schedule: locked until 15 min before the shift,
+// yellow in the early window, green on time, red once late (in or out).
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ScanFace, MapPin, LocateFixed, QrCode } from 'lucide-react'
@@ -13,7 +15,63 @@ import {
 } from '../lib/passkeys.js'
 import { fetchSiteGeofence, geofenceStatus, clockPunch } from '../lib/clockPunch.js'
 
-export default function ClockInCard({ guardId, siteId, clockedIn, onPunched }) {
+const EARLY_WINDOW_MIN = 15 // clock-in opens this many minutes before the shift
+const LATE_GRACE_MIN = 10 // matches the roster-alerts "late" threshold
+
+function fmtTime(d) {
+  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+}
+
+/** Today's shift window: published shift first, site operating hours fallback. */
+function shiftWindow(publishedShift, scheduled, date) {
+  if (publishedShift?.starts_at && publishedShift?.ends_at) {
+    return { start: new Date(publishedShift.starts_at), end: new Date(publishedShift.ends_at) }
+  }
+  if (scheduled && !scheduled.isClosed && scheduled.start && scheduled.end) {
+    const d = date || new Date().toISOString().slice(0, 10)
+    const start = new Date(`${d}T${scheduled.start}:00`)
+    const end = new Date(`${d}T${scheduled.end}:00`)
+    if (end <= start) end.setDate(end.getDate() + 1) // overnight shift
+    return { start, end }
+  }
+  return null
+}
+
+/** Traffic-light state for the punch button vs. the schedule. */
+function punchState(type, window, now = new Date()) {
+  if (!window) return { tone: 'green', allowed: true, note: null }
+  const min = 60_000
+  if (type === 'in') {
+    const opensAt = new Date(window.start.getTime() - EARLY_WINDOW_MIN * min)
+    if (now < opensAt) {
+      return { tone: 'locked', allowed: false, note: `Clock-in opens at ${fmtTime(opensAt)} (15 min before your ${fmtTime(window.start)} shift).` }
+    }
+    if (now < window.start) {
+      return { tone: 'yellow', allowed: true, note: `You’re early — shift starts at ${fmtTime(window.start)}.` }
+    }
+    if (now <= new Date(window.start.getTime() + LATE_GRACE_MIN * min)) {
+      return { tone: 'green', allowed: true, note: null }
+    }
+    return { tone: 'red', allowed: true, note: `You’re running late — shift started at ${fmtTime(window.start)}. Clock in now.` }
+  }
+  // clock-out
+  if (now < new Date(window.end.getTime() - EARLY_WINDOW_MIN * min)) {
+    return { tone: 'yellow', allowed: true, note: `Early — your shift runs until ${fmtTime(window.end)}.` }
+  }
+  if (now <= new Date(window.end.getTime() + LATE_GRACE_MIN * min)) {
+    return { tone: 'green', allowed: true, note: null }
+  }
+  return { tone: 'red', allowed: true, note: `Shift ended at ${fmtTime(window.end)} — clock out now.` }
+}
+
+const TONE_BUTTON = {
+  locked: 'bg-white/10 text-ink-3',
+  yellow: 'bg-[#FACC15] text-[#422006] hover:brightness-105',
+  green: 'bg-[#22C55E] text-[#052E16] hover:brightness-105',
+  red: 'bg-[#EF4444] text-white hover:brightness-105',
+}
+
+export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, publishedShift, scheduled, date }) {
   const [enrolled, setEnrolled] = useState(null) // null = checking
   const [site, setSite] = useState(null)
   const [position, setPosition] = useState(null)
@@ -57,6 +115,15 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched }) {
 
   const fence = position && site ? geofenceStatus(position, site) : null
   const siteLocated = site && site.latitude != null && site.longitude != null
+
+  // Re-evaluate the traffic light every 30s so it flips at the right moment.
+  const [, forceTick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => forceTick((n) => n + 1), 30_000)
+    return () => clearInterval(id)
+  }, [])
+  const window_ = shiftWindow(publishedShift, scheduled, date)
+  const punch = punchState(clockedIn ? 'out' : 'in', window_)
 
   const handleEnroll = async () => {
     setBusy('enrolling')
@@ -173,8 +240,14 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched }) {
         <button
           type="button"
           onClick={() => handlePunch(clockedIn ? 'out' : 'in')}
-          disabled={busy === 'punching' || !siteLocated || !fence?.located || (!fence?.inside && !clockedIn)}
-          className="sp-btn-primary mt-4 min-h-[3.25rem] w-full text-base disabled:opacity-50"
+          disabled={
+            busy === 'punching' ||
+            !punch.allowed ||
+            !siteLocated ||
+            !fence?.located ||
+            (!fence?.inside && !clockedIn)
+          }
+          className={`mt-4 flex min-h-[3.25rem] w-full items-center justify-center gap-2 rounded-xl text-base font-semibold transition active:scale-[0.99] disabled:opacity-50 ${TONE_BUTTON[punch.tone]}`}
         >
           {busy === 'punching' ? (
             <>
@@ -183,13 +256,29 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched }) {
           ) : (
             <>
               <ScanFace className="h-5 w-5" />
-              {clockedIn ? 'Clock out with Face ID' : 'Clock in with Face ID'}
+              {clockedIn
+                ? punch.tone === 'red'
+                  ? 'Clock out now — you’re over'
+                  : punch.tone === 'yellow'
+                    ? 'Clock out early'
+                    : 'Clock out with Face ID'
+                : punch.tone === 'red'
+                  ? 'Clock in now — you’re late'
+                  : punch.tone === 'yellow'
+                    ? 'Clock in early'
+                    : 'Clock in with Face ID'}
             </>
           )}
         </button>
       )}
 
-      {enrolled && !clockedIn && siteLocated && fence?.located && !fence.inside && (
+      {enrolled && punch.note && (
+        <p className={`mt-2 text-center text-xs ${punch.tone === 'red' ? 'font-semibold text-accent-red' : 'text-ink-3'}`}>
+          {punch.note}
+        </p>
+      )}
+
+      {enrolled && !clockedIn && punch.allowed && siteLocated && fence?.located && !fence.inside && (
         <p className="mt-2 text-center text-xs text-ink-3">
           The button unlocks when you’re within {site.geofence_radius_m ?? 120}m of the site.
         </p>

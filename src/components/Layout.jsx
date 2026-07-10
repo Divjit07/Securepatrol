@@ -16,10 +16,12 @@ import {
   History,
   PanelLeft,
   Radar,
+  Lock,
 } from 'lucide-react'
 import Logo from './Logo.jsx'
 import { useMemo, useState } from 'react'
 import { useAuth } from '../hooks/useAuth.jsx'
+import { useGuardClockStatus } from '../hooks/useGuardClockStatus.js'
 import SyncIndicator from './SyncIndicator.jsx'
 import ThemeSwitcher from './ThemeSwitcher.jsx'
 import { BRAND } from '../lib/brand.js'
@@ -83,12 +85,14 @@ const clientNavGroups = [
   },
 ]
 
+// Report + History unlock only while clocked in (Scan stays open — it's the
+// NFC/QR clock-in fallback).
 const guardLinks = [
   { to: '/guard', label: 'Dashboard', end: true },
   { to: '/guard/scan', label: 'Scan' },
   { to: '/guard/schedule', label: 'Schedule' },
-  { to: '/guard/incident', label: 'Report' },
-  { to: '/guard/history', label: 'History' },
+  { to: '/guard/incident', label: 'Report', needsClock: true },
+  { to: '/guard/history', label: 'History', needsClock: true },
 ]
 
 function initialsOf(name) {
@@ -311,9 +315,10 @@ function ClientLayout({ children }) {
 
 /** Guard portal keeps the dark mobile-first top bar. */
 function GuardLayout({ children }) {
-  const { profile, signOut } = useAuth()
+  const { profile, user, signOut } = useAuth()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
+  const { clockedIn } = useGuardClockStatus(user?.id)
 
   const handleSignOut = async () => {
     await signOut()
@@ -331,11 +336,21 @@ function GuardLayout({ children }) {
           </Link>
 
           <nav className="hidden min-w-0 flex-1 items-center justify-center gap-0.5 md:flex">
-            {guardLinks.map((link) => (
-              <NavLink key={link.to} to={link.to} end={link.end} className={navClass}>
-                {link.label}
-              </NavLink>
-            ))}
+            {guardLinks.map((link) =>
+              link.needsClock && !clockedIn ? (
+                <span
+                  key={link.to}
+                  title="Clock in first"
+                  className="sp-nav-link flex cursor-not-allowed items-center gap-1 opacity-40"
+                >
+                  <Lock className="h-3 w-3" /> {link.label}
+                </span>
+              ) : (
+                <NavLink key={link.to} to={link.to} end={link.end} className={navClass}>
+                  {link.label}
+                </NavLink>
+              ),
+            )}
           </nav>
 
           <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
@@ -372,21 +387,30 @@ function GuardLayout({ children }) {
             <div className="mb-3 px-1">
               <ThemeSwitcher menuPlacement="down" />
             </div>
-            {guardLinks.map((link) => (
-              <NavLink
-                key={link.to}
-                to={link.to}
-                end={link.end}
-                onClick={() => setMenuOpen(false)}
-                className={({ isActive }) =>
-                  `block rounded-lg px-3 py-2.5 text-sm font-medium ${
-                    isActive ? 'bg-white/10 text-ink' : 'text-ink-2 hover:bg-white/5'
-                  }`
-                }
-              >
-                {link.label}
-              </NavLink>
-            ))}
+            {guardLinks.map((link) =>
+              link.needsClock && !clockedIn ? (
+                <span
+                  key={link.to}
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium text-ink-3 opacity-60"
+                >
+                  <Lock className="h-3.5 w-3.5" /> {link.label} — clock in first
+                </span>
+              ) : (
+                <NavLink
+                  key={link.to}
+                  to={link.to}
+                  end={link.end}
+                  onClick={() => setMenuOpen(false)}
+                  className={({ isActive }) =>
+                    `block rounded-lg px-3 py-2.5 text-sm font-medium ${
+                      isActive ? 'bg-white/10 text-ink' : 'text-ink-2 hover:bg-white/5'
+                    }`
+                  }
+                >
+                  {link.label}
+                </NavLink>
+              ),
+            )}
             <button
               type="button"
               onClick={handleSignOut}

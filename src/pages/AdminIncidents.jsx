@@ -23,19 +23,9 @@ import {
   formatIncidentReportTime,
   getIncidentPhotoSignedUrl,
   incidentAttachmentCount,
-  isHeicPhotoPath,
-  normalizeIncidentAttachments,
+  previewImagePath,
   updateIncidentReportDescription,
 } from '../lib/incidentReports.js'
-
-/** First browser-renderable photo of a report (skips HEIC + documents). */
-function previewImagePath(report) {
-  return (
-    normalizeIncidentAttachments(report).find(
-      (a) => a.kind === 'image' && !isHeicPhotoPath(a.path),
-    )?.path || null
-  )
-}
 
 function mapsUrl(lat, lng) {
   return `https://www.google.com/maps?q=${lat},${lng}`

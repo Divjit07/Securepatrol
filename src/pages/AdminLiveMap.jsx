@@ -5,11 +5,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { MapPin, ScanFace, QrCode, Nfc, Clock } from 'lucide-react'
+import { MapPin, ScanFace, QrCode, Nfc, Clock, Plus, LocateFixed } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { fetchSitesForAdmin } from '../lib/scans.js'
+import { getBestPosition, parseCoordinatePaste } from '../lib/gps.js'
 import { supabase } from '../lib/supabase.js'
 
 const TILE_URL = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
@@ -44,8 +45,77 @@ export default function AdminLiveMap() {
   const [loading, setLoading] = useState(true)
   const mapRef = useRef(null)
   const layerRef = useRef(null)
+  const previewRef = useRef(null)
   const containerRef = useRef(null)
   const guardMarkersRef = useRef({})
+  const addModeRef = useRef(false)
+
+  // ---- Add-site form ---------------------------------------------------------
+  const emptyForm = { name: '', address: '', lat: '', lng: '', radius: '120' }
+  const [showAdd, setShowAdd] = useState(false)
+  const [form, setForm] = useState(emptyForm)
+  const [saving, setSaving] = useState(false)
+  const [addError, setAddError] = useState('')
+  const [locating, setLocating] = useState(false)
+  addModeRef.current = showAdd
+
+  const setCoords = (lat, lng) => {
+    setForm((f) => ({ ...f, lat: lat.toFixed(6), lng: lng.toFixed(6) }))
+    if (previewRef.current && mapRef.current) {
+      previewRef.current.clearLayers()
+      L.circle([lat, lng], {
+        radius: parseInt(form.radius, 10) || 120,
+        color: '#FACC15',
+        weight: 2,
+        dashArray: '6 6',
+        fillColor: '#FACC15',
+        fillOpacity: 0.1,
+      }).addTo(previewRef.current)
+    }
+  }
+
+  const useMyLocation = async () => {
+    setLocating(true)
+    setAddError('')
+    try {
+      const pos = await getBestPosition(2)
+      setCoords(pos.latitude, pos.longitude)
+      mapRef.current?.flyTo([pos.latitude, pos.longitude], 17)
+    } catch (err) {
+      setAddError(err.message || 'Could not get your location.')
+    } finally {
+      setLocating(false)
+    }
+  }
+
+  const handleAddSite = async (e) => {
+    e.preventDefault()
+    setAddError('')
+    const lat = parseFloat(form.lat)
+    const lng = parseFloat(form.lng)
+    if (Number.isNaN(lat) || Number.isNaN(lng)) {
+      setAddError('Set the site location first — tap the map, paste coordinates, or use your location.')
+      return
+    }
+    setSaving(true)
+    const { error } = await supabase.from('sites').insert({
+      name: form.name,
+      address: form.address || null,
+      admin_id: user.id,
+      latitude: lat,
+      longitude: lng,
+      geofence_radius_m: Math.min(1000, Math.max(30, parseInt(form.radius, 10) || 120)),
+    })
+    setSaving(false)
+    if (error) {
+      setAddError(error.message)
+      return
+    }
+    setForm(emptyForm)
+    setShowAdd(false)
+    previewRef.current?.clearLayers()
+    load()
+  }
 
   const load = async () => {
     if (!user) return
@@ -115,12 +185,17 @@ export default function AdminLiveMap() {
     const map = L.map(containerRef.current, { zoomControl: true, attributionControl: true })
     L.tileLayer(TILE_URL, { attribution: TILE_ATTRIBUTION, maxZoom: 19 }).addTo(map)
     map.setView([43.65, -79.38], 11) // GTA default until data arrives
+    map.on('click', (e) => {
+      if (addModeRef.current) setCoords(e.latlng.lat, e.latlng.lng)
+    })
     mapRef.current = map
     layerRef.current = L.layerGroup().addTo(map)
+    previewRef.current = L.layerGroup().addTo(map)
     return () => {
       map.remove()
       mapRef.current = null
       layerRef.current = null
+      previewRef.current = null
     }
   }, [])
 
@@ -183,7 +258,96 @@ export default function AdminLiveMap() {
       <PageHeader
         title="Live Map"
         description="Site geofences, today's clock-ins, and each guard's last known phone position (from scan GPS)."
+        action={
+          <button type="button" onClick={() => setShowAdd((v) => !v)} className="dk-cta">
+            <Plus className="h-4 w-4" /> Add Site
+          </button>
+        }
       />
+
+      {showAdd && (
+        <form onSubmit={handleAddSite} className="dk-card mb-5 p-5">
+          <h3 className="font-display text-lg font-semibold text-ink">New site with GPS</h3>
+          <p className="mt-1 text-sm text-ink-2">
+            Tap the map to drop the geofence, paste coordinates from Google Maps, or stand on site
+            and use your location.
+          </p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="sp-label">Site name</label>
+              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required placeholder="e.g. 800 Bathurst St" className="sp-input" />
+            </div>
+            <div>
+              <label className="sp-label">Address</label>
+              <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Full street address" className="sp-input" />
+            </div>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div>
+              <label className="sp-label">Latitude</label>
+              <input
+                value={form.lat}
+                onChange={(e) => setForm({ ...form, lat: e.target.value })}
+                onPaste={(e) => {
+                  const parsed = parseCoordinatePaste(e.clipboardData.getData('text'))
+                  if (parsed) {
+                    e.preventDefault()
+                    setCoords(parsed.lat, parsed.lng)
+                  }
+                }}
+                placeholder="43.664486"
+                inputMode="decimal"
+                className="sp-input"
+              />
+            </div>
+            <div>
+              <label className="sp-label">Longitude</label>
+              <input
+                value={form.lng}
+                onChange={(e) => setForm({ ...form, lng: e.target.value })}
+                onPaste={(e) => {
+                  const parsed = parseCoordinatePaste(e.clipboardData.getData('text'))
+                  if (parsed) {
+                    e.preventDefault()
+                    setCoords(parsed.lat, parsed.lng)
+                  }
+                }}
+                placeholder="-79.411079"
+                inputMode="decimal"
+                className="sp-input"
+              />
+            </div>
+            <div>
+              <label className="sp-label">Radius (m)</label>
+              <input value={form.radius} onChange={(e) => setForm({ ...form, radius: e.target.value })} inputMode="numeric" className="sp-input" />
+            </div>
+            <div className="flex items-end">
+              <button type="button" onClick={useMyLocation} disabled={locating} className="dk-btn-2 w-full">
+                <LocateFixed className={`h-4 w-4 ${locating ? 'animate-pulse' : ''}`} />
+                {locating ? 'Locating…' : 'Use my location'}
+              </button>
+            </div>
+          </div>
+          {addError && (
+            <p className="mt-3 rounded-xl bg-accent-red/10 px-4 py-2.5 text-sm text-accent-red">{addError}</p>
+          )}
+          <div className="mt-4 flex gap-2">
+            <button type="submit" disabled={saving} className="dk-cta">
+              {saving ? 'Creating…' : 'Create site'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowAdd(false)
+                previewRef.current?.clearLayers()
+              }}
+              className="dk-btn-2"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
 
       {geocodedSites.length === 0 && !loading && (
         <div className="mb-4 rounded-xl border border-accent-orange/30 bg-accent-orange/10 px-4 py-3 text-sm text-accent-orange">

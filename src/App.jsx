@@ -2,6 +2,7 @@ import { Suspense, lazy } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
+import ClockGate from './components/ClockGate.jsx'
 import Login from './pages/Login.jsx'
 import Signup from './pages/Signup.jsx'
 import AppErrorBoundary from './components/AppErrorBoundary.jsx'
@@ -118,7 +119,9 @@ export default function App() {
           path="/guard/history"
           element={
             <ProtectedRoute requireGuard>
-              <GuardHistory />
+              <ClockGate>
+                <GuardHistory />
+              </ClockGate>
             </ProtectedRoute>
           }
         />
@@ -126,7 +129,9 @@ export default function App() {
           path="/guard/incident"
           element={
             <ProtectedRoute requireGuard>
-              <GuardIncidentReport />
+              <ClockGate>
+                <GuardIncidentReport />
+              </ClockGate>
             </ProtectedRoute>
           }
         />
