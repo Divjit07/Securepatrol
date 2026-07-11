@@ -101,6 +101,7 @@ Deno.serve(async (req) => {
       const guardName = (shift.profiles as { name?: string } | null)?.name || 'Guard'
       const startMs = new Date(shift.starts_at).getTime()
       const startLabel = new Date(shift.starts_at).toLocaleString('en-CA', {
+        timeZone: 'America/Toronto',
         weekday: 'short', hour: 'numeric', minute: '2-digit',
       })
 

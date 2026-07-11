@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, Clock, MapPin, LocateFixed } from 'lucide-react'
+import { X, Clock, MapPin, LocateFixed, Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabase.js'
 import {
   normalizeOperatingHours,
@@ -57,6 +57,33 @@ export default function SiteHoursModal({ site, onSaved, onClose }) {
       ...prev,
       [key]: patch === null ? null : { ...(prev[key] || { start: '09:00', end: '17:00' }), ...patch },
     }))
+  }
+
+  const handleClearGps = async () => {
+    if (lat.trim() === '' && lng.trim() === '' && site.latitude == null && site.longitude == null) {
+      return
+    }
+    if (
+      !window.confirm(
+        'Remove GPS from this site? Face ID clock-in will stop until you set a new location.',
+      )
+    ) {
+      return
+    }
+    setSaving(true)
+    setError('')
+    const { error: err } = await supabase
+      .from('sites')
+      .update({ latitude: null, longitude: null })
+      .eq('id', site.id)
+    setSaving(false)
+    if (err) {
+      setError(err.message || 'Could not remove GPS.')
+      return
+    }
+    setLat('')
+    setLng('')
+    onSaved?.(hours)
   }
 
   const handleSave = async () => {
@@ -233,6 +260,18 @@ export default function SiteHoursModal({ site, onSaved, onClose }) {
               {locating ? 'Locating…' : 'Use my location'}
             </button>
           </div>
+
+          {(lat.trim() !== '' || lng.trim() !== '' || site.latitude != null) && (
+            <button
+              type="button"
+              onClick={handleClearGps}
+              disabled={saving}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-accent-red/30 bg-accent-red/10 px-3 py-2 text-sm font-semibold text-accent-red transition hover:bg-accent-red/15 disabled:opacity-50"
+            >
+              <Trash2 className="h-4 w-4" />
+              Remove GPS from site
+            </button>
+          )}
         </div>
 
         {error && (

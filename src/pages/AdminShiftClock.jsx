@@ -8,7 +8,7 @@ import { useAuth } from '../hooks/useAuth.jsx'
 import { supabase } from '../lib/supabase.js'
 import { fetchSitesForAdmin } from '../lib/scans.js'
 import { fetchGuardsWithSites } from '../lib/guards.js'
-import { getScheduledShiftForDate, shiftBounds, shiftScanBounds } from '../hooks/useClientShift.js'
+import { getScheduledShiftForDate, shiftScanBounds } from '../hooks/useClientShift.js'
 import { computeGuardShiftForDay, formatShiftDuration, formatShiftTime } from '../lib/clientStats.js'
 import {
   combineDateAndTime,
@@ -43,10 +43,14 @@ export default function AdminShiftClock() {
   const [sites, setSites] = useState([])
   const [guards, setGuards] = useState([])
   const [selectedSite, setSelectedSite] = useState('')
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [date, setDate] = useState(() => {
+    const n = new Date()
+    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`
+  })
   const [checkpoints, setCheckpoints] = useState([])
   const [scans, setScans] = useState([])
   const [adjustments, setAdjustments] = useState({})
+  const [dayShifts, setDayShifts] = useState([])
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState(null)
   const [editing, setEditing] = useState(null)
@@ -71,6 +75,7 @@ export default function AdminShiftClock() {
       setCheckpoints([])
       setScans([])
       setAdjustments({})
+      setDayShifts([])
       return
     }
 
@@ -84,20 +89,39 @@ export default function AdminShiftClock() {
         setCheckpoints([])
         setScans([])
         setAdjustments({})
+        setDayShifts([])
         setLoading(false)
         return
       }
 
-      const [{ data: cps }, adjRows] = await Promise.all([
+      const dayStart = (() => {
+        const [y, m, d] = date.split('-').map(Number)
+        return new Date(y, m - 1, d, 0, 0, 0, 0)
+      })()
+      const dayEnd = (() => {
+        const [y, m, d] = date.split('-').map(Number)
+        return new Date(y, m - 1, d, 23, 59, 59, 999)
+      })()
+
+      const [{ data: cps }, adjRows, { data: shiftRows }] = await Promise.all([
         supabase
           .from('checkpoints')
           .select('id, name, checkpoint_role, floor_id')
           .in('floor_id', floors.map((f) => f.id))
           .eq('active', true),
         fetchShiftAdjustmentsForDate(selectedSite, date),
+        supabase
+          .from('shifts')
+          .select('id, guard_id, starts_at, ends_at')
+          .eq('site_id', selectedSite)
+          .eq('status', 'published')
+          .not('guard_id', 'is', null)
+          .gte('starts_at', dayStart.toISOString())
+          .lte('starts_at', dayEnd.toISOString()),
       ])
 
       const checkpointList = cps || []
+      setDayShifts(shiftRows || [])
       setCheckpoints(checkpointList)
       setAdjustments(mapShiftAdjustments(adjRows))
 
@@ -108,14 +132,13 @@ export default function AdminShiftClock() {
         return
       }
 
-      const { start, end } = shiftScanBounds(date, scheduled.start, scheduled.end)
       const { data: scanData, error } = await supabase
         .from('scans')
         .select('id, guard_id, checkpoint_id, scanned_at, status')
         .in('checkpoint_id', cpIds)
         .eq('status', 'pass')
-        .gte('scanned_at', start.toISOString())
-        .lte('scanned_at', end.toISOString())
+        .gte('scanned_at', dayStart.toISOString())
+        .lte('scanned_at', dayEnd.toISOString())
         .order('scanned_at', { ascending: true })
 
       if (error) throw error
@@ -162,10 +185,12 @@ export default function AdminShiftClock() {
   const rows = siteGuards.map((guard) => {
     const guardScans = scans.filter((s) => s.guard_id === guard.id)
     const adjustment = adjustments[shiftAdjustmentKey(guard.id, date)]
+    const publishedShift = dayShifts.find((s) => s.guard_id === guard.id)
     const dayShift = computeGuardShiftForDay(guardScans, checkpoints, {
       date,
       adjustment,
       operatingHours: selectedSiteHours,
+      publishedShift,
     })
     const clockInScan = findClockInScan(guardScans, checkpoints, date, scheduled)
 

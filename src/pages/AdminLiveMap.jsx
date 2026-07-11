@@ -16,6 +16,7 @@ import {
   LocateFixed,
   Search,
   Pencil,
+  Trash2,
 } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
@@ -188,6 +189,39 @@ export default function AdminLiveMap() {
       color: 'amber',
       created_by: user.id,
     })
+  }
+
+  const handleClearGps = async () => {
+    if (form.mode !== 'update' || !form.siteId) {
+      setAddError('Pick an existing site first.')
+      return
+    }
+    if (
+      !window.confirm(
+        'Remove GPS from this site? Face ID clock-in will stop until you set a new location. Clock NFC tags are unchanged.',
+      )
+    ) {
+      return
+    }
+    setSaving(true)
+    setAddError('')
+    setAddOk('')
+    try {
+      const { error } = await supabase
+        .from('sites')
+        .update({ latitude: null, longitude: null })
+        .eq('id', form.siteId)
+      if (error) throw error
+      setForm((f) => ({ ...f, lat: '', lng: '' }))
+      previewRef.current?.clearLayers()
+      setAddOk('GPS removed. Site shows as “No GPS” until you look up a new address.')
+      setShowPanel(false)
+      load()
+    } catch (err) {
+      setAddError(err.message || 'Could not remove GPS.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleSave = async (e) => {
@@ -674,7 +708,7 @@ export default function AdminLiveMap() {
               {addError}
             </p>
           )}
-          <div className="mt-4 flex gap-2">
+          <div className="mt-4 flex flex-wrap gap-2">
             <button type="submit" disabled={saving} className="dk-cta">
               {saving
                 ? 'Saving…'
@@ -682,6 +716,17 @@ export default function AdminLiveMap() {
                   ? 'Save geofence'
                   : 'Create site'}
             </button>
+            {form.mode === 'update' && form.siteId && (form.lat || form.lng) && (
+              <button
+                type="button"
+                onClick={handleClearGps}
+                disabled={saving}
+                className="inline-flex items-center gap-2 rounded-full border border-accent-red/40 bg-accent-red/10 px-4 py-2.5 text-sm font-semibold text-accent-red transition hover:bg-accent-red/15 disabled:opacity-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                Remove GPS
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {

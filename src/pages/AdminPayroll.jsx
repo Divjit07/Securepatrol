@@ -62,6 +62,7 @@ export default function AdminPayroll() {
   const [guards, setGuards] = useState([])
   const [hoursScans, setHoursScans] = useState([])
   const [hoursAdjustments, setHoursAdjustments] = useState({})
+  const [publishedShifts, setPublishedShifts] = useState([])
   const [loading, setLoading] = useState(false)
   const [rounding, setRounding] = useState('quarter')
   const [rates, setRates] = useState({})
@@ -114,6 +115,7 @@ export default function AdminPayroll() {
       setCheckpoints([])
       setHoursScans([])
       setHoursAdjustments({})
+      setPublishedShifts([])
       setLoading(false)
       return
     }
@@ -129,6 +131,7 @@ export default function AdminPayroll() {
     if (!cpIds.length) {
       setHoursScans([])
       setHoursAdjustments({})
+      setPublishedShifts([])
       setLoading(false)
       return
     }
@@ -136,7 +139,7 @@ export default function AdminPayroll() {
     const from = localDayStart(filters.fromDate)
     const to = localDayEnd(filters.toDate)
 
-    const [{ data, error }, adjRows] = await Promise.all([
+    const [{ data, error }, adjRows, { data: shiftRows }] = await Promise.all([
       supabase
         .from('scans')
         .select('id, guard_id, checkpoint_id, scanned_at, status')
@@ -146,14 +149,24 @@ export default function AdminPayroll() {
         .lte('scanned_at', to.toISOString())
         .order('scanned_at', { ascending: true }),
       fetchShiftAdjustmentsForSite(filters.siteId, filters.fromDate, filters.toDate),
+      supabase
+        .from('shifts')
+        .select('id, guard_id, starts_at, ends_at')
+        .eq('site_id', filters.siteId)
+        .eq('status', 'published')
+        .not('guard_id', 'is', null)
+        .gte('starts_at', from.toISOString())
+        .lte('starts_at', to.toISOString()),
     ])
 
     if (error) {
       setHoursScans([])
       setHoursAdjustments({})
+      setPublishedShifts([])
     } else {
       setHoursScans(data || [])
       setHoursAdjustments(mapShiftAdjustments(adjRows))
+      setPublishedShifts(shiftRows || [])
     }
 
     setLoading(false)
@@ -170,6 +183,7 @@ export default function AdminPayroll() {
     dates: dateRangeDays(filters.fromDate, filters.toDate),
     adjustmentsByKey: hoursAdjustments,
     operatingHours: selectedSite?.operating_hours,
+    publishedShifts,
   })
   const hoursSummary = describeOperatingHours(selectedSite?.operating_hours)
 
@@ -218,7 +232,7 @@ export default function AdminPayroll() {
     const cpIds = checkpoints.map((c) => c.id)
     if (!cpIds.length) return null
 
-    const [{ data, error }, adjRows] = await Promise.all([
+    const [{ data, error }, adjRows, { data: shiftRows }] = await Promise.all([
       supabase
         .from('scans')
         .select('id, guard_id, checkpoint_id, scanned_at, status')
@@ -228,6 +242,14 @@ export default function AdminPayroll() {
         .lte('scanned_at', localDayEnd(filters.toDate).toISOString())
         .order('scanned_at', { ascending: true }),
       fetchShiftAdjustmentsForSite(filters.siteId, from, filters.toDate),
+      supabase
+        .from('shifts')
+        .select('id, guard_id, starts_at, ends_at')
+        .eq('site_id', filters.siteId)
+        .eq('status', 'published')
+        .not('guard_id', 'is', null)
+        .gte('starts_at', localDayStart(from).toISOString())
+        .lte('starts_at', localDayEnd(filters.toDate).toISOString()),
     ])
     if (error) return null
 
@@ -238,6 +260,7 @@ export default function AdminPayroll() {
       dates: dateRangeDays(from, filters.toDate),
       adjustmentsByKey: mapShiftAdjustments(adjRows),
       operatingHours: selectedSite?.operating_hours,
+      publishedShifts: shiftRows || [],
     })
     const weekly = computeWeeklyPayroll(applyRounding(report.rows, rounding))
     ytdCacheRef.current = { key, weekly }
@@ -418,8 +441,9 @@ export default function AdminPayroll() {
 
       {tab !== 'invoices' && (
         <div className="mb-4 rounded-xl border border-ink/10 bg-ink/5 p-4 text-sm text-ink">
-          Payroll hours for <strong>{selectedSite?.name || 'selected site'}</strong>. Site hours:{' '}
-          <strong>{hoursSummary}</strong>. Includes statutory holidays and shift clock edits.
+          Payroll hours for <strong>{selectedSite?.name || 'selected site'}</strong> come from Face ID /
+          clock punches (and shift-clock edits). Site coverage window:{' '}
+          <strong>{hoursSummary}</strong>. Includes statutory holidays.
         </div>
       )}
 

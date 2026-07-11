@@ -84,11 +84,34 @@ export function formatShiftDuration(clockInAt, clockOutAt) {
   return formatDurationFromMinutes(durationFromShiftTimes(clockInAt, clockOutAt).totalMinutes)
 }
 
-export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustment, operatingHours }) {
-  const schedule = getScheduledShiftForDate(date, operatingHours)
-  if (schedule.isClosed) return null
+function localDateStr(d = new Date()) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
 
-  const { start: shiftStart, end: shiftEnd } = schedule
+/**
+ * Derive one day's pay window from Face ID / NFC clock punches.
+ * Clock-in and clock-out punches are the source of truth. Site operating
+ * hours (or an optional published roster shift) only define the search
+ * window and the legacy auto-end when someone clocks in but never out.
+ * Admin adjustments always win.
+ */
+export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustment, operatingHours, publishedShift }) {
+  const schedule = getScheduledShiftForDate(date, operatingHours)
+
+  let shiftStart = schedule.start
+  let shiftEnd = schedule.end
+  if (publishedShift?.starts_at && publishedShift?.ends_at) {
+    const ps = new Date(publishedShift.starts_at)
+    const pe = new Date(publishedShift.ends_at)
+    shiftStart = `${String(ps.getHours()).padStart(2, '0')}:${String(ps.getMinutes()).padStart(2, '0')}`
+    shiftEnd = `${String(pe.getHours()).padStart(2, '0')}:${String(pe.getMinutes()).padStart(2, '0')}`
+  } else if (schedule.isClosed) {
+    return null
+  }
+
   const passScans = [...guardScans]
     .filter((s) => s.status === 'pass')
     .sort((a, b) => new Date(a.scanned_at) - new Date(b.scanned_at))
@@ -98,13 +121,20 @@ export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustm
   const clockInIds = new Set(
     checkpoints.filter((cp) => cp.checkpoint_role === 'shift_clock_in').map((cp) => cp.id),
   )
+  const clockOutIds = new Set(
+    checkpoints.filter((cp) => cp.checkpoint_role === 'shift_clock_out').map((cp) => cp.id),
+  )
 
-  const { start: scanStart, end } = shiftScanBounds(date, shiftStart, shiftEnd)
+  // Clock-in: from midnight through scheduled end (early sign-in allowed).
+  const { start: scanStart, end: scheduledEnd } = shiftScanBounds(date, shiftStart, shiftEnd)
   const { start: shiftStartBound } = shiftBounds(date, shiftStart, shiftEnd)
+  // Clock-out may happen after the scheduled end — search the whole calendar day.
+  const [y, m, d] = date.split('-').map(Number)
+  const dayEnd = new Date(y, m - 1, d, 23, 59, 59, 999)
 
   const clockInScan = passScans.find((s) => {
     const t = new Date(s.scanned_at)
-    return t >= scanStart && t <= end && clockInIds.has(s.checkpoint_id)
+    return t >= scanStart && t <= dayEnd && clockInIds.has(s.checkpoint_id)
   })
 
   if (!clockInScan && !adjustment) return null
@@ -113,19 +143,23 @@ export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustm
   const defaultClockOut = scheduledClockOutAt(date, shiftEnd)
   const signedInAt = clockInScan ? new Date(clockInScan.scanned_at) : defaultClockIn
 
-  let clockInAt = defaultClockIn
-  let clockOutAt = defaultClockOut
-  let hoursWorked = fixedShiftHours(date, operatingHours)
+  const clockOutScan = clockInScan
+    ? passScans.find((s) => {
+        const t = new Date(s.scanned_at)
+        return t > signedInAt && t <= dayEnd && clockOutIds.has(s.checkpoint_id)
+      })
+    : null
+
+  let clockInAt = signedInAt
+  // Punch-to-punch when both exist; otherwise legacy auto-end at scheduled end.
+  let clockOutAt = clockOutScan ? new Date(clockOutScan.scanned_at) : defaultClockOut
+  let hoursWorked = hoursFromShiftTimes(clockInAt, clockOutAt)
   let isAdjusted = false
   const arrivedEarly = Boolean(clockInScan && signedInAt < defaultClockIn)
 
-  if (arrivedEarly && !adjustment) {
-    clockInAt = signedInAt
-  }
-
   const inWindow = passScans.filter((s) => {
     const t = new Date(s.scanned_at)
-    return t >= shiftStartBound && t <= end
+    return t >= shiftStartBound && t <= scheduledEnd
   })
 
   if (adjustment) {
@@ -138,8 +172,8 @@ export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustm
   }
 
   const now = new Date()
-  const todayStr = now.toISOString().slice(0, 10)
-  const onShift = date === todayStr && now < clockOutAt
+  const onShift =
+    date === localDateStr(now) && !clockOutScan && !adjustment && now < defaultClockOut
 
   return {
     clockInAt,
@@ -155,6 +189,7 @@ export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustm
       : 'Manual entry',
     hoursWorked,
     scanCount: inWindow.length,
+    hasClockOutPunch: Boolean(clockOutScan) || isAdjusted,
   }
 }
 
@@ -165,14 +200,29 @@ export function computeGuardHoursReport({
   dates = [],
   adjustmentsByKey = {},
   operatingHours = null,
+  publishedShifts = [],
 }) {
   const rows = []
+  const shiftByGuardDate = new Map()
+  for (const s of publishedShifts) {
+    if (!s.guard_id || !s.starts_at) continue
+    const key = `${s.guard_id}-${localDateStr(new Date(s.starts_at))}`
+    const prev = shiftByGuardDate.get(key)
+    // Prefer the shift that overlaps most of the local day (first published wins if tie).
+    if (!prev) shiftByGuardDate.set(key, s)
+  }
 
   for (const date of dates) {
     for (const guard of guards) {
       const guardScans = scans.filter((s) => s.guard_id === guard.id)
       const adjustment = adjustmentsByKey[`${guard.id}-${date}`]
-      const dayShift = computeGuardShiftForDay(guardScans, checkpoints, { date, adjustment, operatingHours })
+      const publishedShift = shiftByGuardDate.get(`${guard.id}-${date}`)
+      const dayShift = computeGuardShiftForDay(guardScans, checkpoints, {
+        date,
+        adjustment,
+        operatingHours,
+        publishedShift,
+      })
 
       if (!dayShift) continue
 
@@ -220,7 +270,7 @@ export function dateRangeDays(fromDateStr, toDateStr) {
   const from = new Date(`${fromDateStr}T12:00:00`)
   const to = new Date(`${toDateStr}T12:00:00`)
   for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) {
-    dates.push(d.toISOString().slice(0, 10))
+    dates.push(localDateStr(d))
   }
   return dates
 }

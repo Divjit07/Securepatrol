@@ -19,6 +19,8 @@ type Shift = {
   site_name?: string
 }
 
+const SCHEDULE_TZ = 'America/Toronto'
+
 function icsDate(iso: string) {
   return new Date(iso).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
 }
@@ -54,8 +56,18 @@ END:VCALENDAR`
 function formatShiftLine(s: Shift) {
   const start = new Date(s.starts_at)
   const end = new Date(s.ends_at)
-  const day = start.toLocaleDateString('en-CA', { weekday: 'short', month: 'short', day: 'numeric' })
-  const time = `${start.toLocaleTimeString('en-CA', { hour: 'numeric', minute: '2-digit' })} – ${end.toLocaleTimeString('en-CA', { hour: 'numeric', minute: '2-digit' })}`
+  const day = start.toLocaleDateString('en-CA', {
+    timeZone: SCHEDULE_TZ,
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })
+  const timeOpts: Intl.DateTimeFormatOptions = {
+    timeZone: SCHEDULE_TZ,
+    hour: 'numeric',
+    minute: '2-digit',
+  }
+  const time = `${start.toLocaleTimeString('en-CA', timeOpts)} – ${end.toLocaleTimeString('en-CA', timeOpts)}`
   return `<tr><td style="padding:8px 16px;font-weight:600">${day}</td><td style="padding:8px 16px">${time}</td><td style="padding:8px 16px;color:#64748b">${s.notes ?? ''}</td></tr>`
 }
 

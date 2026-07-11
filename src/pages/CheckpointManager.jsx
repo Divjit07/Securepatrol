@@ -451,7 +451,7 @@ export default function CheckpointManager() {
               >
                 <option value="patrol">Patrol checkpoint</option>
                 <option value="shift_clock_in">Shift clock-in (Main Entrance · 11am)</option>
-                <option value="shift_clock_out">Shift clock-out tag (optional — hours auto-end at 8pm weekdays / 5pm Sat)</option>
+                <option value="shift_clock_out">Shift clock-out tag (optional — without it, hours auto-end at the scheduled / site closing time)</option>
               </select>
               <p className="mt-1 text-xs text-ink-2">
                 Guards only need to scan Main Entrance to clock in. Clock-out is automatic at shift end.
