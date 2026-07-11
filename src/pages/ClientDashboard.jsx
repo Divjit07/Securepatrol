@@ -64,9 +64,10 @@ export default function ClientDashboard() {
                   <span className="block truncate text-sm font-semibold text-ink">{gs.guardName}</span>
                   <span className="block text-xs text-ink-2">
                     {/* Admin shift-clock edits (guard_shift_adjustments) win over the
-                        raw punch time — the raw scan stays immutable underneath. */}
+                        raw punch time — the raw scan stays immutable underneath.
+                        Clients see the official time only; the Adjusted badge stays
+                        on Admin → Shift Clock. */}
                     Clocked in {formatShiftTime(new Date(gs.isAdjusted ? gs.clockInAt : gs.signedInAt || gs.clockInAt))}
-                    {gs.isAdjusted ? ' (adjusted)' : ''}
                     {gs.onShift ? ' · on shift now' : gs.clockOutAt ? ` · until ${formatShiftTime(new Date(gs.clockOutAt))}` : ''}
                   </span>
                 </span>
