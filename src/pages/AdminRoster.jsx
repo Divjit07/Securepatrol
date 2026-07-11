@@ -4,6 +4,7 @@ import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import RosterGrid from '../components/roster/RosterGrid.jsx'
 import ShiftSheet from '../components/roster/ShiftSheet.jsx'
+import RosterSitePicker, { ALL_SITES } from '../components/roster/RosterSitePicker.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { fetchSitesForAdmin } from '../lib/scans.js'
 import { fetchGuardsWithSites } from '../lib/guards.js'
@@ -11,6 +12,7 @@ import { supabase } from '../lib/supabase.js'
 import {
   startOfWeek,
   addDays,
+  sameDay,
   shiftHours,
   detectConflicts,
   fetchShiftsInRange,
@@ -47,18 +49,31 @@ export default function AdminRoster() {
   const [publishing, setPublishing] = useState(false)
   const [banner, setBanner] = useState(null)
 
+  const isAllSites = siteId === ALL_SITES
   const rangeEnd = useMemo(() => addDays(weekStart, numDays), [weekStart, numDays])
-  const days = useMemo(
-    () => Array.from({ length: numDays }, (_, i) => addDays(weekStart, i)),
-    [weekStart, numDays],
-  )
+  // Grid shows today + future only — past columns in the current week are hidden.
+  const days = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return Array.from({ length: numDays }, (_, i) => addDays(weekStart, i)).filter((d) => {
+      const day = new Date(d)
+      day.setHours(0, 0, 0, 0)
+      return day >= today
+    })
+  }, [weekStart, numDays])
+  const thisWeekStart = useMemo(() => startOfWeek(new Date()), [])
+  const canGoPrev = weekStart.getTime() > thisWeekStart.getTime()
 
   useEffect(() => {
     if (!user?.id || !profile?.role) return
     fetchSitesForAdmin(user.id, profile.role)
       .then((data) => {
         setSites(data)
-        setSiteId((prev) => prev || data[0]?.id || '')
+        setSiteId((prev) => {
+          if (prev === ALL_SITES) return ALL_SITES
+          if (prev && data.some((s) => s.id === prev)) return prev
+          return data[0]?.id || ''
+        })
       })
       .catch((err) => setBanner({ tone: 'error', text: err.message }))
   }, [user?.id, profile?.role])
@@ -67,40 +82,59 @@ export default function AdminRoster() {
     if (!siteId) return
     setLoading(true)
     try {
+      const querySiteId = siteId === ALL_SITES ? null : siteId
       const [shiftRows, guardRows, templateRows] = await Promise.all([
-        fetchShiftsInRange(siteId, weekStart, rangeEnd),
+        fetchShiftsInRange(querySiteId, weekStart, rangeEnd),
         fetchGuardsWithSites(),
-        fetchTemplates(siteId).catch(() => []),
+        siteId === ALL_SITES
+          ? Promise.resolve([])
+          : fetchTemplates(siteId).catch(() => []),
       ])
-      setShifts(shiftRows)
-      setGuards(guardRows.filter((g) => g.site_id === siteId && g.active))
+      const siteIds = new Set(sites.map((s) => s.id))
+      const activeGuards = guardRows.filter((g) => g.active && g.site_id && siteIds.has(g.site_id))
+      setShifts(
+        siteId === ALL_SITES
+          ? shiftRows.filter((s) => siteIds.has(s.site_id))
+          : shiftRows,
+      )
+      setGuards(
+        siteId === ALL_SITES
+          ? activeGuards.sort(
+              (a, b) =>
+                (a.site_name || '').localeCompare(b.site_name || '') ||
+                a.name.localeCompare(b.name),
+            )
+          : activeGuards.filter((g) => g.site_id === siteId),
+      )
       setTemplates(templateRows.length ? templateRows : DEFAULT_TEMPLATES)
     } catch (err) {
       setBanner({ tone: 'error', text: err.message })
     } finally {
       setLoading(false)
     }
-  }, [siteId, weekStart, rangeEnd])
+  }, [siteId, weekStart, rangeEnd, sites])
 
   useEffect(() => {
     reload()
   }, [reload])
 
-  // Stay fresh: refetch when the tab regains focus and on any shift/guard
-  // change at this site (another admin editing, a guard claiming a shift).
+  // Stay fresh: refetch on focus + shift/guard changes.
   useEffect(() => {
     if (!siteId) return undefined
     const onFocus = () => reload()
     window.addEventListener('focus', onFocus)
-    const channel = supabase
-      .channel(`roster-${siteId}`)
-      .on(
+    const channel = supabase.channel(`roster-${siteId}`)
+    if (siteId === ALL_SITES) {
+      channel.on('postgres_changes', { event: '*', schema: 'public', table: 'shifts' }, () => reload())
+    } else {
+      channel.on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'shifts', filter: `site_id=eq.${siteId}` },
         () => reload(),
       )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => reload())
-      .subscribe()
+    }
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => reload())
+    channel.subscribe()
     return () => {
       window.removeEventListener('focus', onFocus)
       supabase.removeChannel(channel)
@@ -110,45 +144,61 @@ export default function AdminRoster() {
   const conflicts = useMemo(() => detectConflicts(shifts), [shifts])
   const openShifts = useMemo(() => shifts.filter((s) => !s.guard_id), [shifts])
   const draftCount = useMemo(() => shifts.filter((s) => s.status === 'draft').length, [shifts])
-  const totalHours = useMemo(() => shifts.reduce((sum, s) => sum + shiftHours(s), 0), [shifts])
+  const totalHours = useMemo(
+    () =>
+      shifts.reduce((sum, s) => {
+        if (!days.some((d) => sameDay(d, new Date(s.starts_at)))) return sum
+        return sum + shiftHours(s)
+      }, 0),
+    [shifts, days],
+  )
 
   const rows = useMemo(
     () =>
       guards.map((guard) => {
         const guardShifts = shifts.filter((s) => s.guard_id === guard.id)
-        return { guard, shifts: guardShifts, hours: guardShifts.reduce((sum, s) => sum + shiftHours(s), 0) }
+        const hours = guardShifts.reduce((sum, s) => {
+          if (!days.some((d) => sameDay(d, new Date(s.starts_at)))) return sum
+          return sum + shiftHours(s)
+        }, 0)
+        return { guard, shifts: guardShifts, hours }
       }),
-    [guards, shifts],
+    [guards, shifts, days],
   )
 
-  // Coverage %: minutes of the site's operating window with ≥1 shift on it.
-  const selectedSite = sites.find((s) => s.id === siteId)
+  // Coverage %: minutes of operating window(s) with ≥1 shift.
+  const selectedSite = isAllSites ? null : sites.find((s) => s.id === siteId)
   const coveragePct = useMemo(() => {
     if (!days.length) return 0
+    const sitesForCoverage = isAllSites ? sites : selectedSite ? [selectedSite] : []
+    if (!sitesForCoverage.length) return 0
     let windowMin = 0
     let coveredMin = 0
-    for (const day of days) {
-      const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`
-      const sched = getScheduledShiftForDate(dateStr, selectedSite?.operating_hours)
-      if (sched.isClosed) continue
-      const [sh, sm] = sched.start.split(':').map(Number)
-      const [eh, em] = sched.end.split(':').map(Number)
-      const winStart = new Date(day)
-      winStart.setHours(sh, sm, 0, 0)
-      const winEnd = new Date(day)
-      winEnd.setHours(eh, em, 0, 0)
-      const winLen = (winEnd - winStart) / 60000
-      windowMin += winLen
-      let dayCovered = 0
-      for (const s of shifts) {
-        const a = Math.max(new Date(s.starts_at), winStart)
-        const b = Math.min(new Date(s.ends_at), winEnd)
-        if (b > a) dayCovered += (b - a) / 60000
+    for (const site of sitesForCoverage) {
+      const siteShifts = isAllSites ? shifts.filter((s) => s.site_id === site.id) : shifts
+      for (const day of days) {
+        const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`
+        const sched = getScheduledShiftForDate(dateStr, site.operating_hours)
+        if (sched.isClosed) continue
+        const [sh, sm] = sched.start.split(':').map(Number)
+        const [eh, em] = sched.end.split(':').map(Number)
+        const winStart = new Date(day)
+        winStart.setHours(sh, sm, 0, 0)
+        const winEnd = new Date(day)
+        winEnd.setHours(eh, em, 0, 0)
+        const winLen = (winEnd - winStart) / 60000
+        windowMin += winLen
+        let dayCovered = 0
+        for (const s of siteShifts) {
+          const a = Math.max(new Date(s.starts_at), winStart)
+          const b = Math.min(new Date(s.ends_at), winEnd)
+          if (b > a) dayCovered += (b - a) / 60000
+        }
+        coveredMin += Math.min(dayCovered, winLen)
       }
-      coveredMin += Math.min(dayCovered, winLen)
     }
     return windowMin ? Math.min(100, Math.round((coveredMin / windowMin) * 100)) : 0
-  }, [days, shifts, selectedSite])
+  }, [days, shifts, selectedSite, isAllSites, sites])
 
   const conflictList = useMemo(() => {
     const out = []
@@ -174,7 +224,12 @@ export default function AdminRoster() {
   const handleCellClick = (guardId, date) => {
     const seed = new Date(date)
     seed.setHours(9, 0, 0, 0)
-    setSheet({ guard_id: guardId, starts_at: seed.toISOString() })
+    const guard = guards.find((g) => g.id === guardId)
+    setSheet({
+      guard_id: guardId,
+      starts_at: seed.toISOString(),
+      site_id: isAllSites ? guard?.site_id || null : siteId,
+    })
   }
 
   const handleShiftDrop = async (shiftId, guardId, date) => {
@@ -200,15 +255,26 @@ export default function AdminRoster() {
   }
 
   const handleSave = async (values, repeatOpts) => {
+    const targetSiteId =
+      (siteId !== ALL_SITES ? siteId : null) ||
+      values.site_id ||
+      sheet?.site_id ||
+      guards.find((g) => g.id === (values.guard_id || sheet?.guard_id))?.site_id
+
+    if (!targetSiteId) {
+      flash('error', 'Pick a site (or a guard assigned to a site) before saving.')
+      throw new Error('No site')
+    }
+
     if (sheet?.id) {
       await updateShift(sheet.id, values)
     } else if (repeatOpts) {
       await createShiftSeries(
-        { ...values, site_id: siteId, status: 'draft', created_by: user.id },
+        { ...values, site_id: targetSiteId, status: 'draft', created_by: user.id },
         repeatOpts,
       )
     } else {
-      await createShift({ ...values, site_id: siteId, status: 'draft', created_by: user.id })
+      await createShift({ ...values, site_id: targetSiteId, status: 'draft', created_by: user.id })
     }
     reload()
   }
@@ -223,6 +289,10 @@ export default function AdminRoster() {
   }
 
   const handleCopyWeek = async () => {
+    if (isAllSites) {
+      flash('error', 'Pick a single site to copy last week.')
+      return
+    }
     try {
       const copied = await copyWeek(siteId, weekStart)
       flash(copied.length ? 'success' : 'error', copied.length ? `Copied ${copied.length} shifts from last week as drafts.` : 'Last week has no shifts to copy.')
@@ -233,6 +303,10 @@ export default function AdminRoster() {
   }
 
   const handlePublish = async () => {
+    if (isAllSites) {
+      flash('error', 'Pick a single site to publish drafts.')
+      return
+    }
     setPublishing(true)
     try {
       const result = await publishWeek(siteId, weekStart, rangeEnd, user.id)
@@ -250,7 +324,9 @@ export default function AdminRoster() {
     }
   }
 
-  const weekLabel = `${weekStart.toLocaleDateString([], { month: 'short', day: 'numeric' })} – ${addDays(weekStart, numDays - 1).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}`
+  const weekLabel = days.length
+    ? `${days[0].toLocaleDateString([], { month: 'short', day: 'numeric' })} – ${days[days.length - 1].toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}`
+    : 'No upcoming days'
 
   return (
     <Layout variant="admin">
@@ -261,11 +337,22 @@ export default function AdminRoster() {
           <button
             type="button"
             onClick={handlePublish}
-            disabled={publishing || !draftCount}
-            className="sp-btn-primary"
+            disabled={publishing || !draftCount || isAllSites}
+            title={isAllSites ? 'Pick a single site to publish drafts' : undefined}
+            className={`inline-flex items-center justify-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition ${
+              draftCount && !publishing && !isAllSites
+                ? 'hover:bg-zinc-800 active:scale-[0.98]'
+                : 'cursor-default'
+            } ${publishing || isAllSites ? 'opacity-50' : ''}`}
           >
             <Send className="h-4 w-4" />
-            {publishing ? 'Publishing…' : draftCount ? `Publish ${draftCount} draft${draftCount > 1 ? 's' : ''}` : 'All published'}
+            {publishing
+              ? 'Publishing…'
+              : isAllSites
+                ? 'Pick a site to publish'
+                : draftCount
+                  ? `Publish ${draftCount} draft${draftCount > 1 ? 's' : ''}`
+                  : 'All published'}
           </button>
         }
       />
@@ -281,23 +368,18 @@ export default function AdminRoster() {
       )}
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        {sites.length > 1 && (
-          <select
-            value={siteId}
-            onChange={(e) => setSiteId(e.target.value)}
-            className="sp-input w-auto py-2"
-            aria-label="Site"
-          >
-            {sites.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
+        {sites.length > 0 && (
+          <RosterSitePicker sites={sites} value={siteId || ALL_SITES} onChange={setSiteId} />
         )}
 
         <div className="flex items-center gap-1 rounded-xl border border-ink/10 bg-ink/5 p-1">
-          <button type="button" onClick={() => setWeekStart(addDays(weekStart, -numDays))} className="rounded-lg p-2 text-ink-2 hover:bg-ink/10" aria-label="Previous">
+          <button
+            type="button"
+            onClick={() => setWeekStart(addDays(weekStart, -numDays))}
+            disabled={!canGoPrev}
+            className="rounded-lg p-2 text-ink-2 hover:bg-ink/10 disabled:pointer-events-none disabled:opacity-30"
+            aria-label="Previous"
+          >
             <ChevronLeft className="h-4 w-4" />
           </button>
           <button type="button" onClick={() => setWeekStart(startOfWeek(new Date()))} className="rounded-lg px-3 py-1.5 text-sm font-medium text-ink-2 hover:bg-ink/10">
@@ -318,7 +400,9 @@ export default function AdminRoster() {
                 type="button"
                 onClick={() => setNumDays(n)}
                 className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                  numDays === n ? 'bg-surface-2 text-ink' : 'text-ink-2 hover:text-ink'
+                  numDays === n
+                    ? 'bg-black text-white shadow-sm'
+                    : 'text-ink-2 hover:text-ink'
                 }`}
               >
                 {n === 7 ? 'Weekly' : 'Biweekly'}
@@ -340,6 +424,7 @@ export default function AdminRoster() {
               rows={rows}
               openShifts={openShifts}
               conflicts={conflicts}
+              showSite={isAllSites}
               onCellClick={handleCellClick}
               onShiftClick={(shift) => setSheet(shift)}
               onShiftDrop={handleShiftDrop}
@@ -347,20 +432,22 @@ export default function AdminRoster() {
           )}
         </div>
 
-        {/* Right rail — reference "AI Tools & Automation" geometry */}
+        {/* Right rail */}
         <div className="space-y-4 xl:col-span-3">
           <div>
             <h2 className="mb-3 text-sm font-semibold text-ink">Roster Insights</h2>
-            <div className="flex gap-8">
-              <div>
-                <p className="text-4xl font-light tracking-tight text-ink">{coveragePct}%</p>
-                <p className="mt-1 text-xs text-ink-2">Coverage</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-2xl border border-ink/10 bg-ink/5 p-3">
+                <div className="inline-flex rounded-full bg-[#FFFFFF] px-3 py-1 text-[11px] font-semibold text-black shadow-sm ring-1 ring-black/10">
+                  Coverage
+                </div>
+                <p className="mt-3 text-3xl font-light tracking-tight text-ink">{coveragePct}%</p>
               </div>
-              <div>
-                <p className="text-4xl font-light tracking-tight text-ink">
-                  {Math.round(totalHours)}h
-                </p>
-                <p className="mt-1 text-xs text-ink-2">Scheduled</p>
+              <div className="rounded-2xl border border-ink/10 bg-ink/5 p-3">
+                <div className="inline-flex rounded-full bg-[#FFFFFF] px-3 py-1 text-[11px] font-semibold text-black shadow-sm ring-1 ring-black/10">
+                  Scheduled
+                </div>
+                <p className="mt-3 text-3xl font-light tracking-tight text-ink">{Math.round(totalHours)}h</p>
               </div>
             </div>
           </div>
@@ -368,7 +455,9 @@ export default function AdminRoster() {
           <button
             type="button"
             onClick={handleCopyWeek}
-            className="w-full rounded-xl bg-white py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 active:scale-[0.99]"
+            disabled={isAllSites}
+            title={isAllSites ? 'Pick a single site to copy last week' : undefined}
+            className="w-full rounded-full border border-black/10 bg-[#FFFFFF] py-3 text-sm font-semibold text-black transition hover:bg-zinc-100 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
           >
             Copy Last Week
           </button>
@@ -417,7 +506,7 @@ export default function AdminRoster() {
                   <button
                     type="button"
                     onClick={() => handleDelete(shift, false).then(() => flash('success', 'Open shift removed.'))}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/15 text-ink-2 transition hover:bg-white/10"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-ink/10 text-ink-2 transition hover:bg-ink/5"
                     aria-label="Remove open shift"
                   >
                     <X className="h-3.5 w-3.5" />
@@ -425,7 +514,7 @@ export default function AdminRoster() {
                   <button
                     type="button"
                     onClick={() => setSheet(shift)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-black transition hover:bg-zinc-200"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-black text-white transition hover:bg-zinc-800"
                     aria-label="Assign open shift"
                   >
                     <Check className="h-3.5 w-3.5" />

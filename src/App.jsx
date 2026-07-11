@@ -60,6 +60,7 @@ const ClientCheckpoints = lazyRetry(() => import('./pages/ClientCheckpoints.jsx'
 const ClientReports = lazyRetry(() => import('./pages/ClientReports.jsx'))
 const ClientIncidents = lazyRetry(() => import('./pages/ClientIncidents.jsx'))
 const AdminRoster = lazyRetry(() => import('./pages/AdminRoster.jsx'))
+const AdminOps = lazyRetry(() => import('./pages/AdminOps.jsx'))
 const AdminLiveMap = lazyRetry(() => import('./pages/AdminLiveMap.jsx'))
 const ClientCoverage = lazyRetry(() => import('./pages/ClientCoverage.jsx'))
 const GuardSchedule = lazyRetry(() => import('./pages/GuardSchedule.jsx'))
@@ -255,6 +256,14 @@ export default function App() {
           element={
             <ProtectedRoute requireAdmin>
               <AdminRoster />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/ops"
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminOps />
             </ProtectedRoute>
           }
         />

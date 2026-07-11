@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="theme-color" content="#0d110c" />
+    <meta name="theme-color" content="#1c1f1a" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="/manifest.json" />
@@ -20,8 +20,17 @@
     <title>Kratos | Workforce Command</title>
       <script>
       try {
-        document.documentElement.dataset.theme = localStorage.getItem('sp-theme') || 'forest'
-      } catch (e) {}
+        var saved = localStorage.getItem('sp-theme')
+        var aliases = { moss: 'forest', lagoon: 'sky', meadow: 'day', orchid: 'ivory', rose: 'ivory' }
+        var id = aliases[saved] || saved
+        var valid = { night:1, day:1, forest:1, matte:1, graphite:1, ivory:1, sky:1, studio:1 }
+        if (!valid[id]) {
+          id = window.matchMedia('(prefers-color-scheme: light)').matches ? 'day' : 'night'
+        }
+        document.documentElement.dataset.theme = id
+      } catch (e) {
+        document.documentElement.dataset.theme = 'night'
+      }
     </script>
   </head>
   <body>

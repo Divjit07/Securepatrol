@@ -103,6 +103,59 @@ export async function fetchOnDutyNow() {
   return new Set((data || []).map((s) => s.guard_id)).size
 }
 
+/** Published shifts overlapping [rangeStart, rangeEnd) — includes overnight carries. */
+export async function fetchShiftsOverlapping(rangeStart, rangeEnd, { siteId } = {}) {
+  let query = supabase
+    .from('shifts')
+    .select(SHIFT_SELECT)
+    .eq('status', 'published')
+    .lt('starts_at', rangeEnd.toISOString())
+    .gt('ends_at', rangeStart.toISOString())
+    .order('starts_at')
+
+  if (siteId) query = query.eq('site_id', siteId)
+
+  const { data, error } = await query
+  if (error) throw error
+  return data || []
+}
+
+/**
+ * Latest clock punch per guard in the last `hours` hours.
+ * Returns Map<guardId, { clockedIn, scannedAt, role }>.
+ */
+export async function fetchClockStatusByGuard(hours = 16) {
+  const since = new Date(Date.now() - hours * 3600000).toISOString()
+  const { data, error } = await supabase
+    .from('scans')
+    .select(
+      'id, guard_id, scanned_at, profiles:guard_id(id, name), checkpoints!inner(checkpoint_role, name, floors(site_id, sites(id, name)))',
+    )
+    .eq('status', 'pass')
+    .in('checkpoints.checkpoint_role', ['shift_clock_in', 'shift_clock_out'])
+    .gte('scanned_at', since)
+    .order('scanned_at', { ascending: false })
+    .limit(500)
+
+  if (error) throw error
+
+  const byGuard = new Map()
+  for (const row of data || []) {
+    if (byGuard.has(row.guard_id)) continue
+    const role = row.checkpoints?.checkpoint_role
+    byGuard.set(row.guard_id, {
+      clockedIn: role === 'shift_clock_in',
+      scannedAt: row.scanned_at,
+      role,
+      checkpointName: row.checkpoints?.name || null,
+      siteId: row.checkpoints?.floors?.site_id || null,
+      siteName: row.checkpoints?.floors?.sites?.name || null,
+      guardName: row.profiles?.name || 'Guard',
+    })
+  }
+  return byGuard
+}
+
 /** The guard's next published shift (current one first if in progress). */
 export async function fetchNextShift(guardId) {
   const nowIso = new Date().toISOString()

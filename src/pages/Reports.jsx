@@ -155,10 +155,10 @@ export default function Reports() {
         <select
           value={scanFilters.siteId}
           onChange={(e) => setScanFilters({ ...scanFilters, siteId: e.target.value })}
-          className="rounded-lg border border-white/10 px-3 py-2"
+          className="rounded-full border-0 bg-black px-4 py-2.5 text-sm font-semibold text-white"
         >
           {sites.map((s) => (
-            <option key={s.id} value={s.id}>
+            <option key={s.id} value={s.id} className="bg-white text-black">
               {s.name}
             </option>
           ))}
@@ -167,17 +167,17 @@ export default function Reports() {
           type="date"
           value={scanFilters.fromDate}
           onChange={(e) => setScanFilters({ ...scanFilters, fromDate: e.target.value })}
-          className="rounded-lg border border-white/10 px-3 py-2"
+          className="rounded-full border border-black/10 bg-[#FFFFFF] px-3 py-2 text-sm font-semibold text-black [color-scheme:light]"
         />
         <input
           type="date"
           value={scanFilters.toDate}
           onChange={(e) => setScanFilters({ ...scanFilters, toDate: e.target.value })}
-          className="rounded-lg border border-white/10 px-3 py-2"
+          className="rounded-full border border-black/10 bg-[#FFFFFF] px-3 py-2 text-sm font-semibold text-black [color-scheme:light]"
         />
         <Link
           to="/admin/payroll"
-          className="ml-auto flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-sm font-medium text-ink-2 hover:bg-white/5"
+          className="ml-auto flex items-center gap-2 rounded-full border border-black/10 bg-[#FFFFFF] px-4 py-2 text-sm font-semibold text-black hover:bg-zinc-100"
         >
           Guard hours → Payroll
         </Link>
@@ -192,7 +192,7 @@ export default function Reports() {
           type="button"
           onClick={exportScanCsv}
           disabled={!scans.length}
-          className="flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-sm font-medium hover:bg-white/5 disabled:opacity-50"
+          className="flex items-center gap-2 rounded-full border border-black/10 bg-[#FFFFFF] px-4 py-2 text-sm font-semibold text-black hover:bg-zinc-100 disabled:opacity-50"
         >
           <Download className="h-4 w-4" /> CSV
         </button>
@@ -200,7 +200,7 @@ export default function Reports() {
           type="button"
           onClick={exportScanPdf}
           disabled={!scans.length}
-          className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-200 disabled:opacity-50"
+          className="flex items-center gap-2 rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-50"
         >
           <FileText className="h-4 w-4" /> PDF
         </button>
@@ -246,8 +246,10 @@ export default function Reports() {
                   <td className="px-4 py-3">{scan.distance_metres?.toFixed(0)}m</td>
                   <td className="px-4 py-3">
                     <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        scan.status === 'pass' ? 'bg-accent-green/15 text-accent-green' : 'bg-accent-red/15 text-accent-red'
+                      className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                        scan.status === 'pass'
+                          ? 'bg-black text-white'
+                          : 'bg-accent-red text-white'
                       }`}
                     >
                       {scan.status.toUpperCase()}

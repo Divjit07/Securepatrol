@@ -3,6 +3,7 @@ import {
   LogOut,
   Menu,
   X,
+  Activity,
   LayoutDashboard,
   CalendarDays,
   MapPin,
@@ -41,6 +42,7 @@ function buildAdminNavGroups({ canApproveScans, canManageShiftClock, isSuperAdmi
       label: null,
       items: [
         { to: '/admin', label: 'Overview', end: true, icon: LayoutDashboard },
+        { to: '/admin/ops', label: 'Ops Board', icon: Activity },
         { to: '/admin/roster', label: 'Roster', icon: CalendarDays },
       ],
     },

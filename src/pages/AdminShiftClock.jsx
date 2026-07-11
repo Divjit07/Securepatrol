@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { CalendarHeart, Clock, RotateCcw, Save } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
+import RosterSitePicker from '../components/roster/RosterSitePicker.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { supabase } from '../lib/supabase.js'
 import { fetchSitesForAdmin } from '../lib/scans.js'
@@ -267,31 +268,22 @@ export default function AdminShiftClock() {
         description="View guard sign-in times, edit clock-in/out per guard, or add a paid statutory holiday with a note."
       />
 
-      <div className="sp-card mb-6 flex flex-wrap items-end gap-4 p-6">
-        <div className="min-w-[220px] flex-1">
-          <label className="mb-1.5 block text-sm font-medium text-ink-2">Site</label>
-          <select
-            className="sp-input w-full"
+      <div className="mb-6 flex flex-wrap items-center gap-3">
+        {sites.length > 0 && (
+          <RosterSitePicker
+            sites={sites}
             value={selectedSite}
-            onChange={(e) => setSelectedSite(e.target.value)}
-          >
-            {sites.map((site) => (
-              <option key={site.id} value={site.id}>
-                {site.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-ink-2">Date</label>
-          <input
-            type="date"
-            className="sp-input"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
+            onChange={setSelectedSite}
+            allowAll={false}
           />
-        </div>
+        )}
+        <input
+          type="date"
+          className="rounded-full border-0 bg-[#FFFFFF] px-4 py-3 text-sm font-semibold text-black ring-1 ring-black/10"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          aria-label="Date"
+        />
       </div>
 
       {scheduled.isClosed ? (
@@ -339,21 +331,23 @@ export default function AdminShiftClock() {
                         <tr key={guard.id}>
                           <td className="px-6 py-4">
                             <p className="font-medium text-ink">{guard.name}</p>
-                            {dayShift?.isAdjusted && !isStatutoryHolidayAdjustment(adjustment) && (
-                              <span className="mt-1 inline-block rounded bg-accent-orange/15 px-2 py-0.5 text-xs font-medium text-accent-orange">
-                                Adjusted
-                              </span>
-                            )}
-                            {isStatutoryHolidayAdjustment(adjustment) && (
-                              <span className="mt-1 inline-block rounded bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
-                                Statutory holiday
-                              </span>
-                            )}
-                            {dayShift?.onShift && (
-                              <span className="mt-1 ml-1 inline-block rounded bg-accent-cyan/15 px-2 py-0.5 text-xs font-medium text-brand-800">
-                                On shift
-                              </span>
-                            )}
+                            <div className="mt-1.5 flex flex-wrap gap-1.5">
+                              {dayShift?.isAdjusted && !isStatutoryHolidayAdjustment(adjustment) && (
+                                <span className="rounded-full bg-black px-2.5 py-0.5 text-[10px] font-semibold text-white">
+                                  Adjusted
+                                </span>
+                              )}
+                              {isStatutoryHolidayAdjustment(adjustment) && (
+                                <span className="rounded-full bg-black px-2.5 py-0.5 text-[10px] font-semibold text-white">
+                                  Statutory holiday
+                                </span>
+                              )}
+                              {dayShift?.onShift && (
+                                <span className="rounded-full bg-[#FFFFFF] px-2.5 py-0.5 text-[10px] font-semibold text-black ring-1 ring-black/10">
+                                  On shift
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-6 py-4 text-ink-2">
                             {clockInScan
@@ -436,7 +430,7 @@ export default function AdminShiftClock() {
                                     type="button"
                                     disabled={saving}
                                     onClick={() => handleSave(guard.id)}
-                                    className="sp-btn-primary inline-flex items-center gap-1.5 px-3 py-1.5 text-xs"
+                                    className="inline-flex items-center gap-1.5 rounded-full bg-black px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-50"
                                   >
                                     <Save className="h-3.5 w-3.5" />
                                     Save
@@ -444,7 +438,7 @@ export default function AdminShiftClock() {
                                   <button
                                     type="button"
                                     onClick={cancelEdit}
-                                    className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium hover:bg-white/5"
+                                    className="rounded-full bg-[#FFFFFF] px-3 py-1.5 text-xs font-semibold text-black ring-1 ring-black/10 transition hover:bg-zinc-100"
                                   >
                                     Cancel
                                   </button>
@@ -458,7 +452,7 @@ export default function AdminShiftClock() {
                                     onClick={() =>
                                       startEdit({ guard, dayShift, adjustment }, { statutoryHoliday: true })
                                     }
-                                    className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-medium text-emerald-800 hover:bg-accent-green/15"
+                                    className="inline-flex items-center gap-1.5 rounded-full bg-black px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-zinc-800"
                                   >
                                     <CalendarHeart className="h-3.5 w-3.5" />
                                     Add holiday
@@ -467,7 +461,7 @@ export default function AdminShiftClock() {
                                 <button
                                   type="button"
                                   onClick={() => startEdit({ guard, dayShift, adjustment })}
-                                  className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium hover:bg-white/5"
+                                  className="inline-flex items-center gap-1.5 rounded-full bg-[#FFFFFF] px-3 py-1.5 text-xs font-semibold text-black ring-1 ring-black/10 transition hover:bg-zinc-100"
                                 >
                                   <Clock className="h-3.5 w-3.5" />
                                   {dayShift ? 'Edit times' : 'Set times'}
@@ -477,7 +471,7 @@ export default function AdminShiftClock() {
                                     type="button"
                                     disabled={saving}
                                     onClick={() => handleReset(guard.id)}
-                                    className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-medium text-accent-orange hover:bg-accent-orange/10"
+                                    className="inline-flex items-center gap-1.5 rounded-full bg-[#FFFFFF] px-3 py-1.5 text-xs font-semibold text-black ring-1 ring-black/10 transition hover:bg-zinc-100 disabled:opacity-50"
                                   >
                                     <RotateCcw className="h-3.5 w-3.5" />
                                     Reset

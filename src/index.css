@@ -12,14 +12,14 @@
   --color-apple-shark: #1d1d1f;
   --color-apple-athens: #f5f5f7;
 
-  /* Dark Ops surfaces */
-  --color-canvas: #0d110c;
-  --color-surface: #161b14;
-  --color-surface-2: #242b21;
-  --color-inset: #0a0e09;
-  --color-paper: #fbfdf8;
+  /* Default = Night (Apple elevated dark — not OLED black) */
+  --color-canvas: #1c1f1a;
+  --color-surface: #272b25;
+  --color-surface-2: #343a31;
+  --color-inset: #151814;
+  --color-paper: #f7f6f2;
 
-  /* Accents — Dark Ops spec */
+  /* Accents — lime leads; never drain to white-on-black */
   --color-accent-orange: #96ee60; /* lime — primary accent */
   --color-accent-cyan: #d9f0ff; /* sky pastel — blocks */
   --color-accent-cyan-line: #7fd09f; /* soft green — strokes */
@@ -33,13 +33,13 @@
   --color-brand-sky: #d9f0ff;
   --color-brand-lavender: #eceefe;
   --color-brand-blossom: #fbe4e3;
-  --color-brand-graphite: #141414;
+  --color-brand-graphite: #2a2a2a;
   --color-brand-gray: #f4f4f4;
 
-  /* Text */
-  --color-ink: #ffffff;
-  --color-ink-2: #a3aa9e;
-  --color-ink-3: #565e52;
+  /* Text — ink-3 must stay readable for labels / empty states */
+  --color-ink: #f4f6f1;
+  --color-ink-2: #b6bdb0;
+  --color-ink-3: #8b9284;
 
   /* Legacy (login + un-migrated screens; do not use for new work) */
   --color-navy-950: #060d18;
@@ -57,81 +57,172 @@
   --color-brand-700: #2348a8;
 }
 
-/* ---- Theme moods (user palette) — switched via data-theme on <html> ---- */
-/* ---- Accent-led dark moods: each palette color leads the whole system ---- */
-[data-theme='forest'] {
-  --color-canvas: #0d110c;
-  --color-surface: #161b14;
-  --color-surface-2: #242b21;
-  --color-inset: #0a0e09;
-  --color-paper: #fbfdf8;
+/* ---- Theme moods (data-theme on <html>) ----
+   Night/Day = Apple-style appearance. Moods keep brand soul (lime, champagne).
+   Never pitch-black OLED or pure-white sheets — elevated surfaces + readable ink. */
+
+:root {
+  color-scheme: dark;
+  --hairline: color-mix(in srgb, white 9%, transparent);
+  --hairline-strong: color-mix(in srgb, white 14%, transparent);
+  --fill-subtle: color-mix(in srgb, white 5%, transparent);
+  --fill-hover: color-mix(in srgb, white 9%, transparent);
+  --card-shine: inset 0 1px 0 0 color-mix(in srgb, white 7%, transparent);
+  --elev-shadow: 0 14px 40px -18px color-mix(in srgb, var(--color-accent-orange) 24%, transparent);
+  --soft-shadow: 0 8px 28px -14px rgba(0, 0, 0, 0.35);
+  --chart-grid: color-mix(in srgb, white 9%, transparent);
+  --chart-muted: color-mix(in srgb, white 20%, transparent);
+}
+
+/* Night — Apple elevated dark with forest soul (default) */
+[data-theme='night'] {
+  color-scheme: dark;
+  --color-canvas: #1c1f1a;
+  --color-surface: #272b25;
+  --color-surface-2: #343a31;
+  --color-inset: #151814;
+  --color-paper: #f7f6f2;
+  --color-ink: #f4f6f1;
+  --color-ink-2: #b6bdb0;
+  --color-ink-3: #8b9284;
   --color-accent-orange: #96ee60;
   --color-accent-cyan: #d9f0ff;
   --color-accent-cyan-line: #7fd09f;
   --color-accent-green: #7fd09f;
-  --color-ink-2: #a3aa9e;
-  --color-ink-3: #565e52;
 }
 
+/* Day — warm paper daylight (not pure white) */
+[data-theme='day'] {
+  color-scheme: light;
+  --color-canvas: #ebe8e1;
+  --color-surface: #f7f5f0;
+  --color-surface-2: #ddd8ce;
+  --color-inset: #e3dfd6;
+  --color-paper: #fffcf7;
+  --color-ink: #1c1a15;
+  --color-ink-2: #5a554b;
+  --color-ink-3: #7a7468;
+  --color-accent-orange: #5a9e2e;
+  --color-accent-cyan: #d4ebf7;
+  --color-accent-cyan-line: #4f9e6f;
+  --color-accent-green: #3d8a5a;
+  --hairline: color-mix(in srgb, #1c1a15 10%, transparent);
+  --hairline-strong: color-mix(in srgb, #1c1a15 16%, transparent);
+  --fill-subtle: color-mix(in srgb, #1c1a15 4%, transparent);
+  --fill-hover: color-mix(in srgb, #1c1a15 7%, transparent);
+  --card-shine: inset 0 1px 0 0 color-mix(in srgb, white 70%, transparent);
+  --elev-shadow: 0 12px 32px -16px color-mix(in srgb, #1c1a15 14%, transparent);
+  --soft-shadow: 0 6px 20px -10px rgba(28, 26, 21, 0.12);
+  --chart-grid: color-mix(in srgb, #1c1a15 8%, transparent);
+  --chart-muted: color-mix(in srgb, #1c1a15 18%, transparent);
+}
+
+/* Forest — deeper olive night, lime still leads */
+[data-theme='forest'] {
+  color-scheme: dark;
+  --color-canvas: #141812;
+  --color-surface: #1e241c;
+  --color-surface-2: #2c3429;
+  --color-inset: #10140f;
+  --color-paper: #fbfdf8;
+  --color-ink: #f5f8f2;
+  --color-ink-2: #b0b8a8;
+  --color-ink-3: #87907f;
+  --color-accent-orange: #96ee60;
+  --color-accent-cyan: #d9f0ff;
+  --color-accent-cyan-line: #7fd09f;
+  --color-accent-green: #7fd09f;
+}
+
+/* Midnight (was Matte Black) — soft charcoal, KEEP lime soul */
 [data-theme='matte'] {
-  --color-canvas: #0e0e0e;
-  --color-surface: #171717;
-  --color-surface-2: #242424;
-  --color-inset: #090909;
-  --color-paper: #f5f5f5;
-  --color-accent-orange: #ffffff;
-  --color-accent-cyan: #d4d4d4;
-  --color-accent-cyan-line: #a3a3a3;
-  --color-accent-green: #d4d4d4;
-  --color-ink-2: #a1a1a1;
-  --color-ink-3: #565656;
+  color-scheme: dark;
+  --color-canvas: #1a1a1c;
+  --color-surface: #262628;
+  --color-surface-2: #343438;
+  --color-inset: #121214;
+  --color-paper: #f5f5f7;
+  --color-ink: #f5f5f7;
+  --color-ink-2: #b0b0b5;
+  --color-ink-3: #8a8a90;
+  --color-accent-orange: #96ee60;
+  --color-accent-cyan: #d9f0ff;
+  --color-accent-cyan-line: #8fd4a8;
+  --color-accent-green: #8fd4a8;
 }
 
-/* Brand grayscale — #141414 / #F4F4F4 / #FFFFFF from palette spec */
+/* Graphite — elevated brand gray, KEEP lime (not white-on-black) */
 [data-theme='graphite'] {
-  --color-canvas: #141414;
-  --color-surface: #1c1c1c;
-  --color-surface-2: #2a2a2a;
-  --color-inset: #0f0f0f;
+  color-scheme: dark;
+  --color-canvas: #1e1e1e;
+  --color-surface: #2a2a2a;
+  --color-surface-2: #3a3a3a;
+  --color-inset: #161616;
   --color-paper: #f4f4f4;
-  --color-accent-orange: #ffffff;
-  --color-accent-cyan: #f4f4f4;
-  --color-accent-cyan-line: #f4f4f4;
-  --color-accent-green: #f4f4f4;
-  --color-ink-2: #b0b0b0;
-  --color-ink-3: #6e6e6e;
+  --color-ink: #f4f4f4;
+  --color-ink-2: #b8b8b8;
+  --color-ink-3: #8e8e8e;
+  --color-accent-orange: #96ee60;
+  --color-accent-cyan: #e8e8e8;
+  --color-accent-cyan-line: #96ee60;
+  --color-accent-green: #7fd09f;
 }
 
-/* Ivory — premium cream: warm off-white canvas + champagne-gold accent */
+/* Ivory — warm cream day + champagne gold */
 [data-theme='ivory'] {
-  --color-canvas: #f1ece2;
-  --color-surface: #fbf9f4;
-  --color-surface-2: #e6ddcc;
-  --color-paper: #ffffff;
+  color-scheme: light;
+  --color-canvas: #ebe6dc;
+  --color-surface: #f8f5ee;
+  --color-surface-2: #ddd4c4;
+  --color-inset: #e4ddd0;
+  --color-paper: #fffcf7;
   --color-ink: #211d14;
-  --color-ink-2: #5f5748;
-  --color-ink-3: #a99f8a;
-  --color-accent-orange: #b8962e;
+  --color-ink-2: #5a5346;
+  --color-ink-3: #7d7566;
+  --color-accent-orange: #a88428;
   --color-accent-cyan: #efe7d6;
-  --color-accent-cyan-line: #b8962e;
-  --color-accent-green: #4f9e6f;
+  --color-accent-cyan-line: #a88428;
+  --color-accent-green: #3d8a5a;
+  --hairline: color-mix(in srgb, #211d14 10%, transparent);
+  --hairline-strong: color-mix(in srgb, #211d14 16%, transparent);
+  --fill-subtle: color-mix(in srgb, #211d14 4%, transparent);
+  --fill-hover: color-mix(in srgb, #211d14 7%, transparent);
+  --card-shine: inset 0 1px 0 0 color-mix(in srgb, white 65%, transparent);
+  --elev-shadow: 0 12px 32px -16px color-mix(in srgb, #211d14 12%, transparent);
+  --soft-shadow: 0 6px 20px -10px rgba(33, 29, 20, 0.1);
+  --chart-grid: color-mix(in srgb, #211d14 8%, transparent);
+  --chart-muted: color-mix(in srgb, #211d14 18%, transparent);
 }
 
+/* Sky — cool daylight; accent is deep sky blue (never = canvas) */
 [data-theme='sky'] {
-  --color-canvas: #d9f0ff;
-  --color-surface: #ffffff;
-  --color-surface-2: #c5e7fb;
+  color-scheme: light;
+  --color-canvas: #dceaf4;
+  --color-surface: #f4f9fc;
+  --color-surface-2: #c5d9e8;
+  --color-inset: #d0e0ec;
   --color-paper: #ffffff;
-  --color-ink: #0a0e09;
-  --color-ink-2: #40525e;
-  --color-ink-3: #8aa4b3;
-  --color-accent-orange: #d9f0ff;
-  --color-accent-cyan: #eceefe;
-  --color-accent-cyan-line: #a5dcf8;
+  --color-ink: #0f1a22;
+  --color-ink-2: #3d5260;
+  --color-ink-3: #5f7585;
+  --color-accent-orange: #0a7ea4;
+  --color-accent-cyan: #c8e4f5;
+  --color-accent-cyan-line: #0a7ea4;
+  --color-accent-green: #2f8f6a;
+  --hairline: color-mix(in srgb, #0f1a22 10%, transparent);
+  --hairline-strong: color-mix(in srgb, #0f1a22 16%, transparent);
+  --fill-subtle: color-mix(in srgb, #0f1a22 4%, transparent);
+  --fill-hover: color-mix(in srgb, #0f1a22 7%, transparent);
+  --card-shine: inset 0 1px 0 0 color-mix(in srgb, white 80%, transparent);
+  --elev-shadow: 0 12px 32px -16px color-mix(in srgb, #0f1a22 12%, transparent);
+  --soft-shadow: 0 6px 20px -10px rgba(15, 26, 34, 0.1);
+  --chart-grid: color-mix(in srgb, #0f1a22 8%, transparent);
+  --chart-muted: color-mix(in srgb, #0f1a22 18%, transparent);
 }
 
 /* Studio Glass — optional surface: gray gradient + frosted cards + jet-black chrome */
 [data-theme='studio'] {
+  color-scheme: dark;
   --color-accent-orange: #96ee60;
   --color-accent-cyan: #d9f0ff;
   --color-accent-cyan-line: #7fd09f;
@@ -334,31 +425,111 @@
   background: rgba(255, 255, 255, 0.08);
 }
 
+/* Paper / forced-white fills stay light in every theme. Remap ink tokens so
+   text-ink / native controls on those surfaces stay dark (no white-on-cream
+   in Night / Forest / Midnight / Graphite). */
+.bg-paper,
+.bg-\[\#FFFFFF\] {
+  --color-ink: #1c1a15;
+  --color-ink-2: #5a554b;
+  --color-ink-3: #7a7468;
+  color-scheme: light;
+}
+
+/* Light appearance: light recessed wells (not dark pits with white text) */
+[data-theme='day'] .dk-inset,
+[data-theme='day'] .bg-inset,
 [data-theme='sky'] .dk-inset,
 [data-theme='sky'] .bg-inset,
 [data-theme='ivory'] .dk-inset,
 [data-theme='ivory'] .bg-inset {
-  --color-ink: #ffffff;
-  --color-ink-2: #a3aa9e;
-  --color-ink-3: #6b7365;
-  --color-surface-2: #242b21;
+  border-color: var(--hairline);
+  background: var(--color-inset);
+  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--color-ink) 4%, transparent);
 }
 
-/* Light moods: borders/hovers flip to black-based so cards keep definition */
-/* Light moods: form fields flip to paper-white with dark hairlines */
+[data-theme='day'] .sp-input,
 [data-theme='sky'] .sp-input,
 [data-theme='ivory'] .sp-input {
   background: var(--color-paper);
-  border-color: color-mix(in srgb, var(--color-ink) 15%, transparent);
+  border-color: var(--hairline-strong);
   color-scheme: light;
 }
 
+[data-theme='day'] .dk-card,
+[data-theme='day'] .sp-card,
+[data-theme='day'] .sp-card-elevated,
+[data-theme='day'] .sp-stat-card,
 [data-theme='sky'] .dk-card,
 [data-theme='sky'] .sp-card,
+[data-theme='sky'] .sp-card-elevated,
+[data-theme='sky'] .sp-stat-card,
 [data-theme='ivory'] .dk-card,
-[data-theme='ivory'] .sp-card {
-  border-color: rgba(10, 14, 9, 0.08);
-  box-shadow: 0 2px 12px -6px rgba(10, 14, 9, 0.08);
+[data-theme='ivory'] .sp-card,
+[data-theme='ivory'] .sp-card-elevated,
+[data-theme='ivory'] .sp-stat-card {
+  border-color: var(--hairline);
+  box-shadow: var(--card-shine), var(--soft-shadow);
+}
+
+[data-theme='day'] .dk-card:hover,
+[data-theme='sky'] .dk-card:hover,
+[data-theme='ivory'] .dk-card:hover {
+  border-color: var(--hairline-strong);
+  box-shadow: var(--card-shine), var(--elev-shadow);
+}
+
+[data-theme='day'] .app-sidebar,
+[data-theme='sky'] .app-sidebar,
+[data-theme='ivory'] .app-sidebar {
+  border-color: var(--hairline);
+  box-shadow: 1px 0 0 var(--hairline);
+}
+
+[data-theme='day'] .app-header,
+[data-theme='sky'] .app-header,
+[data-theme='ivory'] .app-header {
+  border-color: var(--hairline);
+  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+}
+
+[data-theme='day'] .dk-btn-2,
+[data-theme='day'] .sp-btn-secondary,
+[data-theme='sky'] .dk-btn-2,
+[data-theme='sky'] .sp-btn-secondary,
+[data-theme='ivory'] .dk-btn-2,
+[data-theme='ivory'] .sp-btn-secondary {
+  border-color: var(--hairline-strong);
+  background: var(--fill-subtle);
+}
+
+[data-theme='day'] .dk-btn-2:hover,
+[data-theme='day'] .sp-btn-secondary:hover,
+[data-theme='sky'] .dk-btn-2:hover,
+[data-theme='sky'] .sp-btn-secondary:hover,
+[data-theme='ivory'] .dk-btn-2:hover,
+[data-theme='ivory'] .sp-btn-secondary:hover {
+  background: var(--fill-hover);
+}
+
+[data-theme='day'] .theme-picker-panel,
+[data-theme='sky'] .theme-picker-panel,
+[data-theme='ivory'] .theme-picker-panel {
+  border-color: var(--hairline-strong);
+  background: color-mix(in srgb, var(--color-surface) 92%, white);
+  box-shadow: var(--soft-shadow);
+}
+
+[data-theme='day'] .theme-picker-option:hover,
+[data-theme='sky'] .theme-picker-option:hover,
+[data-theme='ivory'] .theme-picker-option:hover {
+  background: var(--fill-hover);
+}
+
+[data-theme='day'] .sidebar-nav-active,
+[data-theme='sky'] .sidebar-nav-active,
+[data-theme='ivory'] .sidebar-nav-active {
+  box-shadow: inset 3px 0 0 0 var(--color-accent-orange), inset 0 1px 0 color-mix(in srgb, white 40%, transparent);
 }
 
 @layer base {
@@ -418,26 +589,30 @@
     }
   }
 
-  /* ---- App shell (default = Dark Ops canvas) ---- */
+  /* ---- App shell (token-driven hairlines — work in day + night) ---- */
   .app-shell {
     @apply min-h-dvh w-full bg-canvas;
   }
 
   .app-sidebar {
-    @apply border-r border-white/5 bg-surface;
+    @apply bg-surface;
+    border-right: 1px solid var(--hairline);
   }
 
   .app-header {
-    @apply border-b border-white/5 bg-inset/80 backdrop-blur-xl;
+    @apply bg-inset/80 backdrop-blur-xl;
+    border-bottom: 1px solid var(--hairline);
   }
 
   .sidebar-nav-active {
     @apply bg-surface-2 font-medium text-ink;
-    box-shadow: inset 3px 0 0 0 var(--color-accent-orange), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    box-shadow: inset 3px 0 0 0 var(--color-accent-orange), var(--card-shine);
   }
 
   .theme-picker-panel {
-    @apply rounded-2xl border border-white/10 bg-surface p-1.5 shadow-2xl shadow-black/40 backdrop-blur-xl;
+    @apply rounded-2xl bg-surface p-1.5 backdrop-blur-xl;
+    border: 1px solid var(--hairline-strong);
+    box-shadow: var(--soft-shadow);
   }
 
   .theme-picker-option-active {
@@ -445,35 +620,54 @@
   }
 
   .theme-picker-option {
-    @apply text-ink-2 hover:bg-white/5 hover:text-ink;
+    @apply text-ink-2;
+  }
+
+  .theme-picker-option:hover {
+    color: var(--color-ink);
+    background: var(--fill-hover);
   }
 
   /* ---- Dark Ops primitives ---- */
   .dk-card {
-    @apply rounded-2xl border border-white/5 bg-surface shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)];
-    @apply transition-all duration-300 hover:-translate-y-px hover:border-white/10;
+    @apply rounded-2xl bg-surface transition-all duration-300;
+    border: 1px solid var(--hairline);
+    box-shadow: var(--card-shine);
   }
 
   .dk-card:hover {
-    box-shadow:
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.05),
-      0 14px 40px -18px color-mix(in srgb, var(--color-accent-orange) 22%, transparent);
+    border-color: var(--hairline-strong);
+    transform: translateY(-1px);
+    box-shadow: var(--card-shine), var(--elev-shadow);
   }
 
   .dk-inset {
-    @apply rounded-2xl border border-white/5 bg-inset;
+    @apply rounded-2xl bg-inset;
+    border: 1px solid var(--hairline);
   }
 
   .dk-cta {
-    @apply inline-flex items-center justify-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-zinc-200 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50;
+    background: var(--color-ink);
+    color: var(--color-canvas);
+  }
+
+  .dk-cta:hover {
+    filter: brightness(1.06);
   }
 
   .dk-btn-2 {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm text-ink transition hover:bg-white/10 disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm text-ink transition disabled:pointer-events-none disabled:opacity-50;
+    border: 1px solid var(--hairline-strong);
+    background: var(--fill-subtle);
+  }
+
+  .dk-btn-2:hover {
+    background: var(--fill-hover);
   }
 
   .dk-label {
-    @apply text-[10px] font-semibold uppercase tracking-wider text-ink-3;
+    @apply text-[10px] font-semibold uppercase tracking-wider text-ink-2;
   }
 
   .dk-pill-ok {
@@ -503,35 +697,61 @@
 
   /* ---- sp-* classes (guard app + modals) ---- */
   .sp-card {
-    @apply rounded-2xl border border-white/5 bg-surface shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)];
+    @apply rounded-2xl bg-surface;
+    border: 1px solid var(--hairline);
+    box-shadow: var(--card-shine);
   }
 
   .sp-card-elevated {
-    @apply rounded-2xl border border-white/10 bg-surface shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)];
+    @apply rounded-2xl bg-surface;
+    border: 1px solid var(--hairline-strong);
+    box-shadow: var(--card-shine);
   }
 
   .sp-input {
-    @apply w-full rounded-xl border border-white/10 bg-inset px-4 py-3 text-sm text-ink transition placeholder:text-ink-3;
-    @apply focus:border-accent-cyan-line/50 focus:outline-none focus:ring-4 focus:ring-accent-cyan-line/10;
-    color-scheme: dark;
+    @apply w-full rounded-xl bg-inset px-4 py-3 text-sm text-ink transition placeholder:text-ink-3;
+    @apply focus:outline-none focus:ring-4 focus:ring-accent-cyan-line/10;
+    border: 1px solid var(--hairline-strong);
+    color-scheme: inherit;
+  }
+
+  .sp-input:focus {
+    border-color: color-mix(in srgb, var(--color-accent-cyan-line) 50%, transparent);
   }
 
   .sp-label {
-    @apply mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink-3;
+    @apply mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink-2;
   }
 
   .sp-btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-black transition;
-    @apply hover:bg-zinc-200 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold transition;
+    @apply active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50;
+    background: var(--color-ink);
+    color: var(--color-canvas);
+  }
+
+  .sp-btn-primary:hover {
+    filter: brightness(1.06);
   }
 
   .sp-btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-ink transition;
-    @apply hover:bg-white/10 active:scale-[0.98];
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-ink transition;
+    @apply active:scale-[0.98];
+    border: 1px solid var(--hairline-strong);
+    background: var(--fill-subtle);
+  }
+
+  .sp-btn-secondary:hover {
+    background: var(--fill-hover);
   }
 
   .sp-btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-ink-2 transition hover:bg-white/5 hover:text-ink;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-ink-2 transition;
+  }
+
+  .sp-btn-ghost:hover {
+    color: var(--color-ink);
+    background: var(--fill-subtle);
   }
 
   .sp-page-header {
@@ -539,7 +759,9 @@
   }
 
   .sp-stat-card {
-    @apply rounded-2xl border border-white/5 bg-surface p-5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)];
+    @apply rounded-2xl bg-surface p-5;
+    border: 1px solid var(--hairline);
+    box-shadow: var(--card-shine);
   }
 
   .sp-nav-link {
@@ -547,11 +769,13 @@
   }
 
   .sp-nav-link-active {
-    @apply bg-white/10 text-ink shadow-inner;
+    @apply text-ink shadow-inner;
+    background: var(--fill-hover);
   }
 
   .sp-nav-divider {
-    @apply mx-1 hidden h-5 w-px shrink-0 bg-white/10 lg:block;
+    @apply mx-1 hidden h-5 w-px shrink-0 lg:block;
+    background: var(--hairline-strong);
   }
 
   .sp-logo-frame {

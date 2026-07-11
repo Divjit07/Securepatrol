@@ -103,6 +103,7 @@ export default function RosterGrid({
   rows,
   openShifts,
   conflicts,
+  showSite = false,
   onCellClick,
   onShiftClick,
   onShiftDrop,
@@ -163,6 +164,9 @@ export default function RosterGrid({
             <div key={guard.id} className="contents">
               <div className={rowLabelBase}>
                 <span className="truncate text-sm font-semibold text-ink">{guard.name}</span>
+                {showSite && guard.site_name && (
+                  <span className="truncate text-[10px] font-medium text-ink-2">{guard.site_name}</span>
+                )}
                 <span
                   className={`text-[11px] ${
                     hours > OVERTIME_WEEK_HOURS ? 'font-semibold text-accent-red' : 'text-ink-3'
@@ -191,7 +195,7 @@ export default function RosterGrid({
 
       {rows.length === 0 && (
         <div className="px-6 py-12 text-center text-sm text-ink-3">
-          No guards assigned to this site yet — add guards first, then schedule them here.
+          No guards assigned{showSite ? ' yet' : ' to this site yet'} — add guards first, then schedule them here.
         </div>
       )}
     </div>

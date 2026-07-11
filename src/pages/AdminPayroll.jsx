@@ -357,7 +357,7 @@ export default function AdminPayroll() {
         description="The payroll department's home — guard hours from verified clock punches, and the paystub generator."
       />
 
-      <div className="mb-6 flex gap-2 rounded-lg border border-white/10 bg-surface p-1">
+      <div className="mb-6 flex gap-2 rounded-full border border-ink/10 bg-ink/5 p-1">
         {[
           { id: 'hours', label: 'Guard hours' },
           { id: 'paystubs', label: 'Paystub generator' },
@@ -367,8 +367,8 @@ export default function AdminPayroll() {
             key={id}
             type="button"
             onClick={() => setTab(id)}
-            className={`flex-1 rounded-md px-4 py-2 text-sm font-medium ${
-              tab === id ? 'bg-surface text-black' : 'text-ink-2 hover:bg-white/5'
+            className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition ${
+              tab === id ? 'bg-black text-white' : 'text-ink-2 hover:text-ink'
             }`}
           >
             {label}
@@ -376,14 +376,14 @@ export default function AdminPayroll() {
         ))}
       </div>
 
-      <div className="mb-6 flex flex-wrap gap-4 rounded-xl border border-white/10 bg-surface p-4">
+      <div className="mb-6 flex flex-wrap gap-4 rounded-xl border border-ink/10 bg-surface p-4">
         <select
           value={filters.siteId}
           onChange={(e) => setFilters({ ...filters, siteId: e.target.value })}
-          className="rounded-lg border border-white/10 px-3 py-2"
+          className="rounded-full border-0 bg-black px-4 py-2.5 text-sm font-semibold text-white"
         >
           {sites.map((s) => (
-            <option key={s.id} value={s.id}>
+            <option key={s.id} value={s.id} className="bg-white text-black">
               {s.name}
             </option>
           ))}
@@ -392,22 +392,22 @@ export default function AdminPayroll() {
           type="date"
           value={filters.fromDate}
           onChange={(e) => setFilters({ ...filters, fromDate: e.target.value })}
-          className="rounded-lg border border-white/10 px-3 py-2"
+          className="rounded-full border border-black/10 bg-[#FFFFFF] px-3 py-2 text-sm font-semibold text-black [color-scheme:light]"
         />
         <input
           type="date"
           value={filters.toDate}
           onChange={(e) => setFilters({ ...filters, toDate: e.target.value })}
-          className="rounded-lg border border-white/10 px-3 py-2"
+          className="rounded-full border border-black/10 bg-[#FFFFFF] px-3 py-2 text-sm font-semibold text-black [color-scheme:light]"
         />
-        <div className="flex rounded-lg border border-white/10 bg-white/5 p-1">
+        <div className="flex rounded-full border border-ink/10 bg-ink/5 p-1">
           {ROUNDING_MODES.map((m) => (
             <button
               key={m.id}
               type="button"
               onClick={() => setRounding(m.id)}
-              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                rounding === m.id ? 'bg-white text-black' : 'text-ink-2 hover:bg-white/10'
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                rounding === m.id ? 'bg-black text-white' : 'text-ink-2 hover:text-ink'
               }`}
             >
               {m.label}
@@ -417,7 +417,7 @@ export default function AdminPayroll() {
       </div>
 
       {tab !== 'invoices' && (
-        <div className="mb-4 rounded-xl border border-accent-cyan-line/20 bg-accent-cyan/10 p-4 text-sm text-accent-cyan">
+        <div className="mb-4 rounded-xl border border-ink/10 bg-ink/5 p-4 text-sm text-ink">
           Payroll hours for <strong>{selectedSite?.name || 'selected site'}</strong>. Site hours:{' '}
           <strong>{hoursSummary}</strong>. Includes statutory holidays and shift clock edits.
         </div>
@@ -450,7 +450,7 @@ export default function AdminPayroll() {
               type="button"
               onClick={exportHoursPdf}
               disabled={!hoursReport.rows.length}
-              className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-200 disabled:opacity-50"
+              className="flex items-center gap-2 rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-50"
             >
               <FileText className="h-4 w-4" /> PDF
             </button>
@@ -493,8 +493,16 @@ export default function AdminPayroll() {
                     <td className="px-4 py-3">{formatShiftTime(row.payClockIn)}</td>
                     <td className="px-4 py-3">{formatShiftTime(row.payClockOut)}</td>
                     <td className="px-4 py-3 font-semibold">{formatMinutes(row.payMinutes)}</td>
-                    <td className="px-4 py-3 text-accent-cyan-line">
-                      {row.statutoryHolidayLabel || 'Regular shift'}
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                          row.statutoryHolidayLabel
+                            ? 'bg-black text-white'
+                            : 'bg-[#FFFFFF] text-black ring-1 ring-black/10'
+                        }`}
+                      >
+                        {row.statutoryHolidayLabel || 'Regular shift'}
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -668,7 +676,7 @@ export default function AdminPayroll() {
                     type="button"
                     onClick={() => downloadInvoicePdf({ ...invoice, calc })}
                     disabled={!calc.lines.length || !invoice.billTo.trim()}
-                    className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-200 disabled:opacity-50"
+                    className="flex items-center gap-2 rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-50"
                   >
                     <FileText className="h-4 w-4" /> Invoice PDF
                   </button>
@@ -717,7 +725,7 @@ export default function AdminPayroll() {
               type="button"
               onClick={handleAllPaystubsPdf}
               disabled={!guardsWithHours.length || stubBusy === 'all'}
-              className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-200 disabled:opacity-50"
+              className="flex items-center gap-2 rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-50"
             >
               <Wallet className="h-4 w-4" /> {stubBusy === 'all' ? 'Building…' : 'All paystubs (PDF)'}
             </button>
@@ -749,7 +757,7 @@ export default function AdminPayroll() {
                         type="button"
                         onClick={() => handlePaystubPdf(guard)}
                         disabled={stubBusy != null}
-                        className="flex shrink-0 items-center gap-2 rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-200 disabled:opacity-50"
+                        className="flex shrink-0 items-center gap-2 rounded-full bg-black px-3 py-2 text-xs font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-50"
                       >
                         <FileText className="h-3.5 w-3.5" />
                         {stubBusy === guard.id ? 'Building…' : 'Paystub PDF'}

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
+import RosterSitePicker, { ALL_SITES } from '../components/roster/RosterSitePicker.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock.js'
 import { fetchSitesForAdmin } from '../lib/scans.js'
@@ -37,7 +38,7 @@ export default function AdminIncidents() {
   const canEdit = canApproveScans || isSuperAdmin
 
   const [sites, setSites] = useState([])
-  const [selectedSite, setSelectedSite] = useState('all')
+  const [selectedSite, setSelectedSite] = useState(ALL_SITES)
   const [reports, setReports] = useState([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
@@ -89,7 +90,7 @@ export default function AdminIncidents() {
     setLoading(true)
     try {
       const rows =
-        selectedSite === 'all'
+        selectedSite === ALL_SITES
           ? await fetchIncidentReportsForSites(siteIds)
           : await fetchIncidentReportsForSite(selectedSite)
       setReports(rows)
@@ -188,24 +189,15 @@ export default function AdminIncidents() {
         }
       />
 
-      <div className="mb-6 sp-card p-4">
-        <label className="sp-label" htmlFor="incident-site">
-          Site
-        </label>
-        <select
-          id="incident-site"
-          className="sp-input mt-1.5 max-w-md"
-          value={selectedSite}
-          onChange={(e) => setSelectedSite(e.target.value)}
-        >
-          <option value="all">All sites</option>
-          {sites.map((site) => (
-            <option key={site.id} value={site.id}>
-              {site.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      {sites.length > 0 && (
+        <div className="mb-6">
+          <RosterSitePicker
+            sites={sites}
+            value={selectedSite}
+            onChange={setSelectedSite}
+          />
+        </div>
+      )}
 
       {loading ? (
         <div className="flex justify-center py-12">
@@ -232,7 +224,7 @@ export default function AdminIncidents() {
                       {report.guard?.name || 'Guard'}
                     </p>
                     {incidentAttachmentCount(report) > 0 && (
-                      <span className="rounded-full bg-accent-cyan/10 px-2.5 py-0.5 text-xs font-medium text-accent-cyan-line">
+                      <span className="rounded-full bg-black px-2.5 py-0.5 text-[10px] font-semibold text-white">
                         {incidentAttachmentCount(report)} file{incidentAttachmentCount(report) === 1 ? '' : 's'}
                       </span>
                     )}

@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
+import RosterSitePicker from '../components/roster/RosterSitePicker.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { supabase } from '../lib/supabase.js'
 import { fetchSitesForAdmin } from '../lib/scans.js'
@@ -125,18 +126,14 @@ export default function ScanApproval() {
       <form onSubmit={handleApprove} className="sp-card max-w-xl space-y-5 p-6">
         <div>
           <label className="mb-1.5 block text-sm font-medium text-ink-2">Site</label>
-          <select
-            className="sp-input w-full"
-            value={selectedSite}
-            onChange={(e) => setSelectedSite(e.target.value)}
-            required
-          >
-            {sites.map((site) => (
-              <option key={site.id} value={site.id}>
-                {site.name}
-              </option>
-            ))}
-          </select>
+          {sites.length > 0 && (
+            <RosterSitePicker
+              sites={sites}
+              value={selectedSite}
+              onChange={setSelectedSite}
+              allowAll={false}
+            />
+          )}
         </div>
 
         <div>
@@ -198,7 +195,7 @@ export default function ScanApproval() {
         <button
           type="submit"
           disabled={loading || !selectedCheckpoint || !selectedGuard}
-          className="sp-btn-primary inline-flex items-center gap-2"
+          className="inline-flex items-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-50"
         >
           <CheckCircle2 className="h-4 w-4" />
           {loading ? 'Approving…' : 'Approve scan'}

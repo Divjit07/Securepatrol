@@ -101,9 +101,9 @@ export const CHART = {
   upNext: 'var(--color-accent-cyan)',
   noShow: 'var(--color-surface-2)',
   missed: 'var(--color-ink)',
-  unscheduled: 'rgba(255,255,255,0.22)',
-  unscheduledBar: '#71717a',
-  axis: 'var(--color-ink-3)',
-  grid: 'rgba(255,255,255,0.08)',
+  unscheduled: 'var(--chart-muted)',
+  unscheduledBar: 'var(--color-ink-3)',
+  axis: 'var(--color-ink-2)',
+  grid: 'var(--chart-grid)',
   peak: 'var(--color-inset)',
 }
