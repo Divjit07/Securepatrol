@@ -127,44 +127,65 @@ export default function AdminDashboard() {
       const siteIds = new Set(siteList.map((s) => s.id))
       setGuards(isSuperAdmin ? allGuards : allGuards.filter((g) => !g.site_id || siteIds.has(g.site_id)))
 
+      // Batched: one floors query, one checkpoints query, then per-site scan
+      // counts in parallel. The old per-site sequential loop was 3 round trips
+      // × N sites and re-ran on every window focus.
       const siteStats = {}
       const cpLookup = {}
       const allCpIds = []
-      for (const site of siteList) {
-        const { data: floors } = await supabase.from('floors').select('id').eq('site_id', site.id)
-        const floorIds = floors?.map((f) => f.id) || []
+      const siteById = Object.fromEntries(siteList.map((s) => [s.id, s]))
 
-        let checkpointCount = 0
-        let scanCount = 0
-        if (floorIds.length) {
-          const { data: cps } = await supabase
-            .from('checkpoints')
-            .select('id, name')
-            .in('floor_id', floorIds)
-          checkpointCount = cps?.length || 0
-          for (const cp of cps || []) {
-            cpLookup[cp.id] = { name: cp.name, site: site.name, siteId: site.id }
-            allCpIds.push(cp.id)
-          }
-          if (cps?.length) {
-            const { count } = await supabase
-              .from('scans')
-              .select('*', { count: 'exact', head: true })
-              .in('checkpoint_id', cps.map((c) => c.id))
-              .eq('status', 'pass')
-              .gte('scanned_at', dayStart.toISOString())
-            scanCount = count || 0
-          }
-        }
+      let floorRows = []
+      if (siteList.length) {
+        const { data } = await supabase
+          .from('floors')
+          .select('id, site_id')
+          .in('site_id', siteList.map((s) => s.id))
+        floorRows = data || []
+      }
+      const floorSite = Object.fromEntries(floorRows.map((f) => [f.id, f.site_id]))
 
-        const siteGuards = allGuards.filter((g) => g.site_id === site.id)
+      let cpRows = []
+      if (floorRows.length) {
+        const { data } = await supabase
+          .from('checkpoints')
+          .select('id, name, floor_id')
+          .in('floor_id', floorRows.map((f) => f.id))
+        cpRows = data || []
+      }
+
+      const cpIdsBySite = {}
+      for (const cp of cpRows) {
+        const siteId = floorSite[cp.floor_id]
+        cpLookup[cp.id] = { name: cp.name, site: siteById[siteId]?.name, siteId }
+        allCpIds.push(cp.id)
+        ;(cpIdsBySite[siteId] ||= []).push(cp.id)
+      }
+
+      const scanCounts = await Promise.all(
+        siteList.map(async (site) => {
+          const cpIds = cpIdsBySite[site.id] || []
+          if (!cpIds.length) return 0
+          const { count } = await supabase
+            .from('scans')
+            .select('*', { count: 'exact', head: true })
+            .in('checkpoint_id', cpIds)
+            .eq('status', 'pass')
+            .gte('scanned_at', dayStart.toISOString())
+          return count || 0
+        }),
+      )
+
+      siteList.forEach((site, i) => {
+        const checkpointCount = (cpIdsBySite[site.id] || []).length
+        const scanCount = scanCounts[i]
         siteStats[site.id] = {
           checkpoints: checkpointCount,
           scannedToday: scanCount,
           compliance: checkpointCount ? Math.round((scanCount / checkpointCount) * 100) : 0,
-          guards: siteGuards,
+          guards: allGuards.filter((g) => g.site_id === site.id),
         }
-      }
+      })
       setStats(siteStats)
       setCpMap(cpLookup)
 

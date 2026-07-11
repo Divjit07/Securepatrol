@@ -129,6 +129,35 @@ export function buildAccountingCsv(weeklyRows, approvalsByKey = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// Pay rates (guards.hourly_rate, migration 031)
+// ---------------------------------------------------------------------------
+
+/**
+ * Hourly rates by guard id. Returns { rates, persisted } — persisted=false
+ * when the hourly_rate column doesn't exist yet (migration 031 not applied),
+ * so the UI can fall back to session-only rates instead of breaking.
+ */
+export async function fetchGuardRates(siteId) {
+  const { data, error } = await supabase
+    .from('guards')
+    .select('id, hourly_rate')
+    .eq('site_id', siteId)
+  if (error) return { rates: {}, persisted: false }
+  return {
+    rates: Object.fromEntries((data || []).map((g) => [g.id, g.hourly_rate])),
+    persisted: true,
+  }
+}
+
+export async function saveGuardRate(guardId, rate) {
+  const { error } = await supabase
+    .from('guards')
+    .update({ hourly_rate: rate === '' || rate == null ? null : Number(rate) })
+    .eq('id', guardId)
+  if (error) throw error
+}
+
+// ---------------------------------------------------------------------------
 // Timesheet approvals (guard sign-off)
 // ---------------------------------------------------------------------------
 

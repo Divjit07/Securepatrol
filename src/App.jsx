@@ -49,6 +49,7 @@ const CheckpointManager = lazyRetry(() => import('./pages/CheckpointManager.jsx'
 const GuardManager = lazyRetry(() => import('./pages/GuardManager.jsx'))
 const ClientManager = lazyRetry(() => import('./pages/ClientManager.jsx'))
 const Reports = lazyRetry(() => import('./pages/Reports.jsx'))
+const AdminPayroll = lazyRetry(() => import('./pages/AdminPayroll.jsx'))
 const Alerts = lazyRetry(() => import('./pages/Alerts.jsx'))
 const ScanApproval = lazyRetry(() => import('./pages/ScanApproval.jsx'))
 const AdminShiftClock = lazyRetry(() => import('./pages/AdminShiftClock.jsx'))
@@ -197,6 +198,14 @@ export default function App() {
           element={
             <ProtectedRoute requireAdmin>
               <Reports />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/payroll"
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminPayroll />
             </ProtectedRoute>
           }
         />

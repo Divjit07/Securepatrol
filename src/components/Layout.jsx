@@ -17,6 +17,7 @@ import {
   PanelLeft,
   Radar,
   Lock,
+  Wallet,
 } from 'lucide-react'
 import Logo from './Logo.jsx'
 import { useMemo, useState } from 'react'
@@ -51,6 +52,10 @@ function buildAdminNavGroups({ canApproveScans, canManageShiftClock, isSuperAdmi
         { to: '/admin/guards', label: 'Guards', icon: ShieldCheck },
         { to: '/admin/clients', label: 'Clients', icon: Building2 },
       ],
+    },
+    {
+      label: 'Payroll',
+      items: [{ to: '/admin/payroll', label: 'Payroll', icon: Wallet }],
     },
     {
       label: 'Insights',

@@ -34,7 +34,14 @@ in is just a pass scan on a `shift_clock_in` checkpoint.
 - **Supabase**: Postgres + RLS, Auth, Storage, Realtime, Edge Functions (Deno/TS)
 - **Resend** for all outbound email
 - **jsPDF + jspdf-autotable** (PDF exports), **qrcode** (QR generation), **html5-qrcode** (camera QR scanning), **lucide-react** (icons)
-- PWA-ish: `manifest.json`, offline scan queue in localStorage (no service worker yet)
+- PWA-ish: `manifest.json`, offline scan queue in localStorage, `public/sw.js` service
+  worker (v18 2026-07-11: same-origin only — NEVER intercepts Supabase/fonts; cache-first
+  for hashed `/assets/*`, network-first navigations with offline index.html fallback.
+  Bump `CACHE_NAME` when changing it). Perf notes: fonts load via `<link>` in `index.html`
+  (+ preconnects to Google Fonts & Supabase — update the preconnect if the project ref
+  changes); vendor-react/vendor-supabase manual chunks in `vite.config.js` keep the main
+  entry ~30 kB; auth boot uses `getSession()` only (no `getUser()` round trip) and reloads
+  the profile only when the user id changes.
 - All page routes are **lazy-loaded** (`React.lazy`) in `src/App.jsx` — keep new pages lazy
 
 ## 3. Repo map
@@ -92,7 +99,10 @@ src/
   pages/dev/              # DEV-only visual harnesses (excluded from prod builds)
 supabase/
   schema.sql              # Base schema (applied manually long ago)
-  migrations/             # 002…027 numbered SQL files — see §14 warning
+  migrations/             # 002…031 numbered SQL files — see §14 warning
+                          # 031: signup role hardening (user_metadata role clamped to
+                          # guard/client), clock-out passes from anywhere, guards.hourly_rate,
+                          # scans(guard_id, scanned_at DESC) index
   functions/              # Edge functions (Deno): create/delete guard+client, list-clients,
                           # submit-incident-report, publish-schedule, roster-alerts
 ```
@@ -209,9 +219,9 @@ acknowledged = small green check; conflict = `ring-2 ring-red-400/70` + red tria
   State persisted in `localStorage['sp-sidebar-collapsed']`.
 - **Nav groups** (label `text-xs uppercase tracking-wider text-gray-400 mb-2 px-3`; items
   `flex gap-3 px-3 py-2 text-sm text-gray-600 rounded-lg`, active `bg-gray-100 text-gray-900 font-medium`, icons h-4 w-4 stroke-2):
-  - **Admin**: (no label) Overview `/admin`, Roster `/admin/roster` · **SITE** Checkpoints,
-    Guards, Clients · **INSIGHTS** Reports, Alerts · **OPERATIONS** (conditional on can-flags)
-    Shift Clock, Incidents, Approve
+  - **Admin**: (no label) Overview `/admin`, Roster `/admin/roster` · **SITE** Live Map,
+    Checkpoints, Guards, Clients · **PAYROLL** Payroll `/admin/payroll` · **INSIGHTS** Reports,
+    Alerts · **OPERATIONS** (conditional on can-flags) Shift Clock, Incidents, Approve
   - **Client**: (no label) Scan History `/client` · **SITE** Coverage, Shift Clock ·
     **OPERATIONS** Incidents · **INSIGHTS** Reports
 - **Sidebar footer**: SyncIndicator, then profile row — avatar circle (`bg-blue-100
@@ -322,14 +332,20 @@ function `create-guard`); assign-to-site select; **"Remove guard permanently"** 
 **`/admin/clients` — ClientManager "Client Manager".** Same pattern via `create-client` /
 `list-clients` / `delete-client` edge functions; assigns client login to a site.
 
-**`/admin/reports` — Reports "Reports".** Two tabs (segmented): **Patrol scans** (site+date
-filters; CSV + PDF export buttons; stat cards total/passed/failed; scan table) and
-**Guard hours (payroll)** (pay-period filters; blue banner shows the site's live hours via
-`describeOperatingHours`; **Exact / 15-min rounding** toggle; export buttons **Payroll CSV**
-(weekly regular/OT/stat split + timesheet-approval column), CSV (daily rows), PDF; per-guard
-total cards with amber `OT xh` badge; detail table Date/Guard/Clock in/Clock out/Hours/Day
-type). Hours derive from clock-in scans + `guard_shift_adjustments`, windowed by
-**per-site operating_hours**.
+**`/admin/reports` — Reports "Reports".** Patrol scans only (site+date filters; CSV + PDF
+export buttons; stat cards total/passed/failed; scan table; "Guard hours → Payroll" link).
+The old Guard-hours tab moved to `/admin/payroll` (2026-07-11).
+
+**`/admin/payroll` — AdminPayroll "Payroll".** The payroll department's home. Shared filter
+bar (site, pay-period from/to, **Exact / 15-min rounding** toggle — defaults to 15-min).
+Two tabs: **Guard hours** (the report formerly in Reports: Payroll CSV weekly
+regular/OT/stat split + approvals column, daily CSV, PDF, per-guard total cards with OT
+badge, detail table) and **Paystub generator** — per guard with hours in the period: hourly
+rate input (persisted to `guards.hourly_rate`, migration 031; session-only with an amber
+warning if the column is missing), manual deduction fields (Income tax / CPP / EI / Other),
+live Gross/Deductions/Net line, **Paystub PDF** per guard + **All paystubs (PDF)** (one page
+per guard). PDF math + rendering in `src/lib/paystub.js` (OT ×1.5, light printable). Hours
+derive from clock punches + `guard_shift_adjustments`, windowed by per-site operating_hours.
 
 **`/admin/alerts` — Alerts.** Per-checkpoint alert configs (minutes_until_alert, enabled
 toggle) + recent alerts log. (Roster alert_events currently email-only — surfacing them
@@ -349,18 +365,23 @@ incidents: description, GPS, attachments (ImageLightbox for photos), email statu
 capability per migration 023.
 
 ### Guard portal (GuardLayout — dark top bar)
-**`/guard` — GuardDashboard "Patrol Dashboard".** NextShiftCard (Today/Tomorrow + time +
-site; **Confirm** button; chevron → schedule). Two big buttons: **"Scan checkpoint"**
-(primary, → /guard/scan) and **"Report incident"** (secondary). ClientShiftBar (date, shift
-window from site hours, rounds/scan stats). Scan history table for the shift; checkpoint
-status cards (grid) with per-checkpoint last-scan state.
+**`/guard` — GuardDashboard "Patrol Dashboard".** **Locked portal (2026-07-11):** clock
+state comes from `useGuardClockStatus` (latest clock punch). Clocked OUT → the page shows
+ONLY the ClockInCard + a lock notice (schedule stays reachable). Clocked IN → full
+dashboard: GuardClockedInPanel, ClockInCard, NextShiftCard, Scan checkpoint / Report
+incident buttons, ClientShiftBar, scan history table, checkpoint status cards.
+**ClockInCard is a traffic light** (card border + pill + button): grey = off duty /
+before the window, yellow = 15-min early window, green = on duty (clocked in), red =
+late for clock-in or overdue clock-out. Clock-IN requires the site geofence;
+**clock-OUT works from anywhere** (GPS recorded for audit only — trigger passes it,
+migration 031).
 
-**`/guard/scan` — ScanScreen.** Mode tabs **NFC Tag / QR Code** (default from
-`preferredScanMode()`: NFC on Android Chrome, QR on iOS). NFCScanner: **"Start NFC Scan"**
-→ Web NFC read → checkpoint UUID; QRScanner: camera → decode. On read: gets GPS →
-`submitScanWithGps` → distance check vs checkpoint (~20 m + accuracy bonus; floor/altitude
-heuristics in gps.js) → navigate to `/guard/scan/result` (pass/fail screen with distance +
-retry). Offline: scan queued locally, syncs on reconnect.
+**`/guard/scan` — ScanScreen.** **NFC only** (QR scanning retired 2026-07-11; checkpoints
+are physical NFC tags — `html5-qrcode` and QRScanner.jsx were removed). NFCScanner:
+**"Start NFC Scan"** → Web NFC read → checkpoint UUID → GPS captured for audit →
+`submitScanWithGps` (NFC taps trusted server-side) → `/guard/scan/result`. Non-NFC
+browsers (all iOS) see an info banner pointing to Face ID clock-in; iPhone tap-to-scan
+arrives with the Capacitor wrap. Offline: scan queued locally, syncs on reconnect.
 
 **`/guard/scan/result` — ScanResult.** Big green Verified / red Failed state, distance,
 checkpoint name, "Scan another" / back-to-dashboard actions.

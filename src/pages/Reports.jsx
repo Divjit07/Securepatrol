@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Download, FileText } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import Layout from '../components/Layout.jsx'
@@ -8,25 +9,6 @@ import { supabase } from '../lib/supabase.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { fetchSitesForAdmin } from '../lib/scans.js'
 import { BRAND } from '../lib/brand.js'
-import {
-  computeGuardHoursReport,
-  dateRangeDays,
-  defaultPayPeriodEnd,
-  defaultPayPeriodStart,
-  formatShiftTime,
-} from '../lib/clientStats.js'
-import { fetchShiftAdjustmentsForSite, mapShiftAdjustments } from '../lib/shiftAdjustments.js'
-import { describeOperatingHours } from '../hooks/useClientShift.js'
-import {
-  ROUNDING_MODES,
-  applyRounding,
-  computeWeeklyPayroll,
-  overtimeByGuard,
-  buildAccountingCsv,
-  downloadCsv,
-  formatMinutes,
-  fetchApprovalsForSite,
-} from '../lib/payroll.js'
 
 function localDayStart(dateStr) {
   const [y, m, d] = dateStr.split('-').map(Number)
@@ -38,53 +20,39 @@ function localDayEnd(dateStr) {
   return new Date(y, m - 1, d, 23, 59, 59, 999)
 }
 
+// Guard hours + paystubs moved to /admin/payroll — this page is patrol proof only.
 export default function Reports() {
   const { user, isSuperAdmin } = useAuth()
   const [sites, setSites] = useState([])
-  const [tab, setTab] = useState('scans')
   const [scanFilters, setScanFilters] = useState({
     siteId: '',
     fromDate: new Date().toISOString().slice(0, 10),
     toDate: new Date().toISOString().slice(0, 10),
   })
-  const [hoursFilters, setHoursFilters] = useState({
-    siteId: '',
-    fromDate: defaultPayPeriodStart(),
-    toDate: defaultPayPeriodEnd(),
-  })
   const [scans, setScans] = useState([])
-  const [checkpoints, setCheckpoints] = useState([])
-  const [guards, setGuards] = useState([])
-  const [hoursScans, setHoursScans] = useState([])
-  const [hoursAdjustments, setHoursAdjustments] = useState({})
   const [loading, setLoading] = useState(false)
-  const [rounding, setRounding] = useState('exact')
+  const [loadError, setLoadError] = useState(null)
 
-  const activeSiteId = tab === 'scans' ? scanFilters.siteId : hoursFilters.siteId
-  const selectedSite = sites.find((s) => s.id === activeSiteId)
+  const selectedSite = sites.find((s) => s.id === scanFilters.siteId)
 
   useEffect(() => {
     if (!user) return
     fetchSitesForAdmin(user.id, isSuperAdmin ? 'super_admin' : 'admin').then((siteList) => {
       setSites(siteList)
-      if (siteList.length) {
-        setScanFilters((f) => ({ ...f, siteId: f.siteId || siteList[0].id }))
-        setHoursFilters((f) => ({ ...f, siteId: f.siteId || siteList[0].id }))
-      }
+      if (siteList.length) setScanFilters((f) => ({ ...f, siteId: f.siteId || siteList[0].id }))
     })
   }, [user?.id, isSuperAdmin])
 
-  const loadSiteMeta = async (siteId) => {
-    const [{ data: floors }, { data: guardData }] = await Promise.all([
-      supabase.from('floors').select('id').eq('site_id', siteId),
-      supabase.from('guards').select('id, name').eq('site_id', siteId).eq('active', true).order('name'),
-    ])
+  const loadScans = async () => {
+    if (!scanFilters.siteId) return
+    setLoading(true)
+    setLoadError(null)
 
-    setGuards(guardData || [])
-
+    const { data: floors } = await supabase.from('floors').select('id').eq('site_id', scanFilters.siteId)
     if (!floors?.length) {
-      setCheckpoints([])
-      return []
+      setScans([])
+      setLoading(false)
+      return
     }
 
     const { data: cps } = await supabase
@@ -93,16 +61,7 @@ export default function Reports() {
       .in('floor_id', floors.map((f) => f.id))
       .eq('active', true)
 
-    setCheckpoints(cps || [])
-    return cps || []
-  }
-
-  const loadScans = async () => {
-    if (!scanFilters.siteId) return
-    setLoading(true)
-
-    const cps = await loadSiteMeta(scanFilters.siteId)
-    const cpIds = cps.map((c) => c.id)
+    const cpIds = (cps || []).map((c) => c.id)
     if (!cpIds.length) {
       setScans([])
       setLoading(false)
@@ -111,7 +70,7 @@ export default function Reports() {
 
     const from = localDayStart(scanFilters.fromDate)
     const to = localDayEnd(scanFilters.toDate)
-    const cpMap = Object.fromEntries(cps.map((c) => [c.id, c]))
+    const cpMap = Object.fromEntries((cps || []).map((c) => [c.id, c]))
 
     const { data, error } = await supabase
       .from('scans')
@@ -122,7 +81,7 @@ export default function Reports() {
       .order('scanned_at', { ascending: false })
 
     if (error) {
-      alert(error.message)
+      setLoadError(error.message)
       setScans([])
     } else {
       setScans((data || []).map((s) => ({ ...s, checkpoint: cpMap[s.checkpoint_id] })))
@@ -131,53 +90,9 @@ export default function Reports() {
     setLoading(false)
   }
 
-  const loadHoursData = async () => {
-    if (!hoursFilters.siteId) return
-    setLoading(true)
-
-    const cps = await loadSiteMeta(hoursFilters.siteId)
-    const cpIds = cps.map((c) => c.id)
-    if (!cpIds.length) {
-      setHoursScans([])
-      setHoursAdjustments({})
-      setLoading(false)
-      return
-    }
-
-    const from = localDayStart(hoursFilters.fromDate)
-    const to = localDayEnd(hoursFilters.toDate)
-
-    const [{ data, error }, adjRows] = await Promise.all([
-      supabase
-        .from('scans')
-        .select('id, guard_id, checkpoint_id, scanned_at, status')
-        .in('checkpoint_id', cpIds)
-        .eq('status', 'pass')
-        .gte('scanned_at', from.toISOString())
-        .lte('scanned_at', to.toISOString())
-        .order('scanned_at', { ascending: true }),
-      fetchShiftAdjustmentsForSite(hoursFilters.siteId, hoursFilters.fromDate, hoursFilters.toDate),
-    ])
-
-    if (error) {
-      alert(error.message)
-      setHoursScans([])
-      setHoursAdjustments({})
-    } else {
-      setHoursScans(data || [])
-      setHoursAdjustments(mapShiftAdjustments(adjRows))
-    }
-
-    setLoading(false)
-  }
-
   useEffect(() => {
-    if (scanFilters.siteId && tab === 'scans') loadScans()
-  }, [scanFilters.siteId, scanFilters.fromDate, scanFilters.toDate, tab])
-
-  useEffect(() => {
-    if (hoursFilters.siteId && tab === 'hours') loadHoursData()
-  }, [hoursFilters.siteId, hoursFilters.fromDate, hoursFilters.toDate, tab])
+    if (scanFilters.siteId) loadScans()
+  }, [scanFilters.siteId, scanFilters.fromDate, scanFilters.toDate])
 
   const exportScanCsv = () => {
     const headers = ['Date', 'Checkpoint', 'Floor', 'Guard', 'Distance (m)', 'Status', 'Sync']
@@ -227,135 +142,19 @@ export default function Reports() {
     doc.save(`securepatrol-scans-${scanFilters.fromDate}.pdf`)
   }
 
-  const hoursReport = computeGuardHoursReport({
-    scans: hoursScans,
-    checkpoints,
-    guards,
-    dates: dateRangeDays(hoursFilters.fromDate, hoursFilters.toDate),
-    adjustmentsByKey: hoursAdjustments,
-    operatingHours: selectedSite?.operating_hours,
-  })
-  const hoursSummary = describeOperatingHours(selectedSite?.operating_hours)
-
-  const payRows = applyRounding(hoursReport.rows, rounding)
-  const weeklyPayroll = computeWeeklyPayroll(payRows)
-  const otByGuard = overtimeByGuard(weeklyPayroll)
-
-  const exportAccountingCsv = async () => {
-    let approvals = {}
-    try {
-      approvals = await fetchApprovalsForSite(hoursFilters.siteId, hoursFilters.fromDate, hoursFilters.toDate)
-    } catch {
-      // approvals table not migrated yet — export without the column data
-    }
-    downloadCsv(
-      `securepatrol-payroll-${hoursFilters.fromDate}-${hoursFilters.toDate}.csv`,
-      buildAccountingCsv(weeklyPayroll, approvals),
-    )
-  }
-
-  const exportHoursCsv = () => {
-    const headers = ['Date', 'Guard', 'Clock In', 'Clock Out', 'Hours', 'Day type']
-    const rows = payRows.map((row) => [
-      row.date,
-      row.guardName,
-      formatShiftTime(row.payClockIn),
-      formatShiftTime(row.payClockOut),
-      formatMinutes(row.payMinutes),
-      row.statutoryHolidayLabel || 'Regular shift',
-    ])
-    const summaryRows = [
-      [],
-      ['Guard', 'Days worked', 'Total hours'],
-      ...Object.values(hoursReport.totalByGuard).map((g) => [g.name, g.days, g.hoursLabel]),
-    ]
-    const csv = [headers, ...rows, ...summaryRows].map((r) => r.map((c) => `"${c}"`).join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `securepatrol-hours-${hoursFilters.fromDate}-${hoursFilters.toDate}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
-  const exportHoursPdf = () => {
-    const doc = new jsPDF()
-    doc.setFontSize(18)
-    doc.text(`${BRAND.name} Guard Hours Report`, 14, 20)
-    doc.setFontSize(9)
-    doc.text(BRAND.tagline, 14, 26)
-    doc.setFontSize(11)
-    doc.text(`Site: ${selectedSite?.name || ''}`, 14, 33)
-    doc.text(`Pay period: ${hoursFilters.fromDate} to ${hoursFilters.toDate}`, 14, 40)
-    doc.text(`Schedule: ${hoursSummary}`, 14, 47)
-    doc.text('Payroll report · Includes statutory holidays and manual adjustments', 14, 54)
-
-    autoTable(doc, {
-      startY: 62,
-      head: [['Date', 'Guard', 'Clock In', 'Clock Out', 'Hours', 'Day type']],
-      body: payRows.map((row) => [
-        row.date,
-        row.guardName,
-        row.payClockIn.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
-        row.payClockOut.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
-        formatMinutes(row.payMinutes),
-        row.statutoryHolidayLabel || 'Regular shift',
-      ]),
-    })
-
-    const summaryY = doc.lastAutoTable.finalY + 12
-    doc.setFontSize(12)
-    doc.text('Total hours by guard', 14, summaryY)
-    autoTable(doc, {
-      startY: summaryY + 4,
-      head: [['Guard', 'Days worked', 'Total hours']],
-      body: Object.values(hoursReport.totalByGuard).map((g) => [
-        g.name,
-        g.days,
-        g.hoursLabel,
-      ]),
-    })
-
-    doc.save(`securepatrol-hours-${hoursFilters.fromDate}-${hoursFilters.toDate}.pdf`)
-  }
-
   const passed = scans.filter((s) => s.status === 'pass').length
-
-  const syncSiteSelection = (siteId) => {
-    setScanFilters((f) => ({ ...f, siteId }))
-    setHoursFilters((f) => ({ ...f, siteId }))
-  }
 
   return (
     <Layout variant="admin">
       <PageHeader
         title="Reports"
-        description="Patrol scan history and guard hours for payroll. Export PDF or CSV for any site."
+        description="Patrol scan history with CSV/PDF export. Guard hours and paystubs live in Payroll."
       />
-
-      <div className="mb-6 flex gap-2 rounded-lg border border-white/10 bg-surface p-1">
-        {[
-          { id: 'scans', label: 'Patrol scans' },
-          { id: 'hours', label: 'Guard hours (payroll)' },
-        ].map(({ id, label }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setTab(id)}
-            className={`flex-1 rounded-md px-4 py-2 text-sm font-medium ${
-              tab === id ? 'bg-surface text-black' : 'text-ink-2 hover:bg-white/5'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
 
       <div className="mb-6 flex flex-wrap gap-4 rounded-xl border border-white/10 bg-surface p-4">
         <select
-          value={activeSiteId}
-          onChange={(e) => syncSiteSelection(e.target.value)}
+          value={scanFilters.siteId}
+          onChange={(e) => setScanFilters({ ...scanFilters, siteId: e.target.value })}
           className="rounded-lg border border-white/10 px-3 py-2"
         >
           {sites.map((s) => (
@@ -364,222 +163,104 @@ export default function Reports() {
             </option>
           ))}
         </select>
-        {tab === 'scans' ? (
-          <>
-            <input
-              type="date"
-              value={scanFilters.fromDate}
-              onChange={(e) => setScanFilters({ ...scanFilters, fromDate: e.target.value })}
-              className="rounded-lg border border-white/10 px-3 py-2"
-            />
-            <input
-              type="date"
-              value={scanFilters.toDate}
-              onChange={(e) => setScanFilters({ ...scanFilters, toDate: e.target.value })}
-              className="rounded-lg border border-white/10 px-3 py-2"
-            />
-          </>
-        ) : (
-          <>
-            <input
-              type="date"
-              value={hoursFilters.fromDate}
-              onChange={(e) => setHoursFilters({ ...hoursFilters, fromDate: e.target.value })}
-              className="rounded-lg border border-white/10 px-3 py-2"
-            />
-            <input
-              type="date"
-              value={hoursFilters.toDate}
-              onChange={(e) => setHoursFilters({ ...hoursFilters, toDate: e.target.value })}
-              className="rounded-lg border border-white/10 px-3 py-2"
-            />
-          </>
-        )}
+        <input
+          type="date"
+          value={scanFilters.fromDate}
+          onChange={(e) => setScanFilters({ ...scanFilters, fromDate: e.target.value })}
+          className="rounded-lg border border-white/10 px-3 py-2"
+        />
+        <input
+          type="date"
+          value={scanFilters.toDate}
+          onChange={(e) => setScanFilters({ ...scanFilters, toDate: e.target.value })}
+          className="rounded-lg border border-white/10 px-3 py-2"
+        />
+        <Link
+          to="/admin/payroll"
+          className="ml-auto flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-sm font-medium text-ink-2 hover:bg-white/5"
+        >
+          Guard hours → Payroll
+        </Link>
       </div>
 
-      {tab === 'scans' ? (
-        <>
-          <div className="mb-4 flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={exportScanCsv}
-              disabled={!scans.length}
-              className="flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-sm font-medium hover:bg-white/5 disabled:opacity-50"
-            >
-              <Download className="h-4 w-4" /> CSV
-            </button>
-            <button
-              type="button"
-              onClick={exportScanPdf}
-              disabled={!scans.length}
-              className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-200 disabled:opacity-50"
-            >
-              <FileText className="h-4 w-4" /> PDF
-            </button>
-          </div>
+      {loadError && (
+        <div className="mb-4 rounded-lg bg-accent-red/15 p-4 text-sm text-accent-red">{loadError}</div>
+      )}
 
-          <div className="mb-4 grid gap-4 sm:grid-cols-3">
-            <div className="rounded-xl border border-white/10 bg-surface p-4">
-              <p className="text-sm text-ink-2">Total scans</p>
-              <p className="text-2xl font-bold">{scans.length}</p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-surface p-4">
-              <p className="text-sm text-ink-2">Passed</p>
-              <p className="text-2xl font-bold text-accent-green">{passed}</p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-surface p-4">
-              <p className="text-sm text-ink-2">Failed</p>
-              <p className="text-2xl font-bold text-accent-red">{scans.length - passed}</p>
-            </div>
-          </div>
+      <div className="mb-4 flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={exportScanCsv}
+          disabled={!scans.length}
+          className="flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-sm font-medium hover:bg-white/5 disabled:opacity-50"
+        >
+          <Download className="h-4 w-4" /> CSV
+        </button>
+        <button
+          type="button"
+          onClick={exportScanPdf}
+          disabled={!scans.length}
+          className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-200 disabled:opacity-50"
+        >
+          <FileText className="h-4 w-4" /> PDF
+        </button>
+      </div>
 
-          {loading ? (
-            <div className="flex justify-center py-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent-orange border-t-transparent" />
-            </div>
-          ) : (
-            <div className="overflow-hidden rounded-xl border border-white/10 bg-surface">
-              <table className="w-full text-sm">
-                <thead className="bg-white/5 text-left text-ink-2">
-                  <tr>
-                    <th className="px-4 py-3 font-medium">Date/Time</th>
-                    <th className="px-4 py-3 font-medium">Checkpoint</th>
-                    <th className="px-4 py-3 font-medium">Guard</th>
-                    <th className="px-4 py-3 font-medium">Distance</th>
-                    <th className="px-4 py-3 font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {scans.map((scan) => (
-                    <tr key={scan.id}>
-                      <td className="px-4 py-3">{new Date(scan.scanned_at).toLocaleString()}</td>
-                      <td className="px-4 py-3 font-medium">{scan.checkpoint?.name}</td>
-                      <td className="px-4 py-3">{scan.profiles?.name}</td>
-                      <td className="px-4 py-3">{scan.distance_metres?.toFixed(0)}m</td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                            scan.status === 'pass' ? 'bg-accent-green/15 text-accent-green' : 'bg-accent-red/15 text-accent-red'
-                          }`}
-                        >
-                          {scan.status.toUpperCase()}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {scans.length === 0 && (
-                <p className="p-8 text-center text-ink-2">No scans found for this period.</p>
-              )}
-            </div>
-          )}
-        </>
+      <div className="mb-4 grid gap-4 sm:grid-cols-3">
+        <div className="rounded-xl border border-white/10 bg-surface p-4">
+          <p className="text-sm text-ink-2">Total scans</p>
+          <p className="text-2xl font-bold">{scans.length}</p>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-surface p-4">
+          <p className="text-sm text-ink-2">Passed</p>
+          <p className="text-2xl font-bold text-accent-green">{passed}</p>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-surface p-4">
+          <p className="text-sm text-ink-2">Failed</p>
+          <p className="text-2xl font-bold text-accent-red">{scans.length - passed}</p>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent-orange border-t-transparent" />
+        </div>
       ) : (
-        <>
-          <div className="mb-4 rounded-xl border border-accent-cyan-line/20 bg-accent-cyan/10 p-4 text-sm text-accent-cyan">
-            Payroll hours for <strong>{selectedSite?.name || 'selected site'}</strong>. Site hours:{' '}
-            <strong>{hoursSummary}</strong>. Includes statutory holidays and shift clock edits.
-          </div>
-
-          <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
-            <div className="mr-auto flex rounded-lg border border-white/10 bg-white/5 p-1">
-              {ROUNDING_MODES.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => setRounding(m.id)}
-                  className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                    rounding === m.id ? 'bg-white text-black' : 'text-ink-2 hover:bg-white/10'
-                  }`}
-                >
-                  {m.label}
-                </button>
+        <div className="overflow-hidden rounded-xl border border-white/10 bg-surface">
+          <table className="w-full text-sm">
+            <thead className="bg-white/5 text-left text-ink-2">
+              <tr>
+                <th className="px-4 py-3 font-medium">Date/Time</th>
+                <th className="px-4 py-3 font-medium">Checkpoint</th>
+                <th className="px-4 py-3 font-medium">Guard</th>
+                <th className="px-4 py-3 font-medium">Distance</th>
+                <th className="px-4 py-3 font-medium">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {scans.map((scan) => (
+                <tr key={scan.id}>
+                  <td className="px-4 py-3">{new Date(scan.scanned_at).toLocaleString()}</td>
+                  <td className="px-4 py-3 font-medium">{scan.checkpoint?.name}</td>
+                  <td className="px-4 py-3">{scan.profiles?.name}</td>
+                  <td className="px-4 py-3">{scan.distance_metres?.toFixed(0)}m</td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                        scan.status === 'pass' ? 'bg-accent-green/15 text-accent-green' : 'bg-accent-red/15 text-accent-red'
+                      }`}
+                    >
+                      {scan.status.toUpperCase()}
+                    </span>
+                  </td>
+                </tr>
               ))}
-            </div>
-            <button
-              type="button"
-              onClick={exportAccountingCsv}
-              disabled={!weeklyPayroll.length}
-              className="flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-sm font-medium hover:bg-white/5 disabled:opacity-50"
-            >
-              <Download className="h-4 w-4" /> Payroll CSV
-            </button>
-            <button
-              type="button"
-              onClick={exportHoursCsv}
-              disabled={!hoursReport.rows.length}
-              className="flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-sm font-medium hover:bg-white/5 disabled:opacity-50"
-            >
-              <Download className="h-4 w-4" /> CSV
-            </button>
-            <button
-              type="button"
-              onClick={exportHoursPdf}
-              disabled={!hoursReport.rows.length}
-              className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-200 disabled:opacity-50"
-            >
-              <FileText className="h-4 w-4" /> PDF
-            </button>
-          </div>
-
-          {loading ? (
-            <div className="flex justify-center py-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent-orange border-t-transparent" />
-            </div>
-          ) : (
-            <>
-              <div className="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {Object.entries(hoursReport.totalByGuard).map(([guardId, g]) => (
-                  <div key={guardId} className="rounded-xl border border-white/10 bg-surface p-4 shadow-sm">
-                    <p className="text-sm text-ink-2">{g.name}</p>
-                    <p className="text-2xl font-bold">{g.hoursLabel}</p>
-                    <p className="text-xs text-ink-3">
-                      {g.days} days worked
-                      {otByGuard[guardId] ? (
-                        <span className="ml-2 font-semibold text-accent-orange">
-                          OT {formatMinutes(otByGuard[guardId])}
-                        </span>
-                      ) : null}
-                    </p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="overflow-hidden rounded-xl border border-white/10 bg-surface">
-                <table className="w-full text-sm">
-                  <thead className="bg-white/5 text-left text-ink-2">
-                    <tr>
-                      <th className="px-4 py-3 font-medium">Date</th>
-                      <th className="px-4 py-3 font-medium">Guard</th>
-                      <th className="px-4 py-3 font-medium">Clock in</th>
-                      <th className="px-4 py-3 font-medium">Clock out</th>
-                      <th className="px-4 py-3 font-medium">Hours</th>
-                      <th className="px-4 py-3 font-medium">Day type</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {payRows.map((row) => (
-                      <tr key={`${row.date}-${row.guardId}`}>
-                        <td className="px-4 py-3">{row.date}</td>
-                        <td className="px-4 py-3 font-medium">{row.guardName}</td>
-                        <td className="px-4 py-3">{formatShiftTime(row.payClockIn)}</td>
-                        <td className="px-4 py-3">{formatShiftTime(row.payClockOut)}</td>
-                        <td className="px-4 py-3 font-semibold">{formatMinutes(row.payMinutes)}</td>
-                        <td className="px-4 py-3 text-accent-cyan-line">
-                          {row.statutoryHolidayLabel || 'Regular shift'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {hoursReport.rows.length === 0 && (
-                  <p className="p-8 text-center text-ink-2">No shift hours recorded for this period.</p>
-                )}
-              </div>
-            </>
+            </tbody>
+          </table>
+          {scans.length === 0 && (
+            <p className="p-8 text-center text-ink-2">No scans found for this period.</p>
           )}
-        </>
+        </div>
       )}
     </Layout>
   )

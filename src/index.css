@@ -1,4 +1,5 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Sans:wght@500;600;700&family=Instrument+Serif:ital@0;1&display=swap");
+/* Fonts load from index.html (<link preconnect + stylesheet>) so they fetch in
+   parallel with the JS/CSS bundles instead of chaining behind this file. */
 @import "tailwindcss";
 
 @theme {

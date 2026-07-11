@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { isScanApprover, checkScanApproverFromDb } from '../lib/scanApproval.js'
 import { isShiftClockAdmin, checkShiftClockAdminFromDb } from '../lib/shiftClockAccess.js'
@@ -29,33 +29,37 @@ export function AuthProvider({ children }) {
     return data
   }, [])
 
-  useEffect(() => {
-    async function initSession() {
-      const { data: { session } } = await supabase.auth.getSession()
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      const currentUser = authUser ?? session?.user ?? null
-      setUser(currentUser)
-      if (currentUser) {
-        const p = await loadProfile(currentUser.id)
-        setProfile(p)
-      }
-      setLoading(false)
-    }
-    initSession()
+  // Which user id the current profile belongs to — lets auth events (token
+  // refresh fires ~hourly) skip redundant profile refetches. The session from
+  // getSession()/events is read locally; a forged local session can't read
+  // anything anyway because RLS validates the JWT on every query.
+  const profileUserRef = useRef(null)
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      const currentUser = authUser ?? session?.user ?? null
+  useEffect(() => {
+    const syncFromSession = async (session) => {
+      const currentUser = session?.user ?? null
       setUser(currentUser)
-      if (currentUser) {
-        const p = await loadProfile(currentUser.id)
-        setProfile(p)
-      } else {
+      if (!currentUser) {
+        profileUserRef.current = null
         setProfile(null)
         setCanApproveScans(false)
         setCanManageShiftClock(false)
+        setLoading(false)
+        return
+      }
+      if (profileUserRef.current !== currentUser.id) {
+        profileUserRef.current = currentUser.id
+        const p = await loadProfile(currentUser.id)
+        // A newer auth event may have switched users while we were fetching.
+        if (profileUserRef.current === currentUser.id) setProfile(p)
       }
       setLoading(false)
+    }
+
+    supabase.auth.getSession().then(({ data: { session } }) => syncFromSession(session))
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      syncFromSession(session)
     })
 
     return () => subscription.unsubscribe()
@@ -64,6 +68,7 @@ export function AuthProvider({ children }) {
   const signIn = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
+    profileUserRef.current = data.user.id // claim it so the auth event doesn't refetch
     const p = await loadProfile(data.user.id)
     setProfile(p)
     return { user: data.user, profile: p }
@@ -78,6 +83,7 @@ export function AuthProvider({ children }) {
     if (error) throw error
     const needsEmailConfirmation = !data.session
     if (data.session && data.user) {
+      profileUserRef.current = data.user.id
       const p = await loadProfile(data.user.id)
       setProfile(p)
       setUser(data.user)

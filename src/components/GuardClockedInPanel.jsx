@@ -2,10 +2,16 @@ import { Link } from 'react-router-dom'
 import { formatShiftTime } from '../lib/clientStats.js'
 import { formatTimeLabel } from '../hooks/useClientShift.js'
 
-function avatarUrl(name) {
-  if (!name) return null
-  const encoded = encodeURIComponent(name.trim())
-  return `https://ui-avatars.com/api/?name=${encoded}&size=128&background=2d3840&color=ffffff&bold=true`
+// Local initials avatar — the old ui-avatars.com call leaked guard names to a
+// third party and blocked render on slow networks.
+function initialsOf(name) {
+  return (name || '?')
+    .trim()
+    .split(/\s+/)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase()
 }
 
 function ordinalDay(n) {
@@ -103,12 +109,8 @@ export default function GuardClockedInPanel({
             </p>
           )}
         </div>
-        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border-2 border-white/20 bg-[#2d3840]">
-          <img
-            src={avatarUrl(name)}
-            alt=""
-            className="h-full w-full object-cover"
-          />
+        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-2 border-white/20 bg-[#2d3840] text-xl font-bold text-white">
+          {initialsOf(name)}
         </div>
       </div>
 

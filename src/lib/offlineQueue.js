@@ -35,7 +35,7 @@ export async function submitScan({
   gpsAccuracy = null,
   scannedAt,
   syncMethod = 'realtime',
-  scanInputMethod = 'qr',
+  scanInputMethod = 'nfc',
 }) {
   const { data: checkpoint, error: cpError } = await supabase
     .from('checkpoints')
@@ -136,7 +136,7 @@ export async function flushOfflineQueue() {
         distance_metres: 0,
         status: 'fail',
         sync_method: 'offline_sync',
-        scan_input_method: scan.scan_input_method ?? 'qr',
+        scan_input_method: scan.scan_input_method ?? 'nfc',
       })
       if (error) throw error
       synced++
@@ -150,7 +150,7 @@ export async function flushOfflineQueue() {
   return { synced, failed }
 }
 
-export async function submitScanWithGps(checkpointId, guardId, { scanInputMethod = 'qr' } = {}) {
+export async function submitScanWithGps(checkpointId, guardId, { scanInputMethod = 'nfc' } = {}) {
   const position =
     scanInputMethod === 'nfc'
       ? (await getOptionalPosition(8000, 2)) ?? (await getBestPosition(1))

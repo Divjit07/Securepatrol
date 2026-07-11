@@ -1,12 +1,12 @@
-// Geofenced Face ID clock-in card (guard dashboard). Watches GPS, shows live
-// distance to the site, and arms the clock-in/out button only inside the
-// geofence. Punching = Face ID (passkey, verified server-side) + a face_gps
-// scan that the DB trigger re-validates against the site coordinates.
-// Button color tracks the schedule: locked until 15 min before the shift,
-// yellow in the early window, green on time, red once late (in or out).
+// Geofenced Face ID clock card (guard dashboard). Watches GPS, shows live
+// distance to the site, and arms the clock-in button only inside the geofence.
+// Clock-OUT works from anywhere — the punch is recorded with GPS for audit but
+// never blocked by the fence (server trigger agrees since migration 031).
+// The whole card is a traffic light: grey = off duty, yellow = 15-min early
+// window, green = clocked in (on duty), red = late for clock-in / overdue out.
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ScanFace, MapPin, LocateFixed, QrCode } from 'lucide-react'
+import { ScanFace, MapPin, LocateFixed, Nfc } from 'lucide-react'
 import {
   passkeySupported,
   hasEnrolledPasskey,
@@ -14,6 +14,7 @@ import {
   verifyWithPasskey,
 } from '../lib/passkeys.js'
 import { fetchSiteGeofence, geofenceStatus, clockPunch } from '../lib/clockPunch.js'
+import { getOptionalPosition } from '../lib/gps.js'
 
 const EARLY_WINDOW_MIN = 15 // clock-in opens this many minutes before the shift
 const LATE_GRACE_MIN = 10 // matches the roster-alerts "late" threshold
@@ -39,12 +40,12 @@ function shiftWindow(publishedShift, scheduled, date) {
 
 /** Traffic-light state for the punch button vs. the schedule. */
 function punchState(type, window, now = new Date()) {
-  if (!window) return { tone: 'green', allowed: true, note: null }
+  if (!window) return { tone: type === 'out' ? 'green' : 'grey', allowed: true, note: null }
   const min = 60_000
   if (type === 'in') {
     const opensAt = new Date(window.start.getTime() - EARLY_WINDOW_MIN * min)
     if (now < opensAt) {
-      return { tone: 'locked', allowed: false, note: `Clock-in opens at ${fmtTime(opensAt)} (15 min before your ${fmtTime(window.start)} shift).` }
+      return { tone: 'grey', allowed: false, note: `Clock-in opens at ${fmtTime(opensAt)} (15 min before your ${fmtTime(window.start)} shift).` }
     }
     if (now < window.start) {
       return { tone: 'yellow', allowed: true, note: `You’re early — shift starts at ${fmtTime(window.start)}.` }
@@ -54,9 +55,9 @@ function punchState(type, window, now = new Date()) {
     }
     return { tone: 'red', allowed: true, note: `You’re running late — shift started at ${fmtTime(window.start)}. Clock in now.` }
   }
-  // clock-out
+  // clock-out — always allowed, from anywhere
   if (now < new Date(window.end.getTime() - EARLY_WINDOW_MIN * min)) {
-    return { tone: 'yellow', allowed: true, note: `Early — your shift runs until ${fmtTime(window.end)}.` }
+    return { tone: 'green', allowed: true, note: `On duty — your shift runs until ${fmtTime(window.end)}.` }
   }
   if (now <= new Date(window.end.getTime() + LATE_GRACE_MIN * min)) {
     return { tone: 'green', allowed: true, note: null }
@@ -65,10 +66,18 @@ function punchState(type, window, now = new Date()) {
 }
 
 const TONE_BUTTON = {
-  locked: 'bg-white/10 text-ink-3',
+  grey: 'bg-white/10 text-ink-3',
   yellow: 'bg-[#FACC15] text-[#422006] hover:brightness-105',
   green: 'bg-[#22C55E] text-[#052E16] hover:brightness-105',
   red: 'bg-[#EF4444] text-white hover:brightness-105',
+}
+
+// Card-level traffic light: border tint + status pill.
+const TONE_CARD = {
+  grey: { ring: 'border-white/10', pill: 'bg-white/10 text-ink-2', label: 'Off duty' },
+  yellow: { ring: 'border-[#FACC15]/50', pill: 'bg-[#FACC15]/15 text-[#FACC15]', label: 'Early window' },
+  green: { ring: 'border-[#22C55E]/50', pill: 'bg-[#22C55E]/15 text-[#22C55E]', label: 'On duty' },
+  red: { ring: 'border-[#EF4444]/50', pill: 'bg-[#EF4444]/15 text-[#EF4444]', label: 'Late' },
 }
 
 export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, publishedShift, scheduled, date }) {
@@ -124,6 +133,10 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
   }, [])
   const window_ = shiftWindow(publishedShift, scheduled, date)
   const punch = punchState(clockedIn ? 'out' : 'in', window_)
+  // Card color: green whenever clocked in (red only when overdue to leave);
+  // when clocked out it follows the clock-in traffic light.
+  const cardTone = clockedIn ? (punch.tone === 'red' ? 'red' : 'green') : punch.tone
+  const card = TONE_CARD[cardTone]
 
   const handleEnroll = async () => {
     setBusy('enrolling')
@@ -144,12 +157,19 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
   }
 
   const handlePunch = async (type) => {
-    if (!position) return
     setBusy('punching')
     setMessage(null)
     try {
+      // Clock-out works from anywhere — grab a one-shot fix if the watch
+      // hasn't produced one yet.
+      let pos = position
+      if (!pos && type === 'out') pos = await getOptionalPosition(8000, 2)
+      if (!pos) {
+        setMessage({ tone: 'error', text: 'Couldn’t read your location — turn Location Services on and try again.' })
+        return
+      }
       await verifyWithPasskey()
-      const scan = await clockPunch({ guardId, siteId, type, position })
+      const scan = await clockPunch({ guardId, siteId, type, position: pos })
       if (scan.status === 'pass') {
         setMessage({
           tone: 'success',
@@ -178,7 +198,7 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
         <p className="mt-2 text-sm text-ink-2">
           This browser can’t do Face ID.{' '}
           <Link to="/guard/scan" className="font-semibold text-accent-cyan-line underline underline-offset-2">
-            Scan the clock-in tag instead
+            Tap the clock-in NFC tag instead
           </Link>
           .
         </p>
@@ -187,13 +207,16 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
   }
 
   return (
-    <div className="sp-card mb-4 p-5">
+    <div className={`sp-card mb-4 border p-5 transition-colors ${card.ring}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="flex items-center gap-2 text-sm font-semibold text-ink">
-          <ScanFace className="h-4 w-4 text-accent-orange" /> Face ID clock-in
+          <ScanFace className="h-4 w-4 text-accent-orange" /> Shift clock
+          <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide ${card.pill}`}>
+            {card.label}
+          </span>
         </p>
 
-        {siteLocated && (
+        {siteLocated && !clockedIn && (
           <span
             className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
               fence?.located
@@ -213,7 +236,7 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
         )}
       </div>
 
-      {!siteLocated && site !== null && (
+      {!siteLocated && site !== null && !clockedIn && (
         <p className="mt-3 rounded-xl border border-accent-orange/30 bg-accent-orange/10 px-3 py-2 text-xs text-accent-orange">
           This site has no GPS location yet — ask your admin to set it (Overview → site card → clock icon).
         </p>
@@ -243,11 +266,10 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
           disabled={
             busy === 'punching' ||
             !punch.allowed ||
-            !siteLocated ||
-            !fence?.located ||
-            (!fence?.inside && !clockedIn)
+            // Clock-IN needs to be inside the geofence; clock-OUT works anywhere.
+            (!clockedIn && (!siteLocated || !fence?.located || !fence?.inside))
           }
-          className={`mt-4 flex min-h-[3.25rem] w-full items-center justify-center gap-2 rounded-xl text-base font-semibold transition active:scale-[0.99] disabled:opacity-50 ${TONE_BUTTON[punch.tone]}`}
+          className={`mt-4 flex min-h-[3.25rem] w-full items-center justify-center gap-2 rounded-xl text-base font-semibold transition active:scale-[0.99] disabled:opacity-50 ${TONE_BUTTON[clockedIn ? (punch.tone === 'red' ? 'red' : 'green') : punch.tone]}`}
         >
           {busy === 'punching' ? (
             <>
@@ -259,9 +281,7 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
               {clockedIn
                 ? punch.tone === 'red'
                   ? 'Clock out now — you’re over'
-                  : punch.tone === 'yellow'
-                    ? 'Clock out early'
-                    : 'Clock out with Face ID'
+                  : 'Clock out with Face ID'
                 : punch.tone === 'red'
                   ? 'Clock in now — you’re late'
                   : punch.tone === 'yellow'
@@ -275,6 +295,12 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
       {enrolled && punch.note && (
         <p className={`mt-2 text-center text-xs ${punch.tone === 'red' ? 'font-semibold text-accent-red' : 'text-ink-3'}`}>
           {punch.note}
+        </p>
+      )}
+
+      {enrolled && clockedIn && (
+        <p className="mt-2 text-center text-xs text-ink-3">
+          You can clock out from anywhere — no need to be at the site.
         </p>
       )}
 
@@ -297,12 +323,12 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
       )}
 
       <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-ink-3">
-        <QrCode className="h-3.5 w-3.5" />
+        <Nfc className="h-3.5 w-3.5" />
         Backup:{' '}
         <Link to="/guard/scan" className="font-semibold text-ink-2 underline underline-offset-2 hover:text-ink">
-          tap the clock-in NFC tag
+          tap the clock NFC tag
         </Link>{' '}
-        (QR won’t work for clock-in)
+        (QR is never accepted for the clock)
       </p>
     </div>
   )
