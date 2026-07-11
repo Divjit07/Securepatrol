@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom'
 import { formatShiftTime } from '../lib/clientStats.js'
 import { formatTimeLabel } from '../hooks/useClientShift.js'
 
@@ -108,7 +107,7 @@ export default function GuardClockedInPanel({
             <p className="mt-2 text-sm text-[#B0BEC5]">{formatClockInStamp(signedInAt)}</p>
           ) : (
             <p className="mt-2 text-sm text-[#B0BEC5]">
-              Not clocked in yet — scan Main Entrance to start your shift.
+              Not clocked in yet — use Face ID clock-in below.
             </p>
           )}
         </div>
@@ -130,12 +129,12 @@ export default function GuardClockedInPanel({
             )}
           </div>
           {guardShift.onShift && (
-            <Link
-              to="/guard/scan"
+            <a
+              href="#face-clock"
               className="guard-clock-out-btn shrink-0 rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-110"
             >
               Clock Out
-            </Link>
+            </a>
           )}
         </div>
       )}

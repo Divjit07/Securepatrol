@@ -142,9 +142,10 @@ Deno.serve(async (req) => {
       const options = await generateAuthenticationOptions({
         rpID,
         userVerification: 'required',
+        // Platform authenticator only — never offer the hybrid QR "use another device" path.
         allowCredentials: creds.map((c) => ({
           id: c.credential_id,
-          transports: c.transports || undefined,
+          transports: ['internal'],
         })),
       })
 

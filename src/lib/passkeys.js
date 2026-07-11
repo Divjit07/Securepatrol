@@ -29,6 +29,19 @@ export function passkeySupported() {
   return typeof window !== 'undefined' && Boolean(window.PublicKeyCredential)
 }
 
+/** Prefer a real on-device biometric when the browser can report it. */
+export async function platformAuthenticatorAvailable() {
+  if (!passkeySupported()) return false
+  try {
+    if (typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function') {
+      return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
+    }
+  } catch {
+    /* fall through */
+  }
+  return true
+}
+
 /** Has this guard enrolled at least one passkey (any device)? */
 export async function hasEnrolledPasskey(guardId) {
   const { data, error } = await supabase
@@ -48,10 +61,37 @@ export async function enrollPasskey() {
   return result?.verified === true
 }
 
-/** The Face ID moment: prompts biometrics and verifies the signature server-side. */
+/** The Face ID moment: prompts biometrics and verifies the signature server-side.
+ *  Restricted to this device's platform authenticator (Face ID / fingerprint) —
+ *  never the cross-device "scan a QR on another phone" Apple/Google hybrid flow. */
 export async function verifyWithPasskey() {
   const { options } = await invoke('auth-options')
-  const response = await startAuthentication({ optionsJSON: options })
-  const result = await invoke('auth-verify', { response })
-  return result?.verified === true
+  // Force internal (on-device) only — ignore any hybrid/cable transports that
+  // would make Safari/Chrome show a QR code for another device.
+  if (Array.isArray(options?.allowCredentials)) {
+    options.allowCredentials = options.allowCredentials.map((c) => ({
+      ...c,
+      transports: ['internal'],
+    }))
+  }
+  try {
+    const response = await startAuthentication({
+      optionsJSON: options,
+      useBrowserAutofill: false,
+    })
+    const result = await invoke('auth-verify', { response })
+    return result?.verified === true
+  } catch (err) {
+    const name = err?.name || ''
+    const msg = err?.message || ''
+    if (name === 'NotAllowedError' || /not allowed|cancel|abort/i.test(msg)) {
+      throw new Error('Face ID was cancelled. Try again on this phone.')
+    }
+    if (/no authenticator|not supported|securityerror/i.test(msg + name)) {
+      throw new Error(
+        'Face ID isn’t available in this browser. Open Kratos on the iPhone that enrolled Face ID (not a Mac), or re-enroll here.',
+      )
+    }
+    throw err
+  }
 }

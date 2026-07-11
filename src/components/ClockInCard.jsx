@@ -207,7 +207,7 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
   }
 
   return (
-    <div className={`sp-card mb-4 border p-5 transition-colors ${card.ring}`}>
+    <div id="face-clock" className={`sp-card mb-4 scroll-mt-24 border p-5 transition-colors ${card.ring}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="flex items-center gap-2 text-sm font-semibold text-ink">
           <ScanFace className="h-4 w-4 text-accent-orange" /> Shift clock
