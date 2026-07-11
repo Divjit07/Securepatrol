@@ -63,7 +63,10 @@ export default function ClientDashboard() {
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold text-ink">{gs.guardName}</span>
                   <span className="block text-xs text-ink-2">
-                    Clocked in {formatShiftTime(new Date(gs.signedInAt || gs.clockInAt))}
+                    {/* Admin shift-clock edits (guard_shift_adjustments) win over the
+                        raw punch time — the raw scan stays immutable underneath. */}
+                    Clocked in {formatShiftTime(new Date(gs.isAdjusted ? gs.clockInAt : gs.signedInAt || gs.clockInAt))}
+                    {gs.isAdjusted ? ' (adjusted)' : ''}
                     {gs.onShift ? ' · on shift now' : gs.clockOutAt ? ` · until ${formatShiftTime(new Date(gs.clockOutAt))}` : ''}
                   </span>
                 </span>

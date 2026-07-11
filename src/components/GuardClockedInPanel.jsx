@@ -85,7 +85,10 @@ export default function GuardClockedInPanel({
   const name = profile?.name || 'Guard'
   const roleLine = `Guarding Security - BYOD`
   const clockedIn = Boolean(guardShift)
-  const signedInAt = guardShift?.signedInAt || guardShift?.clockInAt
+  // Admin shift-clock edits win over the raw punch time for display.
+  const signedInAt = guardShift?.isAdjusted
+    ? guardShift?.clockInAt
+    : guardShift?.signedInAt || guardShift?.clockInAt
   const shiftTimeLine = publishedShift
     ? formatShiftRangeFromIso(publishedShift.starts_at, publishedShift.ends_at)
     : formatShiftRangeLine(
