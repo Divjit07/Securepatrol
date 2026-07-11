@@ -1,6 +1,6 @@
 /**
- * Simple, zero-network login backdrop: deep charcoal gradient with a faint
- * lime aura. No images, no video — instant on any connection.
+ * Dark Ops login backdrop — charcoal canvas, soft lime aura, subtle hatch.
+ * No images/video; instant on any connection.
  */
 export default function AuthBackground() {
   return (
@@ -9,16 +9,16 @@ export default function AuthBackground() {
         className="absolute inset-0"
         style={{
           background:
-            'radial-gradient(120% 90% at 85% 10%, rgba(150, 238, 96, 0.10) 0%, transparent 45%),' +
-            'radial-gradient(100% 80% at 10% 95%, rgba(127, 208, 159, 0.07) 0%, transparent 50%),' +
-            'linear-gradient(160deg, #14180f 0%, #0a0e09 55%, #090c0f 100%)',
+            'radial-gradient(90% 70% at 78% 12%, rgba(150, 238, 96, 0.12) 0%, transparent 52%),' +
+            'radial-gradient(70% 55% at 8% 88%, rgba(127, 208, 159, 0.08) 0%, transparent 48%),' +
+            'linear-gradient(165deg, #1c1f1a 0%, #151814 48%, #121512 100%)',
         }}
       />
       <div
-        className="absolute inset-0 opacity-[0.35]"
+        className="absolute inset-0 opacity-[0.28]"
         style={{
           backgroundImage:
-            'repeating-linear-gradient(45deg, rgba(255,255,255,0.012) 0 1px, transparent 1px 9px)',
+            'repeating-linear-gradient(135deg, rgba(255,255,255,0.015) 0 1px, transparent 1px 10px)',
         }}
       />
     </div>

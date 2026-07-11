@@ -39,16 +39,18 @@ export default function Login() {
 
   return (
     <AuthShell mode="signin">
-      <h2 className="kratos-auth-card-title">Secure sign-in</h2>
-      <p className="kratos-auth-card-sub">
-        Organization credentials for guards, clients, and operations
-      </p>
+      <header className="mb-6">
+        <h2 className="kratos-auth-card-title">Sign in</h2>
+        <p className="kratos-auth-card-sub">
+          Guards, clients, and ops — one secure login.
+        </p>
+      </header>
 
       {!isSupabaseConfigured && (
         <div className="kratos-auth-alert mb-5">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>
-            Add Supabase credentials to <code className="rounded bg-black/10 px-1">.env.local</code>
+            Add Supabase credentials to <code className="rounded bg-black/20 px-1">.env.local</code>
           </span>
         </div>
       )}
@@ -89,11 +91,11 @@ export default function Login() {
         </div>
 
         <button type="submit" disabled={loading} className="kratos-auth-submit">
-          {loading ? 'Signing in…' : 'Enter'}
+          {loading ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
 
-      <p className="kratos-auth-footnote mt-6">
+      <p className="kratos-auth-footnote mt-5">
         Unauthorized access is prohibited · {BRAND.name} logs all activity
       </p>
     </AuthShell>

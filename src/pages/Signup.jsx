@@ -50,16 +50,18 @@ export default function Signup() {
 
   return (
     <AuthShell mode="signup">
-      <h2 className="kratos-auth-card-title">Create account</h2>
-      <p className="kratos-auth-card-sub">
-        Enlist on {BRAND.name} — your admin assigns sites after approval
-      </p>
+      <header className="mb-6">
+        <h2 className="kratos-auth-card-title">Create account</h2>
+        <p className="kratos-auth-card-sub">
+          Enlist on {BRAND.name} — your admin assigns sites after approval.
+        </p>
+      </header>
 
       {!isSupabaseConfigured && (
         <div className="kratos-auth-alert mb-5">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>
-            Add Supabase credentials to <code className="rounded bg-black/10 px-1">.env.local</code>
+            Add Supabase credentials to <code className="rounded bg-black/20 px-1">.env.local</code>
           </span>
         </div>
       )}
