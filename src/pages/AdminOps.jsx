@@ -259,7 +259,12 @@ export default function AdminOps() {
       const siteUpcoming = upcomingShifts.filter((s) => s.site_id === site.id).slice(0, 6)
       const siteClocked = clockedInList.filter((c) => c.siteId === site.id)
       const scheduledIds = new Set(siteLive.map((s) => s.guard_id).filter(Boolean))
-      const late = siteLive.filter((s) => s.guard_id && !clockByGuard.get(s.guard_id)?.clockedIn)
+      const late = siteLive.filter((s) => {
+        if (!s.guard_id) return false
+        const c = clockByGuard.get(s.guard_id)
+        // Still due: never punched. Early clock-out during a live shift is not "late".
+        return !c?.clockedIn && c?.role !== 'shift_clock_out'
+      })
 
       return {
         site,
@@ -434,7 +439,16 @@ export default function AdminOps() {
                     <div className="space-y-2">
                       {siteLive.map((shift) => {
                         const clock = shift.guard_id ? clockByGuard.get(shift.guard_id) : null
-                        const latePunch = shift.guard_id && !clock?.clockedIn
+                        const onClock = Boolean(clock?.clockedIn)
+                        const clockedOut = clock?.role === 'shift_clock_out'
+                        const latePunch = Boolean(shift.guard_id && !onClock && !clockedOut)
+                        const statusNote = latePunch
+                          ? ' · not clocked in'
+                          : onClock
+                            ? ' · on the clock'
+                            : clockedOut
+                              ? ' · clocked out'
+                              : ''
                         return (
                           <ShiftHoverCard key={shift.id} shift={shift} clock={clock}>
                             <button
@@ -442,14 +456,18 @@ export default function AdminOps() {
                               className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition hover:brightness-[0.98] ${
                                 latePunch
                                   ? 'border-accent-red/30 bg-accent-red/10'
-                                  : 'border-ink/10 bg-ink/5'
+                                  : clockedOut
+                                    ? 'border-ink/10 bg-ink/[0.03] opacity-80'
+                                    : 'border-ink/10 bg-ink/5'
                               }`}
                             >
                               <span
                                 className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
-                                  clock?.clockedIn
+                                  onClock
                                     ? 'bg-accent-green text-black'
-                                    : 'bg-black text-white'
+                                    : clockedOut
+                                      ? 'bg-ink/20 text-ink'
+                                      : 'bg-black text-white'
                                 }`}
                               >
                                 {initialsOf(shift.profiles?.name || 'Open')}
@@ -460,7 +478,7 @@ export default function AdminOps() {
                                 </span>
                                 <span className="block text-xs text-ink-2">
                                   {formatTimeRange(shift)}
-                                  {latePunch ? ' · not clocked in' : clock?.clockedIn ? ' · on the clock' : ''}
+                                  {statusNote}
                                 </span>
                               </span>
                               <span className="rounded-full bg-[#FFFFFF] px-2.5 py-1 text-[10px] font-semibold text-black ring-1 ring-black/10">

@@ -122,34 +122,50 @@ export async function fetchShiftsOverlapping(rangeStart, rangeEnd, { siteId } = 
 
 /**
  * Latest clock punch per guard in the last `hours` hours.
- * Returns Map<guardId, { clockedIn, scannedAt, role }>.
+ * Returns Map<guardId, { clockedIn, scannedAt, role, ... }>.
+ * clockedIn is true only when the newest punch is shift_clock_in
+ * (a later shift_clock_out clears them from the Ops Board).
  */
 export async function fetchClockStatusByGuard(hours = 16) {
   const since = new Date(Date.now() - hours * 3600000).toISOString()
+
+  // Resolve clock checkpoints first, then filter scans by id — more reliable
+  // than nested PostgREST role filters (which can miss Face ID clock-outs).
+  const { data: cps, error: cpError } = await supabase
+    .from('checkpoints')
+    .select('id, checkpoint_role, name, floors(site_id, sites(id, name))')
+    .in('checkpoint_role', ['shift_clock_in', 'shift_clock_out'])
+    .eq('active', true)
+  if (cpError) throw cpError
+
+  const cpById = new Map((cps || []).map((c) => [c.id, c]))
+  const cpIds = [...cpById.keys()]
+  if (!cpIds.length) return new Map()
+
   const { data, error } = await supabase
     .from('scans')
-    .select(
-      'id, guard_id, scanned_at, profiles:guard_id(id, name), checkpoints!inner(checkpoint_role, name, floors(site_id, sites(id, name)))',
-    )
+    .select('id, guard_id, checkpoint_id, scanned_at, profiles:guard_id(id, name)')
     .eq('status', 'pass')
-    .in('checkpoints.checkpoint_role', ['shift_clock_in', 'shift_clock_out'])
+    .in('checkpoint_id', cpIds)
     .gte('scanned_at', since)
     .order('scanned_at', { ascending: false })
-    .limit(500)
+    .limit(2000)
 
   if (error) throw error
 
   const byGuard = new Map()
   for (const row of data || []) {
     if (byGuard.has(row.guard_id)) continue
-    const role = row.checkpoints?.checkpoint_role
+    const cp = cpById.get(row.checkpoint_id)
+    const role = cp?.checkpoint_role
+    if (role !== 'shift_clock_in' && role !== 'shift_clock_out') continue
     byGuard.set(row.guard_id, {
       clockedIn: role === 'shift_clock_in',
       scannedAt: row.scanned_at,
       role,
-      checkpointName: row.checkpoints?.name || null,
-      siteId: row.checkpoints?.floors?.site_id || null,
-      siteName: row.checkpoints?.floors?.sites?.name || null,
+      checkpointName: cp?.name || null,
+      siteId: cp?.floors?.site_id || null,
+      siteName: cp?.floors?.sites?.name || null,
       guardName: row.profiles?.name || 'Guard',
     })
   }
