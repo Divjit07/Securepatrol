@@ -219,13 +219,11 @@ acknowledged = small green check; conflict = `ring-2 ring-red-400/70` + red tria
   State persisted in `localStorage['sp-sidebar-collapsed']`.
 - **Nav groups** (label `text-xs uppercase tracking-wider text-gray-400 mb-2 px-3`; items
   `flex gap-3 px-3 py-2 text-sm text-gray-600 rounded-lg`, active `bg-gray-100 text-gray-900 font-medium`, icons h-4 w-4 stroke-2):
-  - **Admin**: (no label) Overview `/admin`, Roster `/admin/roster` · **SITES** (dynamic:
-    search bar + every site as a link to `/admin/site/:id`, each with a geofence badge —
-    green pin + radius when lat/lng set, red "No GPS" when the clock-in geofence is missing;
-    `SidebarSites` in Layout.jsx, module-cached list, `previewSites` prop feeds the
-    /dev/admin harness) · **SITE** Live Map,
-    Checkpoints, Guards, Clients · **PAYROLL** Payroll `/admin/payroll` · **INSIGHTS** Reports,
-    Alerts · **OPERATIONS** (conditional on can-flags) Shift Clock, Incidents, Approve
+  - **Admin**: (no label) Overview `/admin`, Roster `/admin/roster` · **SITE** Sites
+    `/admin/sites`, Live Map, Checkpoints, Guards, Clients · **PAYROLL** Payroll
+    `/admin/payroll` · **INSIGHTS** Reports, Alerts · **OPERATIONS** (conditional on
+    can-flags) Shift Clock, Incidents, Approve. (A sidebar-embedded sites list was tried
+    2026-07-11 and removed same day — too many sites, cluttered; the directory page won.)
   - **Client**: (no label) Scan History `/client` · **SITE** Coverage, Shift Clock ·
     **OPERATIONS** Incidents · **INSIGHTS** Reports
 - **Sidebar footer**: SyncIndicator, then profile row — avatar circle (`bg-blue-100
@@ -316,6 +314,12 @@ show time range, hours, Open/Draft badges, ack check, conflict ring+tooltip.
 (weekly/biweekly/monthly × occurrences), notes; edit mode adds Delete + "Delete series".
 Live: refetches on focus + Supabase realtime on shifts/profiles. Publish → edge function
 (emails + .ics) with silent DB fallback if function missing.
+
+**`/admin/sites` — AdminSites "Sites".** Site directory built for many sites: big
+autofocused search (name/address, live count), red banner totalling sites without GPS,
+then one row per site — building icon, name + address, assigned-guard count, geofence
+badge (green pill + radius, or red "No GPS" — every site is geofenced for clock-in/out),
+chevron → `/admin/site/:id`.
 
 **`/admin/site/:id` — SiteDashboard.** "← Back to overview" link; ClientShiftBar (date
 picker + shift stats); live scan feed + guard clock table for one site. Respects site hours.

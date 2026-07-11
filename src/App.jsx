@@ -43,6 +43,7 @@ const ScanResult = lazyRetry(() => import('./pages/ScanResult.jsx'))
 const GuardHistory = lazyRetry(() => import('./pages/GuardHistory.jsx'))
 const GuardIncidentReport = lazyRetry(() => import('./pages/GuardIncidentReport.jsx'))
 const AdminDashboard = lazyRetry(() => import('./pages/AdminDashboard.jsx'))
+const AdminSites = lazyRetry(() => import('./pages/AdminSites.jsx'))
 const SiteDashboard = lazyRetry(() => import('./pages/SiteDashboard.jsx'))
 const LiveFeedPage = lazyRetry(() => import('./pages/LiveFeedPage.jsx'))
 const CheckpointManager = lazyRetry(() => import('./pages/CheckpointManager.jsx'))
@@ -150,6 +151,14 @@ export default function App() {
           element={
             <ProtectedRoute requireAdmin>
               <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/sites"
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminSites />
             </ProtectedRoute>
           }
         />

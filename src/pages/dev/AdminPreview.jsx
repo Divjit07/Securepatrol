@@ -43,16 +43,9 @@ const ALERTS = [
   { id: 3, type: 'LATE', site: '800 Bathurst-DJ', time: '11:12 AM', msg: 'Divjit Singh is running late — shift started Wed 11:00 AM, no clock-in yet.' },
 ]
 
-const PREVIEW_SITES = [
-  { id: 'p1', name: '800 Bathurst-DJ', address: '800 Bathurst St, Toronto', latitude: 43.66, longitude: -79.41, geofence_radius_m: 120 },
-  { id: 'p2', name: 'Home', address: '12 Example Ave', latitude: 43.7, longitude: -79.4, geofence_radius_m: 150 },
-  { id: 'p3', name: 'Yorkdale North Tower', address: '1 Yorkdale Rd', latitude: 43.72, longitude: -79.45, geofence_radius_m: 120 },
-  { id: 'p4', name: 'Harbourfront Plaza', address: '235 Queens Quay W' },
-]
-
 export default function AdminPreview() {
   return (
-    <Layout variant="admin" previewSites={PREVIEW_SITES}>
+    <Layout variant="admin">
       <PageHeader
         title="Overview"
         description="Sites, coverage, and today's compliance at a glance."
