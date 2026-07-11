@@ -12,6 +12,7 @@ import {
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import RosterSitePicker, { ALL_SITES } from '../components/roster/RosterSitePicker.jsx'
+import ViewportModal, { ModalBody, ModalHeader } from '../components/ViewportModal.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock.js'
 import { fetchSitesForAdmin } from '../lib/scans.js'
@@ -253,131 +254,117 @@ export default function AdminIncidents() {
       )}
 
       {selected && (
-        <div
-          className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-slate-900/55"
-          onClick={closeReport}
-          role="presentation"
-        >
-          <div className="flex min-h-full items-center justify-center p-4 sm:p-6">
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="admin-incident-title"
-              className="flex max-h-[calc(100dvh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-ink/10 bg-surface shadow-xl"
-              onClick={(e) => e.stopPropagation()}
+        <ViewportModal onClose={closeReport} labelledBy="admin-incident-title">
+          <ModalHeader>
+            <div className="min-w-0">
+              <h2 id="admin-incident-title" className="font-display text-lg font-semibold text-ink">
+                {selected.guard?.name || 'Guard'}
+              </h2>
+              <p className="text-sm text-ink-2">
+                {selected.site?.name || 'Site'} · {formatIncidentReportTime(selected.created_at)}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={closeReport}
+              className="rounded-lg p-1.5 text-ink-2 hover:bg-ink/10 hover:text-ink"
+              aria-label="Close"
             >
-              <div className="flex shrink-0 items-start justify-between gap-3 border-b border-ink/10 px-5 py-4">
-                <div className="min-w-0">
-                  <h2 id="admin-incident-title" className="font-display text-lg font-semibold text-ink">
-                    {selected.guard?.name || 'Guard'}
-                  </h2>
-                  <p className="text-sm text-ink-2">
-                    {selected.site?.name || 'Site'} · {formatIncidentReportTime(selected.created_at)}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={closeReport}
-                  className="rounded-lg p-1.5 text-ink-2 hover:bg-ink/10 hover:text-ink"
-                  aria-label="Close"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
+              <X className="h-5 w-5" />
+            </button>
+          </ModalHeader>
 
-              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 py-4">
-                <div>
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-ink-2">Report</p>
-                    {canEdit && !editing && (
-                      <button
-                        type="button"
-                        onClick={() => setEditing(true)}
-                        className="inline-flex items-center gap-1 text-xs font-medium text-accent-cyan-line hover:text-accent-cyan-line"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                        Edit text
-                      </button>
-                    )}
-                  </div>
-                  {editing ? (
-                    <>
-                      <textarea
-                        className="sp-input mt-2 w-full"
-                        rows={8}
-                        value={editText}
-                        onChange={(e) => setEditText(e.target.value)}
-                        maxLength={5000}
-                      />
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={handleSave}
-                          disabled={saving || editText.trim().length < 10}
-                          className="sp-btn-primary inline-flex items-center gap-1.5 py-2 text-sm"
-                        >
-                          <Save className="h-4 w-4" />
-                          {saving ? 'Saving…' : 'Save'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditing(false)
-                            setEditText(selected.description)
-                          }}
-                          className="sp-btn-secondary py-2 text-sm"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ink">
-                      {selected.description}
-                    </p>
-                  )}
-                </div>
-
-                {selected.guard_lat != null && selected.guard_lng != null && (
-                  <a
-                    href={mapsUrl(selected.guard_lat, selected.guard_lng)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-sm font-medium text-accent-cyan-line hover:text-accent-cyan-line"
-                  >
-                    <MapPin className="h-4 w-4" />
-                    View location on map
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </a>
-                )}
-
-                <IncidentReportAttachments report={selected} />
-
-                {message && (
-                  <p
-                    className={`text-sm ${
-                      message.type === 'success' ? 'text-accent-green' : 'text-accent-red'
-                    }`}
-                  >
-                    {message.text}
-                  </p>
-                )}
-
-                {canEdit && (
+          <ModalBody>
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-2">Report</p>
+                {canEdit && !editing && (
                   <button
                     type="button"
-                    onClick={handleDelete}
-                    disabled={deleting}
-                    className="inline-flex items-center gap-1.5 text-sm font-medium text-accent-red hover:text-accent-red"
+                    onClick={() => setEditing(true)}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-accent-cyan-line hover:text-accent-cyan-line"
                   >
-                    <Trash2 className="h-4 w-4" />
-                    {deleting ? 'Deleting…' : 'Delete report'}
+                    <Pencil className="h-3.5 w-3.5" />
+                    Edit text
                   </button>
                 )}
               </div>
+              {editing ? (
+                <>
+                  <textarea
+                    className="sp-input mt-2 w-full"
+                    rows={8}
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                    maxLength={5000}
+                  />
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSave}
+                      disabled={saving || editText.trim().length < 10}
+                      className="sp-btn-primary inline-flex items-center gap-1.5 py-2 text-sm"
+                    >
+                      <Save className="h-4 w-4" />
+                      {saving ? 'Saving…' : 'Save'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditing(false)
+                        setEditText(selected.description)
+                      }}
+                      className="sp-btn-secondary py-2 text-sm"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ink">
+                  {selected.description}
+                </p>
+              )}
             </div>
-          </div>
-        </div>
+
+            {selected.guard_lat != null && selected.guard_lng != null && (
+              <a
+                href={mapsUrl(selected.guard_lat, selected.guard_lng)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-accent-cyan-line hover:text-accent-cyan-line"
+              >
+                <MapPin className="h-4 w-4" />
+                View location on map
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            )}
+
+            <IncidentReportAttachments report={selected} />
+
+            {message && (
+              <p
+                className={`text-sm ${
+                  message.type === 'success' ? 'text-accent-green' : 'text-accent-red'
+                }`}
+              >
+                {message.text}
+              </p>
+            )}
+
+            {canEdit && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleting}
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-accent-red hover:text-accent-red"
+              >
+                <Trash2 className="h-4 w-4" />
+                {deleting ? 'Deleting…' : 'Delete report'}
+              </button>
+            )}
+          </ModalBody>
+        </ViewportModal>
       )}
 
       {lightbox && (

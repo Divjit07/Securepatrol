@@ -581,11 +581,13 @@
 
 @layer components {
   @media (prefers-reduced-motion: no-preference) {
+    /* No fill-mode: transform must not linger — it creates a containing block
+       that traps position:fixed overlays (incident modals, etc.). */
     .animate-rise {
-      animation: rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+      animation: rise 0.45s cubic-bezier(0.22, 1, 0.36, 1);
     }
     .animate-rise-slow {
-      animation: rise 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+      animation: rise 0.65s cubic-bezier(0.22, 1, 0.36, 1);
     }
   }
 

@@ -195,3 +195,84 @@ export async function getOptionalPosition(timeoutMs = 5000, samples = 1) {
     return null
   }
 }
+
+/**
+ * Forward-geocode a street address via Photon (OpenStreetMap / Komoot).
+ * Supports house numbers — Open-Meteo only matches city names.
+ * Returns up to `limit` candidates with lat/lng + display label.
+ */
+export async function searchPlaces(query, { limit = 6, countryCode = 'CA' } = {}) {
+  const q = (query || '').trim()
+  if (q.length < 3) return []
+
+  const url = new URL('https://photon.komoot.io/api/')
+  url.searchParams.set('q', q)
+  url.searchParams.set('limit', String(limit))
+  url.searchParams.set('lang', 'en')
+  // Bias toward GTA / southern Ontario so Canadian street lookups rank first
+  if (countryCode === 'CA') {
+    url.searchParams.set('lat', '43.65')
+    url.searchParams.set('lon', '-79.38')
+  }
+
+  const res = await fetch(url.toString())
+  if (!res.ok) throw new Error('Address lookup failed — try again or paste coordinates.')
+
+  const data = await res.json()
+  const features = data.features || []
+
+  const mapped = features
+    .map((f) => {
+      const [lng, lat] = f.geometry?.coordinates || []
+      if (lat == null || lng == null) return null
+      const p = f.properties || {}
+      if (countryCode && p.countrycode && p.countrycode.toUpperCase() !== countryCode.toUpperCase()) {
+        return null
+      }
+      const line = [
+        [p.housenumber, p.street || p.name].filter(Boolean).join(' '),
+        p.district,
+        p.city || p.town || p.village || p.municipality,
+        p.state,
+        p.postcode,
+        p.country,
+      ]
+        .filter(Boolean)
+        .join(', ')
+      const label = line || p.name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+      const shortName =
+        [p.housenumber, p.street || p.name].filter(Boolean).join(' ') || p.name || 'Location'
+      return {
+        id: `${lat},${lng},${p.osm_id || label}`,
+        label,
+        name: shortName,
+        latitude: lat,
+        longitude: lng,
+      }
+    })
+    .filter(Boolean)
+
+  if (mapped.length) return mapped
+
+  // Fallback: Nominatim (also OSM) if Photon returns nothing
+  const nom = new URL('https://nominatim.openstreetmap.org/search')
+  nom.searchParams.set('q', q)
+  nom.searchParams.set('format', 'json')
+  nom.searchParams.set('addressdetails', '1')
+  nom.searchParams.set('limit', String(limit))
+  if (countryCode) nom.searchParams.set('countrycodes', countryCode.toLowerCase())
+
+  const nomRes = await fetch(nom.toString(), {
+    headers: { Accept: 'application/json' },
+  })
+  if (!nomRes.ok) return []
+
+  const nomData = await nomRes.json()
+  return (nomData || []).map((r) => ({
+    id: String(r.place_id),
+    label: r.display_name,
+    name: [r.address?.house_number, r.address?.road].filter(Boolean).join(' ') || r.display_name.split(',')[0],
+    latitude: parseFloat(r.lat),
+    longitude: parseFloat(r.lon),
+  }))
+}
