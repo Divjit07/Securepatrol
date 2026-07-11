@@ -3,6 +3,7 @@
 // coordinates) — last scan per guard = last known phone location. Continuous
 // background tracking arrives with the Capacitor app.
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import {
@@ -61,6 +62,7 @@ function todayDateInput() {
 
 export default function AdminLiveMap() {
   const { user, isSuperAdmin } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [sites, setSites] = useState([])
   const [scans, setScans] = useState([])
   const [loading, setLoading] = useState(true)
@@ -393,13 +395,42 @@ export default function AdminLiveMap() {
     }
   }
 
-  const openPanel = (mode = 'new') => {
+  const openPanel = (mode = 'new', site = null) => {
     setAddError('')
     setAddOk('')
     setPlaceHits([])
-    setForm({ ...emptyForm, mode })
+    if (mode === 'update' && site) {
+      setForm({
+        ...emptyForm,
+        mode: 'update',
+        siteId: site.id,
+        name: site.name || '',
+        address: site.address || '',
+        lat: site.latitude != null ? String(site.latitude) : '',
+        lng: site.longitude != null ? String(site.longitude) : '',
+        radius: String(site.geofence_radius_m || 120),
+      })
+      if (site.latitude != null && site.longitude != null) {
+        drawPreview(site.latitude, site.longitude, site.geofence_radius_m || 120)
+        mapRef.current?.flyTo([site.latitude, site.longitude], 16)
+      }
+    } else {
+      setForm({ ...emptyForm, mode })
+    }
     setShowPanel(true)
   }
+
+  // Deep-link from Sites directory: /admin/map?geofence=<siteId>
+  useEffect(() => {
+    const siteId = searchParams.get('geofence')
+    if (!siteId || !sites.length) return
+    const site = sites.find((s) => s.id === siteId)
+    if (!site) return
+    openPanel('update', site)
+    const next = new URLSearchParams(searchParams)
+    next.delete('geofence')
+    setSearchParams(next, { replace: true })
+  }, [sites, searchParams])
 
   return (
     <Layout variant="admin">
