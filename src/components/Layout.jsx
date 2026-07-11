@@ -18,14 +18,16 @@ import {
   Radar,
   Lock,
   Wallet,
+  Search,
 } from 'lucide-react'
 import Logo from './Logo.jsx'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { useGuardClockStatus } from '../hooks/useGuardClockStatus.js'
 import SyncIndicator from './SyncIndicator.jsx'
 import ThemeSwitcher from './ThemeSwitcher.jsx'
 import { BRAND } from '../lib/brand.js'
+import { fetchSitesForAdmin } from '../lib/scans.js'
 
 function buildAdminNavGroups({ canApproveScans, canManageShiftClock, isSuperAdmin }) {
   const operations = [
@@ -109,18 +111,117 @@ function initialsOf(name) {
     .toUpperCase()
 }
 
-function SidebarNav({ groups, onNavigate }) {
-  const itemClass = ({ isActive }) =>
-    `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
-      isActive
-        ? 'sidebar-nav-active'
-        : 'text-ink-2 hover:bg-white/5 hover:text-ink'
-    }`
+const sidebarItemClass = ({ isActive }) =>
+  `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
+    isActive
+      ? 'sidebar-nav-active'
+      : 'text-ink-2 hover:bg-white/5 hover:text-ink'
+  }`
+
+// Sidebar sites list survives page navigations without a loading flash:
+// render the cached list instantly, refresh it in the background.
+const sitesCache = { userId: null, sites: null }
+
+/** SITES sidebar group: search bar on top, every site linked to its dashboard.
+ *  `previewSites` = mock data for the /dev/admin harness (no auth there). */
+function SidebarSites({ onNavigate, previewSites = null }) {
+  const { user, isSuperAdmin } = useAuth()
+  const [sites, setSites] = useState(() =>
+    previewSites || (sitesCache.userId === user?.id && sitesCache.sites ? sitesCache.sites : []),
+  )
+  const [query, setQuery] = useState('')
+
+  useEffect(() => {
+    if (previewSites || !user?.id) return
+    fetchSitesForAdmin(user.id, isSuperAdmin ? 'super_admin' : 'admin')
+      .then((list) => {
+        sitesCache.userId = user.id
+        sitesCache.sites = list
+        setSites(list)
+      })
+      .catch(() => {})
+  }, [user?.id, isSuperAdmin, previewSites])
+
+  if (!sites.length) return null
+
+  const q = query.trim().toLowerCase()
+  const matches = q
+    ? sites.filter(
+        (s) => s.name.toLowerCase().includes(q) || (s.address || '').toLowerCase().includes(q),
+      )
+    : sites
 
   return (
+    <div>
+      <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-ink-3">Sites</p>
+      <div className="mb-1.5 flex items-center gap-2 rounded-lg bg-white/5 px-3 py-1.5">
+        <Search className="h-3.5 w-3.5 shrink-0 text-ink-3" />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search sites…"
+          aria-label="Search sites"
+          className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-ink-3"
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={() => setQuery('')}
+            className="rounded p-0.5 text-ink-3 hover:bg-white/10 hover:text-ink"
+            aria-label="Clear site search"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        )}
+      </div>
+      <div className="max-h-56 space-y-0.5 overflow-y-auto">
+        {matches.map((site) => {
+          // Clock-in/out is geofenced per site — surface which sites have GPS set.
+          const geofenced = site.latitude != null && site.longitude != null
+          return (
+            <NavLink
+              key={site.id}
+              to={`/admin/site/${site.id}`}
+              className={sidebarItemClass}
+              onClick={onNavigate}
+              title={site.address || site.name}
+            >
+              <Building2 className="h-4 w-4 shrink-0" strokeWidth={2} />
+              <span className="truncate">{site.name}</span>
+              <span
+                className={`ml-auto flex shrink-0 items-center gap-1 text-[10px] font-semibold ${
+                  geofenced ? 'text-accent-green' : 'text-accent-red'
+                }`}
+                title={
+                  geofenced
+                    ? `Geofenced · ${site.geofence_radius_m ?? 120}m clock-in zone`
+                    : 'No GPS set — clock-in geofence missing (site card → clock icon)'
+                }
+              >
+                <MapPin className="h-3 w-3" />
+                {geofenced ? `${site.geofence_radius_m ?? 120}m` : 'No GPS'}
+              </span>
+            </NavLink>
+          )
+        })}
+        {matches.length === 0 && (
+          <p className="px-3 py-2 text-xs text-ink-3">No sites match “{query}”</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function SidebarNav({ groups, onNavigate, showSites = false, previewSites = null }) {
+  return (
     <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
-      {groups.map((group) => (
+      {groups.map((group, index) => (
         <div key={group.label || 'home'}>
+          {index === 1 && showSites && (
+            <div className="mb-6">
+              <SidebarSites onNavigate={onNavigate} previewSites={previewSites} />
+            </div>
+          )}
           {group.label && (
             <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-ink-3">
               {group.label}
@@ -130,7 +231,7 @@ function SidebarNav({ groups, onNavigate }) {
             {group.items.map((link) => {
               const Icon = link.icon
               return (
-                <NavLink key={link.to} to={link.to} end={link.end} className={itemClass} onClick={onNavigate}>
+                <NavLink key={link.to} to={link.to} end={link.end} className={sidebarItemClass} onClick={onNavigate}>
                   <Icon className="h-4 w-4 shrink-0" strokeWidth={2} />
                   {link.label}
                 </NavLink>
@@ -147,7 +248,7 @@ const COLLAPSE_KEY = 'sp-sidebar-collapsed'
 
 /** Enterprise sidebar shell (admin + client portals): 260px white sidebar on
  *  gray-50, collapsible on desktop, slide-over on mobile. */
-function SidebarLayout({ children, groups, roleLabel, homeTo }) {
+function SidebarLayout({ children, groups, roleLabel, homeTo, showSites = false, previewSites = null }) {
   const { profile, signOut } = useAuth()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -196,7 +297,12 @@ function SidebarLayout({ children, groups, roleLabel, homeTo }) {
         </button>
       </div>
 
-      <SidebarNav groups={groups} onNavigate={() => setMenuOpen(false)} />
+      <SidebarNav
+        groups={groups}
+        onNavigate={() => setMenuOpen(false)}
+        showSites={showSites}
+        previewSites={previewSites}
+      />
 
       <div className="border-t border-white/5 p-3">
         <div className="mb-1">
@@ -297,14 +403,20 @@ function SidebarLayout({ children, groups, roleLabel, homeTo }) {
   )
 }
 
-function AdminLayout({ children }) {
+function AdminLayout({ children, previewSites }) {
   const { canApproveScans, canManageShiftClock, isSuperAdmin } = useAuth()
   const groups = useMemo(
     () => buildAdminNavGroups({ canApproveScans, canManageShiftClock, isSuperAdmin }),
     [canApproveScans, canManageShiftClock, isSuperAdmin],
   )
   return (
-    <SidebarLayout groups={groups} roleLabel="Administrator" homeTo="/admin">
+    <SidebarLayout
+      groups={groups}
+      roleLabel="Administrator"
+      homeTo="/admin"
+      showSites
+      previewSites={previewSites}
+    >
       {children}
     </SidebarLayout>
   )
@@ -432,8 +544,8 @@ function GuardLayout({ children }) {
   )
 }
 
-export default function Layout({ children, variant = 'admin' }) {
-  if (variant === 'admin') return <AdminLayout>{children}</AdminLayout>
+export default function Layout({ children, variant = 'admin', previewSites }) {
+  if (variant === 'admin') return <AdminLayout previewSites={previewSites}>{children}</AdminLayout>
   if (variant === 'client') return <ClientLayout>{children}</ClientLayout>
   return <GuardLayout>{children}</GuardLayout>
 }

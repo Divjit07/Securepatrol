@@ -219,7 +219,11 @@ acknowledged = small green check; conflict = `ring-2 ring-red-400/70` + red tria
   State persisted in `localStorage['sp-sidebar-collapsed']`.
 - **Nav groups** (label `text-xs uppercase tracking-wider text-gray-400 mb-2 px-3`; items
   `flex gap-3 px-3 py-2 text-sm text-gray-600 rounded-lg`, active `bg-gray-100 text-gray-900 font-medium`, icons h-4 w-4 stroke-2):
-  - **Admin**: (no label) Overview `/admin`, Roster `/admin/roster` · **SITE** Live Map,
+  - **Admin**: (no label) Overview `/admin`, Roster `/admin/roster` · **SITES** (dynamic:
+    search bar + every site as a link to `/admin/site/:id`, each with a geofence badge —
+    green pin + radius when lat/lng set, red "No GPS" when the clock-in geofence is missing;
+    `SidebarSites` in Layout.jsx, module-cached list, `previewSites` prop feeds the
+    /dev/admin harness) · **SITE** Live Map,
     Checkpoints, Guards, Clients · **PAYROLL** Payroll `/admin/payroll` · **INSIGHTS** Reports,
     Alerts · **OPERATIONS** (conditional on can-flags) Shift Clock, Incidents, Approve
   - **Client**: (no label) Scan History `/client` · **SITE** Coverage, Shift Clock ·
@@ -342,10 +346,22 @@ Two tabs: **Guard hours** (the report formerly in Reports: Payroll CSV weekly
 regular/OT/stat split + approvals column, daily CSV, PDF, per-guard total cards with OT
 badge, detail table) and **Paystub generator** — per guard with hours in the period: hourly
 rate input (persisted to `guards.hourly_rate`, migration 031; session-only with an amber
-warning if the column is missing), manual deduction fields (Income tax / CPP / EI / Other),
-live Gross/Deductions/Net line, **Paystub PDF** per guard + **All paystubs (PDF)** (one page
-per guard). PDF math + rendering in `src/lib/paystub.js` (OT ×1.5, light printable). Hours
-derive from clock punches + `guard_shift_adjustments`, windowed by per-site operating_hours.
+warning if the column is missing), **percentage-based statutory deductions** — Net = Gross −
+(Gross × EI%) − ((Gross − exemption) × CPP%) − other fees; defaults EI 1.63%, CPP 5.95%
+over $134.62/period ($3,500/yr ÷ 26), all three editable in a settings strip; only "Other
+fees" is a typed per-guard dollar amount — live Gross/Deductions/Net line, **Paystub PDF**
+per guard + **All paystubs (PDF)** (one page per guard). The PDF is a **Dayforce-style
+statement** (`src/lib/paystub.js`): company logo top-left (fetched from `/logo.png`,
+cached), PRODUCTIVE SECURITY INC. letterhead, employee/pay-period blocks, one bordered
+grid with **Current + YTD** column groups and Earnings (REG/OT/STAT with hours+rate) /
+Taxes (E.I., C.P.P., Other) / Net Pay sections, employer-messages box. YTD is computed
+from real punches (Jan 1 of the period's year → period end; cached per site+period).
+Third tab **Invoice generator** (`src/lib/invoice.js`): bill a client for extra services —
+invoice #/date/due, bill-to, line items (description × qty × rate, add/remove), tax %
+(HST 13 default), notes; letterheaded **Invoice PDF**. Nothing persisted — the PDF is the
+artifact. Both PDF builders export `build*Doc` for Node testing (named `{ jsPDF }` import
+works in both browser and Node). Hours derive from clock punches +
+`guard_shift_adjustments`, windowed by per-site operating_hours.
 
 **`/admin/alerts` — Alerts.** Per-checkpoint alert configs (minutes_until_alert, enabled
 toggle) + recent alerts log. (Roster alert_events currently email-only — surfacing them
