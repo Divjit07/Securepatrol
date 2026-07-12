@@ -91,13 +91,23 @@ export default function GuardDashboard() {
     )
   }
 
-  // ---- Locked portal: clocked out → only the clock card ---------------------
+  // ---- Locked portal: clocked out → identity + shift status cards stay
+  // (Div's approved look), everything else waits for the clock card punch.
   if (!clockLoading && !clockedIn) {
     return (
       <Layout variant="guard">
         <PageHeader
           title="Patrol Dashboard"
           description={`Good shift, ${profile?.name || 'Guard'}. ${site?.name || profile?.sites?.name || 'Your site'}`}
+        />
+
+        <GuardClockedInPanel
+          profile={profile}
+          siteName={site?.name || profile?.sites?.name}
+          scheduled={scheduled}
+          guardShift={null}
+          publishedShift={publishedShift}
+          loading={loading}
         />
 
         <ClockInCard
