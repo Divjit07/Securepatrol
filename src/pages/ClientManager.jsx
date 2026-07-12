@@ -5,6 +5,7 @@ import PageHeader from '../components/PageHeader.jsx'
 import { supabase } from '../lib/supabase.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { fetchSitesForAdmin } from '../lib/scans.js'
+import { readFnError } from '../lib/fnError.js'
 import {
   assignClientToSite,
   fetchClientsWithSites,
@@ -69,13 +70,7 @@ export default function ClientManager() {
         },
       })
 
-      if (fnError) {
-        throw new Error(
-          fnError.message?.includes('FunctionsFetchError')
-            ? 'Client service not deployed. Create user in Supabase, then link profile with role client.'
-            : fnError.message,
-        )
-      }
+      if (fnError) throw new Error(await readFnError(fnError, 'Could not create the client account'))
 
       if (data?.error) throw new Error(data.error)
 

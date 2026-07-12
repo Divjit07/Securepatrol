@@ -134,7 +134,7 @@ export default function AdminShiftClock() {
 
       const { data: scanData, error } = await supabase
         .from('scans')
-        .select('id, guard_id, checkpoint_id, scanned_at, status')
+        .select('id, guard_id, checkpoint_id, scanned_at, status, approval_note')
         .in('checkpoint_id', cpIds)
         .eq('status', 'pass')
         .gte('scanned_at', dayStart.toISOString())
@@ -403,8 +403,20 @@ export default function AdminShiftClock() {
                                   setEditing((prev) => ({ ...prev, clockOut: e.target.value }))
                                 }
                               />
+                            ) : dayShift ? (
+                              <>
+                                {formatShiftTime(dayShift.clockOutAt)}
+                                {dayShift.clockOutNote && (
+                                  <span
+                                    className="mt-0.5 block max-w-[14rem] truncate text-xs text-accent-orange"
+                                    title={dayShift.clockOutNote}
+                                  >
+                                    Early out: {dayShift.clockOutNote}
+                                  </span>
+                                )}
+                              </>
                             ) : (
-                              dayShift ? formatShiftTime(dayShift.clockOutAt) : '—'
+                              '—'
                             )}
                           </td>
                           <td className="px-6 py-4 font-medium">

@@ -43,6 +43,11 @@ function punchState(type, window, now = new Date()) {
   if (!window) return { tone: type === 'out' ? 'green' : 'grey', allowed: true, note: null }
   const min = 60_000
   if (type === 'in') {
+    // Shift already over → not "late", the day is done. Caller fills in the
+    // next-shift details.
+    if (now > new Date(window.end.getTime() + LATE_GRACE_MIN * min)) {
+      return { tone: 'grey', allowed: false, shiftOver: true, note: null }
+    }
     const opensAt = new Date(window.start.getTime() - EARLY_WINDOW_MIN * min)
     if (now < opensAt) {
       return { tone: 'grey', allowed: false, note: `Clock-in opens at ${fmtTime(opensAt)} (15 min before your ${fmtTime(window.start)} shift).` }
@@ -80,13 +85,34 @@ const TONE_CARD = {
   red: { ring: 'border-[#EF4444]/50', pill: 'bg-[#EF4444]/15 text-[#EF4444]', label: 'Late' },
 }
 
-export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, publishedShift, scheduled, date }) {
+/** "Next shift: Tomorrow 9:00 PM at Site — clock-in opens 8:45 PM." */
+function nextShiftLine(nextShift) {
+  if (!nextShift?.starts_at) return null
+  const start = new Date(nextShift.starts_at)
+  const today = new Date()
+  const tomorrow = new Date(today)
+  tomorrow.setDate(today.getDate() + 1)
+  const same = (a, b) =>
+    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+  const day = same(start, today)
+    ? 'today'
+    : same(start, tomorrow)
+      ? 'tomorrow'
+      : start.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })
+  const opens = new Date(start.getTime() - EARLY_WINDOW_MIN * 60_000)
+  const siteName = nextShift.sites?.name ? ` at ${nextShift.sites.name}` : ''
+  return `Next shift: ${day} ${fmtTime(start)}${siteName} — clock-in opens ${fmtTime(opens)}.`
+}
+
+export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, publishedShift, scheduled, date, nextShift }) {
   const [enrolled, setEnrolled] = useState(null) // null = checking
   const [site, setSite] = useState(null)
   const [position, setPosition] = useState(null)
   const [gpsError, setGpsError] = useState(null)
   const [busy, setBusy] = useState(null) // 'enrolling' | 'punching'
   const [message, setMessage] = useState(null) // { tone: 'success'|'error', text }
+  const [confirmingOut, setConfirmingOut] = useState(false) // early clock-out gate
+  const [outNote, setOutNote] = useState('')
   const watchIdRef = useRef(null)
 
   const supported = passkeySupported()
@@ -138,6 +164,23 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
   const cardTone = clockedIn ? (punch.tone === 'red' ? 'red' : 'green') : punch.tone
   const card = TONE_CARD[cardTone]
 
+  // Clocking out before the shift's last 15 minutes = early → confirm + note.
+  const earlyOut =
+    clockedIn && window_ && Date.now() < window_.end.getTime() - EARLY_WINDOW_MIN * 60_000
+
+  // Off-duty note: once today's shift is over (or there's none), point at the
+  // next scheduled shift instead of yelling "you're late".
+  let statusNote = punch.note
+  if (!clockedIn && (punch.shiftOver || !window_)) {
+    const next = nextShiftLine(nextShift)
+    if (punch.shiftOver) {
+      statusNote =
+        next || `Today's shift ended at ${fmtTime(window_.end)} — check Schedule for what's next.`
+    } else if (next) {
+      statusNote = next
+    }
+  }
+
   const handleEnroll = async () => {
     setBusy('enrolling')
     setMessage(null)
@@ -157,6 +200,16 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
   }
 
   const handlePunch = async (type) => {
+    // Early clock-out needs an explicit confirmation + a reason first.
+    if (type === 'out' && earlyOut && !confirmingOut) {
+      setConfirmingOut(true)
+      setMessage(null)
+      return
+    }
+    await doPunch(type, type === 'out' ? outNote : null)
+  }
+
+  const doPunch = async (type, note) => {
     setBusy('punching')
     setMessage(null)
     try {
@@ -169,8 +222,10 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
         return
       }
       await verifyWithPasskey()
-      const scan = await clockPunch({ guardId, siteId, type, position: pos })
+      const scan = await clockPunch({ guardId, siteId, type, position: pos, note })
       if (scan.status === 'pass') {
+        setConfirmingOut(false)
+        setOutNote('')
         setMessage({
           tone: 'success',
           text: type === 'out' ? 'Clocked out. Have a safe one!' : 'Clocked in — shift started. Stay safe out there.',
@@ -259,7 +314,45 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
         </>
       )}
 
-      {enrolled && (
+      {enrolled && confirmingOut && (
+        <div className="mt-4 rounded-xl border border-[#FACC15]/40 bg-[#FACC15]/10 p-4">
+          <p className="text-sm font-semibold text-ink">
+            You’re still on shift — it runs until {fmtTime(window_.end)}. Sure you want to clock out
+            early?
+          </p>
+          <textarea
+            value={outNote}
+            onChange={(e) => setOutNote(e.target.value)}
+            rows={2}
+            maxLength={500}
+            placeholder="Why are you leaving early? (required — the office sees this)"
+            className="sp-input mt-3 w-full text-sm"
+          />
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={() => doPunch('out', outNote)}
+              disabled={busy === 'punching' || outNote.trim().length < 3}
+              className="flex min-h-[2.75rem] flex-1 items-center justify-center gap-2 rounded-xl bg-[#EF4444] text-sm font-semibold text-white transition hover:brightness-105 disabled:opacity-50"
+            >
+              {busy === 'punching' ? 'Verifying…' : 'Confirm clock out'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmingOut(false)
+                setOutNote('')
+              }}
+              disabled={busy === 'punching'}
+              className="flex min-h-[2.75rem] flex-1 items-center justify-center rounded-xl bg-white/10 text-sm font-semibold text-ink transition hover:bg-white/15"
+            >
+              Stay on shift
+            </button>
+          </div>
+        </div>
+      )}
+
+      {enrolled && !confirmingOut && (
         <button
           type="button"
           onClick={() => handlePunch(clockedIn ? 'out' : 'in')}
@@ -292,9 +385,9 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
         </button>
       )}
 
-      {enrolled && punch.note && (
+      {enrolled && !confirmingOut && statusNote && (
         <p className={`mt-2 text-center text-xs ${punch.tone === 'red' ? 'font-semibold text-accent-red' : 'text-ink-3'}`}>
-          {punch.note}
+          {statusNote}
         </p>
       )}
 

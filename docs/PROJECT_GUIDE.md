@@ -380,7 +380,12 @@ per-guard clock-in/out rows derived from scans; **edit** any row (manual times =
 `guard_shift_adjustments`), mark **statutory holiday** (credits full scheduled hours).
 Respects per-site hours.
 
-**`/admin/incidents` — AdminIncidents "Incident reports".** List of guard-submitted
+**`/admin/incidents` — AdminIncidents "Incident reports".** Cards show an email badge:
+green "Emailed" (`email_sent_at`) or red "Email failed — hover for reason" (`email_error`
+tooltip; the report itself is always stored). Note: while Resend is sandboxed
+(`onboarding@resend.dev`), `INCIDENT_REPORT_TO` must be the Resend account owner's inbox
+or every send fails. Create-guard/create-client errors surface via `src/lib/fnError.js`
+(reads the real message out of FunctionsHttpError.context). List of guard-submitted
 incidents: description, GPS, attachments (ImageLightbox for photos), email status; edit
 capability per migration 023.
 
@@ -394,7 +399,21 @@ incident buttons, ClientShiftBar, scan history table, checkpoint status cards.
 before the window, yellow = 15-min early window, green = on duty (clocked in), red =
 late for clock-in or overdue clock-out. Clock-IN requires the site geofence;
 **clock-OUT works from anywhere** (GPS recorded for audit only — trigger passes it,
-migration 031).
+migration 031). More clock behaviors (2026-07-11):
+- **Early clock-out confirm**: punching out >15 min before shift end opens an amber
+  confirm panel — "still on shift, sure?" + a required reason (min 3 chars), stored on
+  the clock-out scan's `approval_note` and shown to admins in Shift Clock ("Early out: …",
+  via `clockOutNote` from `computeGuardShiftForDay`).
+- **Instant portal lock**: `useGuardClockStatus` is a module-level shared store — one
+  state for Layout nav, ClockGate, and dashboard, so a punch anywhere locks/unlocks the
+  whole portal (incl. sidebar links) immediately, no 60s poll lag.
+- **Shift over ≠ late**: once today's window has passed, the card goes grey and shows
+  the guard's next published shift ("Next shift: tomorrow 9:00 PM at X — clock-in opens
+  8:45 PM", via `fetchNextShift`) instead of "you're late".
+- **New hires**: the no-site screen still renders ClockInCard, so Face ID can be
+  enrolled with no site or schedule assigned.
+- **Handoffs**: clock state is strictly per-guard — guard B clocks in normally while
+  guard A is still on shift; both rows appear in Shift Clock.
 
 **`/guard/scan` — ScanScreen.** **NFC only** (QR scanning retired 2026-07-11; checkpoints
 are physical NFC tags — `html5-qrcode` and QRScanner.jsx were removed). NFCScanner:

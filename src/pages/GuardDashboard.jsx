@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CheckCircle2, ScanLine, AlertTriangle, Lock } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
@@ -16,6 +16,7 @@ import { useGuardClockStatus } from '../hooks/useGuardClockStatus.js'
 import { getCheckpointStatus } from '../lib/scans.js'
 import { flushOfflineQueue } from '../lib/offlineQueue.js'
 import { useGuardPublishedShift } from '../hooks/useGuardPublishedShift.js'
+import { fetchNextShift } from '../lib/schedule.js'
 
 export default function GuardDashboard() {
   const { profile, user } = useAuth()
@@ -44,6 +45,14 @@ export default function GuardDashboard() {
   const myShift = guardShifts.find((row) => row.guardId === user?.id) || guardShifts[0] || null
   const myShiftWithDate = myShift ? { ...myShift, date } : null
 
+  // Next published shift — the off-duty clock card points at it once today's
+  // shift is over ("Next shift: tomorrow 9:00 PM — clock-in opens 8:45 PM").
+  const [nextShift, setNextShift] = useState(null)
+  useEffect(() => {
+    if (!user?.id) return
+    fetchNextShift(user.id).then(setNextShift).catch(() => setNextShift(null))
+  }, [user?.id, clockedIn])
+
   useEffect(() => {
     // useClientSiteData already fetches on mount — only reload if the flush
     // actually pushed queued punches (the old unconditional reload doubled
@@ -53,22 +62,33 @@ export default function GuardDashboard() {
     })
   }, [siteId, user?.id, reload])
 
+  const handlePunched = () => {
+    refreshClock()
+    reload()
+  }
+
   if (!siteId) {
     return (
       <Layout variant="guard">
-        <div className="rounded-xl border border-accent-orange/30 bg-accent-orange/10 p-8 text-center">
+        <div className="mb-4 rounded-xl border border-accent-orange/30 bg-accent-orange/10 p-8 text-center">
           <h1 className="text-lg font-semibold text-accent-orange">No site assigned</h1>
           <p className="mt-2 text-sm text-accent-orange">
             Contact your administrator to assign you to a patrol site.
           </p>
         </div>
+        {/* New hires can register Face ID right away — no site or schedule needed. */}
+        <ClockInCard
+          guardId={user?.id}
+          siteId={null}
+          clockedIn={false}
+          onPunched={handlePunched}
+          publishedShift={null}
+          scheduled={null}
+          date={date}
+          nextShift={nextShift}
+        />
       </Layout>
     )
-  }
-
-  const handlePunched = () => {
-    refreshClock()
-    reload()
   }
 
   // ---- Locked portal: clocked out → only the clock card ---------------------
@@ -88,6 +108,7 @@ export default function GuardDashboard() {
           publishedShift={publishedShift}
           scheduled={scheduled}
           date={date}
+          nextShift={nextShift}
         />
 
         <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center">
@@ -129,6 +150,7 @@ export default function GuardDashboard() {
         publishedShift={publishedShift}
         scheduled={scheduled}
         date={date}
+        nextShift={nextShift}
       />
 
       {clockLoading ? (

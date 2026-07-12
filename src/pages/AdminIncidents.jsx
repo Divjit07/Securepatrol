@@ -229,6 +229,18 @@ export default function AdminIncidents() {
                         {incidentAttachmentCount(report)} file{incidentAttachmentCount(report) === 1 ? '' : 's'}
                       </span>
                     )}
+                    {report.email_sent_at ? (
+                      <span className="rounded-full bg-accent-green/15 px-2.5 py-0.5 text-[10px] font-semibold text-accent-green">
+                        Emailed
+                      </span>
+                    ) : report.email_error ? (
+                      <span
+                        className="rounded-full bg-accent-red/15 px-2.5 py-0.5 text-[10px] font-semibold text-accent-red"
+                        title={report.email_error}
+                      >
+                        Email failed — hover for reason
+                      </span>
+                    ) : null}
                   </div>
                   <p className="mt-0.5 text-sm text-ink-2">
                     {report.site?.name || 'Site'} · {formatIncidentReportTime(report.created_at)}

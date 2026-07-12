@@ -230,6 +230,8 @@ export async function fetchIncidentReportsForSites(siteIds, { limit = 100 } = {}
       photo_path,
       attachments,
       created_at,
+      email_sent_at,
+      email_error,
       guard:profiles!guard_id(name),
       site:sites(name)
     `)

@@ -4,6 +4,7 @@ import Layout from '../components/Layout.jsx'
 import { supabase } from '../lib/supabase.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { fetchSitesForAdmin } from '../lib/scans.js'
+import { readFnError } from '../lib/fnError.js'
 import { fetchGuardsWithSites, assignGuardToSite, formatSiteLabel, removeGuard } from '../lib/guards.js'
 
 export default function GuardManager() {
@@ -63,13 +64,7 @@ export default function GuardManager() {
         },
       })
 
-      if (fnError) {
-        throw new Error(
-          fnError.message?.includes('FunctionsFetchError')
-            ? 'Guard service not deployed. Create user in Supabase, then assign site in the table below.'
-            : fnError.message,
-        )
-      }
+      if (fnError) throw new Error(await readFnError(fnError, 'Could not create the guard account'))
 
       if (data?.error) throw new Error(data.error)
 

@@ -40,7 +40,7 @@ export function geofenceStatus(position, site) {
  * Records the punch. Face ID must already be verified by the caller —
  * this inserts the scan; the DB trigger sets pass/fail from the site geofence.
  */
-export async function clockPunch({ guardId, siteId, type, position }) {
+export async function clockPunch({ guardId, siteId, type, position, note = null }) {
   const role = type === 'out' ? 'shift_clock_out' : 'shift_clock_in'
 
   const { data: checkpointId, error: rpcError } = await supabase.rpc('ensure_clock_checkpoint', {
@@ -63,6 +63,8 @@ export async function clockPunch({ guardId, siteId, type, position }) {
       status: 'fail', // trigger decides pass/fail
       sync_method: 'realtime',
       scan_input_method: 'face_gps',
+      // Early clock-out reason (rides the existing approval_note column).
+      approval_note: note?.trim() ? note.trim().slice(0, 500) : null,
     })
     .select()
     .single()

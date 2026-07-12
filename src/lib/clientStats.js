@@ -190,6 +190,8 @@ export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustm
     hoursWorked,
     scanCount: inWindow.length,
     hasClockOutPunch: Boolean(clockOutScan) || isAdjusted,
+    // Guard's early clock-out reason (typed at punch time, stored on the scan).
+    clockOutNote: clockOutScan?.approval_note || null,
   }
 }
 
