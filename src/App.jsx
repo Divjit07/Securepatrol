@@ -67,6 +67,7 @@ const GuardSchedule = lazyRetry(() => import('./pages/GuardSchedule.jsx'))
 const RosterPreview = import.meta.env.DEV ? lazy(() => import('./pages/dev/RosterPreview.jsx')) : null
 const AdminPreview = import.meta.env.DEV ? lazy(() => import('./pages/dev/AdminPreview.jsx')) : null
 const ApplePreview = import.meta.env.DEV ? lazy(() => import('./pages/dev/ApplePreview.jsx')) : null
+const ScalePreview = import.meta.env.DEV ? lazy(() => import('./pages/dev/ScalePreview.jsx')) : null
 
 function PageLoader() {
   return (
@@ -320,6 +321,7 @@ export default function App() {
         {RosterPreview && <Route path="/dev/roster" element={<RosterPreview />} />}
         {AdminPreview && <Route path="/dev/admin" element={<AdminPreview />} />}
         {ApplePreview && <Route path="/dev/apple" element={<ApplePreview />} />}
+        {ScalePreview && <Route path="/dev/scale" element={<ScalePreview />} />}
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

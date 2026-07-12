@@ -33,10 +33,13 @@ function scheduledClockInAt(dateStr, shiftStart) {
   return new Date(y, m - 1, d, startH, startM, 0, 0)
 }
 
-function scheduledClockOutAt(dateStr, shiftEnd) {
+function scheduledClockOutAt(dateStr, shiftEnd, shiftStart = null) {
   const [y, m, d] = dateStr.split('-').map(Number)
   const [endH, endM] = shiftEnd.split(':').map(Number)
-  return new Date(y, m - 1, d, endH, endM, 0, 0)
+  const out = new Date(y, m - 1, d, endH, endM, 0, 0)
+  // Overnight shift: the scheduled end lands on the next day.
+  if (shiftStart && shiftEnd <= shiftStart) out.setDate(out.getDate() + 1)
+  return out
 }
 
 export function fixedShiftHours(dateStr, operatingHours) {
@@ -44,7 +47,9 @@ export function fixedShiftHours(dateStr, operatingHours) {
   if (schedule.isClosed) return 0
   const [startH, startM] = schedule.start.split(':').map(Number)
   const [endH, endM] = schedule.end.split(':').map(Number)
-  return Math.round(((endH * 60 + endM - startH * 60 - startM) / 60) * 100) / 100
+  // +1440 % 1440 keeps overnight shifts (end before start) positive.
+  const minutes = (endH * 60 + endM - startH * 60 - startM + 1440) % 1440
+  return Math.round((minutes / 60) * 100) / 100
 }
 
 export function formatShiftTime(date) {
@@ -128,9 +133,11 @@ export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustm
   // Clock-in: from midnight through scheduled end (early sign-in allowed).
   const { start: scanStart, end: scheduledEnd } = shiftScanBounds(date, shiftStart, shiftEnd)
   const { start: shiftStartBound } = shiftBounds(date, shiftStart, shiftEnd)
-  // Clock-out may happen after the scheduled end — search the whole calendar day.
+  // Clock-out may run past the scheduled end (overtime) — search to end of the
+  // calendar day, or 6h past the scheduled end for overnight/late shifts.
   const [y, m, d] = date.split('-').map(Number)
-  const dayEnd = new Date(y, m - 1, d, 23, 59, 59, 999)
+  const calendarDayEnd = new Date(y, m - 1, d, 23, 59, 59, 999)
+  const dayEnd = new Date(Math.max(calendarDayEnd.getTime(), scheduledEnd.getTime() + 6 * 3600000))
 
   const clockInScan = passScans.find((s) => {
     const t = new Date(s.scanned_at)
@@ -140,7 +147,7 @@ export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustm
   if (!clockInScan && !adjustment) return null
 
   const defaultClockIn = scheduledClockInAt(date, shiftStart)
-  const defaultClockOut = scheduledClockOutAt(date, shiftEnd)
+  const defaultClockOut = scheduledClockOutAt(date, shiftEnd, shiftStart)
   const signedInAt = clockInScan ? new Date(clockInScan.scanned_at) : defaultClockIn
 
   const clockOutScan = clockInScan
@@ -248,6 +255,7 @@ export function computeGuardHoursReport({
         isAdjusted: dayShift.isAdjusted,
         isStatutoryHoliday: dayShift.isStatutoryHoliday,
         statutoryHolidayLabel: dayShift.statutoryHolidayLabel,
+        clockOutNote: dayShift.clockOutNote,
       })
     }
   }

@@ -23,8 +23,9 @@ function fmtTime(d) {
   return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
 }
 
-/** Today's shift window: published shift first, site operating hours fallback. */
-function shiftWindow(publishedShift, scheduled, date) {
+/** Today's shift window: published shift first, site operating hours fallback.
+ *  (Exported for the /dev/scale logic tests.) */
+export function shiftWindow(publishedShift, scheduled, date) {
   if (publishedShift?.starts_at && publishedShift?.ends_at) {
     return { start: new Date(publishedShift.starts_at), end: new Date(publishedShift.ends_at) }
   }
@@ -38,8 +39,9 @@ function shiftWindow(publishedShift, scheduled, date) {
   return null
 }
 
-/** Traffic-light state for the punch button vs. the schedule. */
-function punchState(type, window, now = new Date()) {
+/** Traffic-light state for the punch button vs. the schedule.
+ *  (Exported for the /dev/scale logic tests.) */
+export function punchState(type, window, now = new Date()) {
   if (!window) return { tone: type === 'out' ? 'green' : 'grey', allowed: true, note: null }
   const min = 60_000
   if (type === 'in') {

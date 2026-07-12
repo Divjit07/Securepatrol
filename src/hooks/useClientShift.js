@@ -102,6 +102,8 @@ export function shiftBounds(dateStr, startTime, endTime) {
   const [y, m, d] = dateStr.split('-').map(Number)
   const start = new Date(y, m - 1, d, startH, startM, 0, 0)
   const end = new Date(y, m - 1, d, endH, endM, 59, 999)
+  // Overnight shift (e.g. 20:00 → 06:00): the end lands on the NEXT day.
+  if (end <= start) end.setDate(end.getDate() + 1)
   return { start, end }
 }
 

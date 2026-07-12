@@ -455,6 +455,14 @@ export for their site (same engines as admin Reports, site-locked, uses site hou
 `/dev/roster` — RosterGrid + ShiftSheet with mock guards/shifts/conflicts.
 `/dev/admin` — sidebar shell + spec components with mock data. **Use these to screenshot
 UI changes** (headless browser) without credentials.
+`/dev/scale` — **scale + logic test harness**: seeded generator (`pages/dev/scaleData.js`)
+builds 40 guards × 15 sites × 14 days of punches (late/no-show/forgot-out/early-out-with-
+note/stat-holiday/adjusted/overnight scenarios) and runs them through the REAL payroll,
+rounding, OT, paystub and punch-state code, asserting 18 invariants on the page (all-green
+banner or red failures). Re-roll button changes the seed. This harness caught the
+overnight-shift bug fixed 2026-07-11: `shiftBounds`/`scheduledClockOutAt`/`fixedShiftHours`
+now roll the end to the next day when `end <= start` — before that, 20:00→06:00 sites
+produced negative hours and dropped evening scans.
 
 ## 10. Edge functions & automation
 
