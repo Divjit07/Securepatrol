@@ -24,20 +24,7 @@ export const THEME_GROUPS = [
     label: 'Moods',
     themes: [
       { id: 'forest', label: 'Forest', dot: PALETTE.lime },
-      { id: 'matte', label: 'Midnight', dot: 'linear-gradient(145deg, #262628, #96ee60)' },
-      { id: 'graphite', label: 'Graphite', dot: 'linear-gradient(145deg, #2a2a2a, #96ee60)' },
-      { id: 'ivory', label: 'Ivory', dot: 'linear-gradient(135deg, #f8f5ee, #a88428)' },
       { id: 'sky', label: 'Sky', dot: 'linear-gradient(135deg, #f4f9fc, #0a7ea4)' },
-    ],
-  },
-  {
-    label: 'Surface',
-    themes: [
-      {
-        id: 'studio',
-        label: 'Studio Glass',
-        dot: `linear-gradient(135deg, ${PALETTE.gray}, #2a2a2a)`,
-      },
     ],
   },
 ]
@@ -50,8 +37,12 @@ const THEME_ALIASES = {
   moss: 'forest',
   lagoon: 'sky',
   meadow: 'day',
-  orchid: 'ivory',
-  rose: 'ivory',
+  orchid: 'day',
+  rose: 'day',
+  ivory: 'day',
+  matte: 'night',
+  graphite: 'night',
+  studio: 'night',
 }
 
 function systemDefaultTheme() {
@@ -70,7 +61,6 @@ function resolveTheme(raw) {
 }
 
 function themeColorFor(id) {
-  if (id === 'studio') return '#CBCDCE'
   if (id === 'day') return '#ebe8e1'
   if (id === 'night') return '#1c1f1a'
   return getComputedStyle(document.documentElement).getPropertyValue('--color-canvas').trim()

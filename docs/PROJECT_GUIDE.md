@@ -157,6 +157,9 @@ email functions skip it).
 > and modals inherit automatically. Cyan hero KPI = only cyan card per page. Full pixel spec:
 > `master-ui-spec-workforce-management.md` + `securepatrol-dark-ui-adaptation-plan.md`.
 > The "enterprise light" section below is HISTORICAL — do not use for new work.
+> **Themes (2026-07-11): exactly four** — Night, Day (appearance) + Forest, Sky (moods).
+> Midnight/matte, Graphite, Ivory and Studio Glass were removed; `THEME_ALIASES` in
+> ThemeSwitcher.jsx maps retired ids to night/day so stored preferences don't break.
 
 ### Fonts
 - Body: **DM Sans** (`--font-sans`); Headings h1–h3: **Instrument Sans** (`--font-display`),
@@ -455,6 +458,10 @@ export for their site (same engines as admin Reports, site-locked, uses site hou
 `/dev/roster` — RosterGrid + ShiftSheet with mock guards/shifts/conflicts.
 `/dev/admin` — sidebar shell + spec components with mock data. **Use these to screenshot
 UI changes** (headless browser) without credentials.
+`/dev/admin-scale` — **admin Overview at scale**: the real Overview widget tiles
+(Compliance/Rounds/Scans/Clock/Feed/Coverage/Workforce/Alerts), coverage + activity charts,
+all 15 site cards and the day's alerts, computed from the /dev/scale dataset's last day.
+Re-roll button reseeds; "Logic checks" links to /dev/scale.
 `/dev/scale` — **scale + logic test harness**: seeded generator (`pages/dev/scaleData.js`)
 builds 40 guards × 15 sites × 14 days of punches (late/no-show/forgot-out/early-out-with-
 note/stat-holiday/adjusted/overnight scenarios) and runs them through the REAL payroll,

@@ -135,64 +135,6 @@
 }
 
 /* Midnight (was Matte Black) — soft charcoal, KEEP lime soul */
-[data-theme='matte'] {
-  color-scheme: dark;
-  --color-canvas: #1a1a1c;
-  --color-surface: #262628;
-  --color-surface-2: #343438;
-  --color-inset: #121214;
-  --color-paper: #f5f5f7;
-  --color-ink: #f5f5f7;
-  --color-ink-2: #b0b0b5;
-  --color-ink-3: #8a8a90;
-  --color-accent-orange: #96ee60;
-  --color-accent-cyan: #d9f0ff;
-  --color-accent-cyan-line: #8fd4a8;
-  --color-accent-green: #8fd4a8;
-}
-
-/* Graphite — elevated brand gray, KEEP lime (not white-on-black) */
-[data-theme='graphite'] {
-  color-scheme: dark;
-  --color-canvas: #1e1e1e;
-  --color-surface: #2a2a2a;
-  --color-surface-2: #3a3a3a;
-  --color-inset: #161616;
-  --color-paper: #f4f4f4;
-  --color-ink: #f4f4f4;
-  --color-ink-2: #b8b8b8;
-  --color-ink-3: #8e8e8e;
-  --color-accent-orange: #96ee60;
-  --color-accent-cyan: #e8e8e8;
-  --color-accent-cyan-line: #96ee60;
-  --color-accent-green: #7fd09f;
-}
-
-/* Ivory — warm cream day + champagne gold */
-[data-theme='ivory'] {
-  color-scheme: light;
-  --color-canvas: #ebe6dc;
-  --color-surface: #f8f5ee;
-  --color-surface-2: #ddd4c4;
-  --color-inset: #e4ddd0;
-  --color-paper: #fffcf7;
-  --color-ink: #211d14;
-  --color-ink-2: #5a5346;
-  --color-ink-3: #7d7566;
-  --color-accent-orange: #a88428;
-  --color-accent-cyan: #efe7d6;
-  --color-accent-cyan-line: #a88428;
-  --color-accent-green: #3d8a5a;
-  --hairline: color-mix(in srgb, #211d14 10%, transparent);
-  --hairline-strong: color-mix(in srgb, #211d14 16%, transparent);
-  --fill-subtle: color-mix(in srgb, #211d14 4%, transparent);
-  --fill-hover: color-mix(in srgb, #211d14 7%, transparent);
-  --card-shine: inset 0 1px 0 0 color-mix(in srgb, white 65%, transparent);
-  --elev-shadow: 0 12px 32px -16px color-mix(in srgb, #211d14 12%, transparent);
-  --soft-shadow: 0 6px 20px -10px rgba(33, 29, 20, 0.1);
-  --chart-grid: color-mix(in srgb, #211d14 8%, transparent);
-  --chart-muted: color-mix(in srgb, #211d14 18%, transparent);
-}
 
 /* Sky — cool daylight; accent is deep sky blue (never = canvas) */
 [data-theme='sky'] {
@@ -220,152 +162,6 @@
   --chart-muted: color-mix(in srgb, #0f1a22 18%, transparent);
 }
 
-/* Studio Glass — optional surface: gray gradient + frosted cards + jet-black chrome */
-[data-theme='studio'] {
-  color-scheme: dark;
-  --color-accent-orange: #96ee60;
-  --color-accent-cyan: #d9f0ff;
-  --color-accent-cyan-line: #7fd09f;
-  --color-accent-green: #7fd09f;
-}
-
-[data-theme='studio'] .app-shell {
-  @apply min-h-dvh w-full bg-gradient-to-tr from-[#CBCDCE] to-[#747577] bg-fixed;
-}
-
-[data-theme='studio'] .app-main {
-  --color-ink: #141414;
-  --color-ink-2: #3d3f41;
-  --color-ink-3: #5c5e60;
-}
-
-[data-theme='studio'] .app-sidebar,
-[data-theme='studio'] .app-header {
-  --color-ink: #ffffff;
-  --color-ink-2: #c4c4c4;
-  --color-ink-3: #8a8a8a;
-  background: rgba(6, 6, 6, 0.82);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-color: rgba(255, 255, 255, 0.07);
-  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.04);
-}
-
-[data-theme='studio'] .app-header {
-  box-shadow:
-    0 8px 28px -12px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-[data-theme='studio'] .sidebar-nav-active {
-  background: rgba(255, 255, 255, 0.1);
-  box-shadow: inset 3px 0 0 0 var(--color-accent-orange), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-}
-
-[data-theme='studio'] .dk-card,
-[data-theme='studio'] .sp-card {
-  border-color: rgba(255, 255, 255, 0.45);
-  background: rgba(255, 255, 255, 0.28);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  box-shadow:
-    0 10px 40px -12px rgba(20, 20, 20, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.65);
-}
-
-[data-theme='studio'] .dk-card:hover {
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.7),
-    0 16px 44px -14px color-mix(in srgb, var(--color-accent-orange) 28%, rgba(20, 20, 20, 0.2));
-}
-
-[data-theme='studio'] .sp-card-elevated {
-  border-color: rgba(255, 255, 255, 0.5);
-  background: rgba(255, 255, 255, 0.35);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  box-shadow:
-    0 14px 44px -14px rgba(20, 20, 20, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.7);
-}
-
-[data-theme='studio'] .dk-inset {
-  border-color: rgba(255, 255, 255, 0.12);
-  background: rgba(10, 10, 10, 0.55);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  --color-ink: #ffffff;
-  --color-ink-2: #c8cacb;
-  --color-ink-3: #8a8c8e;
-  box-shadow:
-    0 12px 40px -14px rgba(0, 0, 0, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-[data-theme='studio'] .sp-input {
-  border-color: rgba(255, 255, 255, 0.5);
-  background: rgba(255, 255, 255, 0.35);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-[data-theme='studio'] .dk-btn-2,
-[data-theme='studio'] .sp-btn-secondary {
-  border-color: rgba(255, 255, 255, 0.5);
-  background: rgba(255, 255, 255, 0.3);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-[data-theme='studio'] .stat-card-accent {
-  border-color: color-mix(in srgb, #96ee60 35%, rgba(255, 255, 255, 0.55));
-  background: linear-gradient(135deg, #e2f4e8 0%, #d9f0ff 38%, #b8e89a 100%);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow:
-    0 10px 36px -10px color-mix(in srgb, #96ee60 35%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.55);
-  --color-ink: #12290d;
-  --color-ink-2: #3d3f41;
-  --color-ink-3: #5c5e60;
-}
-
-[data-theme='studio'] .stat-card-accent .stat-card-value {
-  color: #12290d;
-}
-
-[data-theme='studio'] .guard-stat-neutral {
-  border-color: rgba(255, 255, 255, 0.45);
-  background: rgba(255, 255, 255, 0.28);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  --color-ink: #141414;
-  --color-ink-2: #3d3f41;
-  --color-ink-3: #5c5e60;
-  box-shadow:
-    0 10px 36px -10px rgba(20, 20, 20, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.55);
-}
-
-[data-theme='studio'] .guard-shift-date-bar {
-  border-color: rgba(255, 255, 255, 0.45);
-  background: rgba(255, 255, 255, 0.28);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  --color-ink: #141414;
-  --color-ink-2: #3d3f41;
-}
-
-[data-theme='studio'] .guard-history-card {
-  border-color: rgba(255, 255, 255, 0.45);
-  background: rgba(255, 255, 255, 0.28);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  --color-ink: #141414;
-  --color-ink-2: #3d3f41;
-  --color-ink-3: #5c5e60;
-}
-
 .guard-clock-in-card {
   background: #3e4e56;
   box-shadow: 0 10px 32px -12px rgba(20, 20, 20, 0.35);
@@ -378,51 +174,6 @@
 
 .guard-clock-out-btn {
   background: #3e4e56;
-}
-
-[data-theme='studio'] .dk-pill-ok {
-  color: #0e2c1b;
-  background: color-mix(in srgb, #7fd09f 32%, rgba(255, 255, 255, 0.65));
-  border: 1px solid color-mix(in srgb, #7fd09f 40%, rgba(255, 255, 255, 0.35));
-}
-
-[data-theme='studio'] .kpi-tone-card .kpi-tone-value,
-[data-theme='studio'] .kpi-tone-card .kpi-tone-label,
-[data-theme='studio'] .kpi-tone-card .kpi-tone-icon {
-  /* KPI_TONES already ship dark ink; reinforce on studio glass */
-  text-shadow: none;
-}
-
-[data-theme='studio'] .checkpoint-card--green {
-  border-color: color-mix(in srgb, var(--color-accent-green) 40%, rgba(255, 255, 255, 0.45));
-  background: linear-gradient(135deg, color-mix(in srgb, var(--color-accent-green) 32%, rgba(255, 255, 255, 0.42)), rgba(255, 255, 255, 0.28));
-  backdrop-filter: blur(16px);
-}
-
-[data-theme='studio'] .checkpoint-card--yellow {
-  border-color: color-mix(in srgb, var(--color-accent-orange) 40%, rgba(255, 255, 255, 0.55));
-  background: linear-gradient(135deg, color-mix(in srgb, var(--color-accent-cyan) 62%, rgba(255, 255, 255, 0.42)), color-mix(in srgb, var(--color-accent-orange) 55%, rgba(255, 255, 255, 0.32)));
-  backdrop-filter: blur(16px);
-}
-
-[data-theme='studio'] .theme-picker-panel {
-  border-color: rgba(255, 255, 255, 0.12);
-  background: rgba(8, 8, 8, 0.35);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
-  box-shadow: 0 16px 48px -12px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-[data-theme='studio'] .theme-picker-panel--down {
-  background: rgba(8, 8, 8, 0.72);
-}
-
-[data-theme='studio'] .theme-picker-option-active {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-[data-theme='studio'] .theme-picker-option:hover {
-  background: rgba(255, 255, 255, 0.08);
 }
 
 /* Paper / forced-white fills stay light in every theme. Remap ink tokens so
@@ -441,20 +192,9 @@
 [data-theme='day'] .bg-inset,
 [data-theme='sky'] .dk-inset,
 [data-theme='sky'] .bg-inset,
-[data-theme='ivory'] .dk-inset,
-[data-theme='ivory'] .bg-inset {
-  border-color: var(--hairline);
-  background: var(--color-inset);
-  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--color-ink) 4%, transparent);
-}
 
 [data-theme='day'] .sp-input,
 [data-theme='sky'] .sp-input,
-[data-theme='ivory'] .sp-input {
-  background: var(--color-paper);
-  border-color: var(--hairline-strong);
-  color-scheme: light;
-}
 
 [data-theme='day'] .dk-card,
 [data-theme='day'] .sp-card,
@@ -464,73 +204,34 @@
 [data-theme='sky'] .sp-card,
 [data-theme='sky'] .sp-card-elevated,
 [data-theme='sky'] .sp-stat-card,
-[data-theme='ivory'] .dk-card,
-[data-theme='ivory'] .sp-card,
-[data-theme='ivory'] .sp-card-elevated,
-[data-theme='ivory'] .sp-stat-card {
-  border-color: var(--hairline);
-  box-shadow: var(--card-shine), var(--soft-shadow);
-}
 
 [data-theme='day'] .dk-card:hover,
 [data-theme='sky'] .dk-card:hover,
-[data-theme='ivory'] .dk-card:hover {
-  border-color: var(--hairline-strong);
-  box-shadow: var(--card-shine), var(--elev-shadow);
-}
 
 [data-theme='day'] .app-sidebar,
 [data-theme='sky'] .app-sidebar,
-[data-theme='ivory'] .app-sidebar {
-  border-color: var(--hairline);
-  box-shadow: 1px 0 0 var(--hairline);
-}
 
 [data-theme='day'] .app-header,
 [data-theme='sky'] .app-header,
-[data-theme='ivory'] .app-header {
-  border-color: var(--hairline);
-  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
-}
 
 [data-theme='day'] .dk-btn-2,
 [data-theme='day'] .sp-btn-secondary,
 [data-theme='sky'] .dk-btn-2,
 [data-theme='sky'] .sp-btn-secondary,
-[data-theme='ivory'] .dk-btn-2,
-[data-theme='ivory'] .sp-btn-secondary {
-  border-color: var(--hairline-strong);
-  background: var(--fill-subtle);
-}
 
 [data-theme='day'] .dk-btn-2:hover,
 [data-theme='day'] .sp-btn-secondary:hover,
 [data-theme='sky'] .dk-btn-2:hover,
 [data-theme='sky'] .sp-btn-secondary:hover,
-[data-theme='ivory'] .dk-btn-2:hover,
-[data-theme='ivory'] .sp-btn-secondary:hover {
-  background: var(--fill-hover);
-}
 
 [data-theme='day'] .theme-picker-panel,
 [data-theme='sky'] .theme-picker-panel,
-[data-theme='ivory'] .theme-picker-panel {
-  border-color: var(--hairline-strong);
-  background: color-mix(in srgb, var(--color-surface) 92%, white);
-  box-shadow: var(--soft-shadow);
-}
 
 [data-theme='day'] .theme-picker-option:hover,
 [data-theme='sky'] .theme-picker-option:hover,
-[data-theme='ivory'] .theme-picker-option:hover {
-  background: var(--fill-hover);
-}
 
 [data-theme='day'] .sidebar-nav-active,
 [data-theme='sky'] .sidebar-nav-active,
-[data-theme='ivory'] .sidebar-nav-active {
-  box-shadow: inset 3px 0 0 0 var(--color-accent-orange), inset 0 1px 0 color-mix(in srgb, white 40%, transparent);
-}
 
 @layer base {
   body {
