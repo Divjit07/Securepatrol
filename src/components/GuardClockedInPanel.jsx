@@ -71,8 +71,7 @@ export default function GuardClockedInPanel({
   publishedShift,
   loading,
 }) {
-  if (scheduled?.isClosed) return null
-
+  // Cards render even on closed days — hiding them reads as "removed" (Div).
   if (loading) {
     return (
       <div className="guard-clock-in-card mb-4 animate-pulse rounded-2xl p-5">
@@ -88,13 +87,16 @@ export default function GuardClockedInPanel({
   const signedInAt = guardShift?.isAdjusted
     ? guardShift?.clockInAt
     : guardShift?.signedInAt || guardShift?.clockInAt
+  const dayClosed = Boolean(scheduled?.isClosed) && !publishedShift
   const shiftTimeLine = publishedShift
     ? formatShiftRangeFromIso(publishedShift.starts_at, publishedShift.ends_at)
-    : formatShiftRangeLine(
-        guardShift?.date || new Date().toISOString().slice(0, 10),
-        scheduled?.start || '11:00',
-        scheduled?.end || '20:00',
-      )
+    : dayClosed
+      ? 'No shift scheduled today'
+      : formatShiftRangeLine(
+          guardShift?.date || new Date().toISOString().slice(0, 10),
+          scheduled?.start || '11:00',
+          scheduled?.end || '20:00',
+        )
   const siteLine = shiftSiteLine(siteName, publishedShift, guardShift)
 
   return (
@@ -145,7 +147,9 @@ export default function GuardClockedInPanel({
           <p className="mt-2 text-sm text-white/95">
             {publishedShift
               ? formatShiftRangeFromIso(publishedShift.starts_at, publishedShift.ends_at)
-              : scheduled.scheduleLabel || `${formatTimeLabel(scheduled.start)} – ${formatTimeLabel(scheduled.end)}`}
+              : dayClosed
+                ? 'No shift scheduled today'
+                : scheduled.scheduleLabel || `${formatTimeLabel(scheduled.start)} – ${formatTimeLabel(scheduled.end)}`}
           </p>
           <p className="mt-1 text-sm font-medium text-white">
             {shiftSiteLine(siteName, publishedShift, null)}

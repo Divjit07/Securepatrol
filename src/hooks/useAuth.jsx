@@ -58,7 +58,17 @@ export function AuthProvider({ children }) {
 
     supabase.auth.getSession().then(({ data: { session } }) => syncFromSession(session))
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // Guard phones drop signal (basements, elevators) and a failed token
+      // refresh can emit a null session — that is NOT a logout. Only an
+      // explicit sign-out (or genuinely empty storage on boot) clears the
+      // user; otherwise re-read the stored session and keep them working.
+      if (!session && event !== 'SIGNED_OUT' && event !== 'INITIAL_SESSION') {
+        supabase.auth.getSession().then(({ data: { session: stored } }) => {
+          if (stored) syncFromSession(stored)
+        })
+        return
+      }
       syncFromSession(session)
     })
 
