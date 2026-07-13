@@ -15,18 +15,29 @@ export function AuthProvider({ children }) {
   // finish — gated pages must not redirect away while this is set.
   const [privilegesLoading, setPrivilegesLoading] = useState(true)
 
-  const loadProfile = useCallback(async (userId) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*, sites(id, name)')
-      .eq('id', userId)
-      .single()
+  // Distinguish "no row" from "request failed". A logged-in user ALWAYS has a
+  // profile row (created by a DB trigger), so a failed fetch on a flaky phone
+  // must never be treated as "this user has no profile" — that used to null the
+  // role and bounce the guard to /login. Retry a few times, then report the
+  // failure so the caller keeps the last-known-good profile instead of nulling.
+  const loadProfile = useCallback(async (userId, { retries = 3 } = {}) => {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*, sites(id, name)')
+        .eq('id', userId)
+        .single()
 
-    if (error) {
-      console.error('Profile load error:', error.message)
-      return null
+      if (!error) return { profile: data, ok: true }
+      // PGRST116 = no row (a real "profile missing"); anything else is transient.
+      if (error.code === 'PGRST116') return { profile: null, ok: true }
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, 400 * (attempt + 1)))
+      } else {
+        console.error('Profile load failed after retries:', error.message)
+      }
     }
-    return data
+    return { profile: null, ok: false }
   }, [])
 
   // Which user id the current profile belongs to — lets auth events (token
@@ -49,9 +60,12 @@ export function AuthProvider({ children }) {
       }
       if (profileUserRef.current !== currentUser.id) {
         profileUserRef.current = currentUser.id
-        const p = await loadProfile(currentUser.id)
+        const { profile: p, ok } = await loadProfile(currentUser.id)
         // A newer auth event may have switched users while we were fetching.
-        if (profileUserRef.current === currentUser.id) setProfile(p)
+        if (profileUserRef.current !== currentUser.id) return
+        // Only overwrite the profile when the fetch succeeded. On transient
+        // failure keep whatever we had — do NOT null a valid session's role.
+        if (ok) setProfile(p)
       }
       setLoading(false)
     }
@@ -75,11 +89,27 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe()
   }, [loadProfile])
 
+  // Self-heal: if we have a user but the profile never resolved (transient
+  // fetch failure), keep retrying quietly so the app recovers without a reload.
+  useEffect(() => {
+    if (!user || profile) return undefined
+    let cancelled = false
+    const id = setInterval(async () => {
+      if (cancelled) return
+      const { profile: p, ok } = await loadProfile(user.id, { retries: 0 })
+      if (!cancelled && ok && p) setProfile(p)
+    }, 3000)
+    return () => {
+      cancelled = true
+      clearInterval(id)
+    }
+  }, [user, profile, loadProfile])
+
   const signIn = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
     profileUserRef.current = data.user.id // claim it so the auth event doesn't refetch
-    const p = await loadProfile(data.user.id)
+    const { profile: p } = await loadProfile(data.user.id)
     setProfile(p)
     return { user: data.user, profile: p }
   }
@@ -94,7 +124,7 @@ export function AuthProvider({ children }) {
     const needsEmailConfirmation = !data.session
     if (data.session && data.user) {
       profileUserRef.current = data.user.id
-      const p = await loadProfile(data.user.id)
+      const { profile: p } = await loadProfile(data.user.id)
       setProfile(p)
       setUser(data.user)
       return { user: data.user, profile: p, needsEmailConfirmation: false }
@@ -180,7 +210,10 @@ export function AuthProvider({ children }) {
         canApproveScans,
         canManageShiftClock,
         privilegesLoading,
-        refreshProfile: () => loadProfile(user?.id).then(setProfile),
+        refreshProfile: () =>
+          loadProfile(user?.id).then(({ profile: p, ok }) => {
+            if (ok) setProfile(p)
+          }),
       }}
     >
       {children}

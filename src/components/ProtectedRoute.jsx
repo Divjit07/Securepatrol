@@ -24,6 +24,18 @@ export default function ProtectedRoute({ children, requireAdmin, requireGuard, r
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
+  // Authenticated but the profile hasn't resolved yet (first load, or a flaky
+  // network dropped the fetch). A logged-in user ALWAYS has a profile row, so
+  // this is "still loading", never "roleless" — show the spinner and let the
+  // background retry recover. Ejecting to /login here was the phantom logout.
+  if (!profile) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent-orange border-t-transparent" />
+      </div>
+    )
+  }
+
   const fallback = homePath({ isAdmin, isClient, isGuard })
 
   if (requireAdmin && !isAdmin) {
