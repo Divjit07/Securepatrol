@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
@@ -7,12 +7,15 @@ import SiteSearchInput from '../components/SiteSearchInput.jsx'
 import SiteHoursModal from '../components/SiteHoursModal.jsx'
 import OverviewBoard from '../components/overview/OverviewBoard.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
-import { getScheduledShiftForDate } from '../hooks/useClientShift.js'
 import { fetchSitesForAdmin } from '../lib/scans.js'
 import { fetchGuardsWithSites } from '../lib/guards.js'
 import { fetchOpenAlertEvents, acknowledgeAlertEvent, ALERT_TYPE_LABELS } from '../lib/alertEvents.js'
+import { fetchClockStatusByGuard } from '../lib/schedule.js'
 import { supabase } from '../lib/supabase.js'
 import { deleteSite } from '../lib/sites.js'
+
+const LATE_MINUTES = 10
+const NO_SHOW_MINUTES = 30
 
 export default function AdminDashboard() {
   const { user, isSuperAdmin } = useAuth()
@@ -20,6 +23,7 @@ export default function AdminDashboard() {
   const [guards, setGuards] = useState([])
   const [stats, setStats] = useState({})
   const [shiftsToday, setShiftsToday] = useState([])
+  const [clockByGuard, setClockByGuard] = useState(() => new Map())
   const [alerts, setAlerts] = useState([])
   const [loading, setLoading] = useState(true)
   const [showNewSite, setShowNewSite] = useState(false)
@@ -29,7 +33,7 @@ export default function AdminDashboard() {
   const [ackBusy, setAckBusy] = useState(null)
   const [query, setQuery] = useState('')
 
-  const loadSites = async () => {
+  const loadSites = useCallback(async () => {
     if (!user) return
     setLoading(true)
     try {
@@ -37,22 +41,28 @@ export default function AdminDashboard() {
       const siteList = await fetchSitesForAdmin(user.id, role)
       setSites(siteList)
 
-      fetchOpenAlertEvents().then(setAlerts).catch(() => setAlerts([]))
-
       const dayStart = new Date()
       dayStart.setHours(0, 0, 0, 0)
       const dayEnd = new Date(dayStart)
       dayEnd.setDate(dayEnd.getDate() + 1)
-      supabase
-        .from('shifts')
-        .select('id, guard_id, site_id, starts_at, ends_at, profiles:guard_id(name)')
-        .eq('status', 'published')
-        .not('guard_id', 'is', null)
-        .lt('starts_at', dayEnd.toISOString())
-        .gt('ends_at', dayStart.toISOString())
-        .then(({ data }) => setShiftsToday(data || []))
 
-      const allGuards = await fetchGuardsWithSites()
+      // Live ops signals — same sources Ops Board uses (punches + published shifts).
+      const [alertRows, clockMap, { data: shiftRows }, allGuards] = await Promise.all([
+        fetchOpenAlertEvents().catch(() => []),
+        fetchClockStatusByGuard(16).catch(() => new Map()),
+        supabase
+          .from('shifts')
+          .select('id, guard_id, site_id, starts_at, ends_at, profiles:guard_id(name)')
+          .eq('status', 'published')
+          .not('guard_id', 'is', null)
+          .lt('starts_at', dayEnd.toISOString())
+          .gt('ends_at', dayStart.toISOString()),
+        fetchGuardsWithSites(),
+      ])
+      setAlerts(alertRows)
+      setClockByGuard(clockMap)
+      setShiftsToday(shiftRows || [])
+
       const siteIds = new Set(siteList.map((s) => s.id))
       setGuards(isSuperAdmin ? allGuards : allGuards.filter((g) => !g.site_id || siteIds.has(g.site_id)))
 
@@ -113,17 +123,34 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [user, isSuperAdmin])
 
   useEffect(() => {
     loadSites()
-  }, [user?.id])
+  }, [loadSites])
 
   useEffect(() => {
     const onFocus = () => loadSites()
+    const refresh = setInterval(loadSites, 60_000)
     window.addEventListener('focus', onFocus)
-    return () => window.removeEventListener('focus', onFocus)
-  }, [user?.id, isSuperAdmin])
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      clearInterval(refresh)
+    }
+  }, [loadSites])
+
+  // Live update when a guard clocks in/out or roster changes.
+  useEffect(() => {
+    const channel = supabase
+      .channel('overview-ops')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'scans' }, () => loadSites())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shifts' }, () => loadSites())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'alert_events' }, () => loadSites())
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [loadSites])
 
   const handleAcknowledge = async (id) => {
     setAckBusy(id)
@@ -196,14 +223,31 @@ export default function AdminDashboard() {
   const unassignedGuards = guards.filter((g) => g.unassigned)
   const activeGuards = scopedGuards.filter((g) => g.active)
 
-  const onDutyIds = new Set(
-    scopedShifts.filter((s) => new Date(s.starts_at) <= now && new Date(s.ends_at) > now).map((s) => s.guard_id),
+  // Pills are live ops signals — punches + published shifts — not stale alert_events alone.
+  const siteIdSet = useMemo(() => new Set(sites.map((s) => s.id)), [sites])
+  const onDutyIds = new Set()
+  for (const [guardId, clock] of clockByGuard) {
+    if (!clock.clockedIn) continue
+    if (clock.siteId && !siteIdSet.has(clock.siteId)) continue
+    if (q && clock.siteId && !scopedSiteIds.has(clock.siteId)) continue
+    onDutyIds.add(guardId)
+  }
+
+  const lateIds = new Set()
+  const noShowIds = new Set()
+  const liveShifts = scopedShifts.filter(
+    (s) => new Date(s.starts_at) <= now && new Date(s.ends_at) > now,
   )
-  const lateIds = new Set(scopedAlerts.filter((a) => a.event_type === 'late').map((a) => a.guard_id))
-  const noShowIds = new Set(scopedAlerts.filter((a) => a.event_type === 'no_show').map((a) => a.guard_id))
+  for (const shift of liveShifts) {
+    if (!shift.guard_id) continue
+    if (clockByGuard.get(shift.guard_id)?.clockedIn) continue
+    const minutesLate = (now - new Date(shift.starts_at)) / 60000
+    if (minutesLate >= NO_SHOW_MINUTES) noShowIds.add(shift.guard_id)
+    else if (minutesLate >= LATE_MINUTES) lateIds.add(shift.guard_id)
+  }
 
   const statusSegments = [
-    { label: 'On duty now', pill: 'On duty', value: onDutyIds.size, tone: 'green' },
+    { label: 'On duty now', pill: 'On duty', value: onDutyIds.size, tone: onDutyIds.size ? 'green' : 'muted' },
     { label: 'Running late', pill: 'Late', value: lateIds.size, tone: lateIds.size ? 'amber' : 'muted' },
     { label: 'No-show', pill: 'No-show', value: noShowIds.size, tone: noShowIds.size ? 'red' : 'muted' },
   ]
