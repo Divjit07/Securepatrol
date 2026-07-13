@@ -16,7 +16,6 @@ import {
   formatShiftTime,
 } from '../lib/clientStats.js'
 import { fetchShiftAdjustmentsForSite, mapShiftAdjustments } from '../lib/shiftAdjustments.js'
-import { describeOperatingHours } from '../hooks/useClientShift.js'
 import {
   ROUNDING_MODES,
   applyRounding,
@@ -185,7 +184,6 @@ export default function AdminPayroll() {
     operatingHours: selectedSite?.operating_hours,
     publishedShifts,
   })
-  const hoursSummary = describeOperatingHours(selectedSite?.operating_hours)
 
   const payRows = applyRounding(hoursReport.rows, rounding)
   const weeklyPayroll = computeWeeklyPayroll(payRows)
@@ -345,11 +343,10 @@ export default function AdminPayroll() {
     doc.setFontSize(11)
     doc.text(`Site: ${selectedSite?.name || ''}`, 14, 33)
     doc.text(`Pay period: ${filters.fromDate} to ${filters.toDate}`, 14, 40)
-    doc.text(`Schedule: ${hoursSummary}`, 14, 47)
-    doc.text('Payroll report · Includes statutory holidays and manual adjustments', 14, 54)
+    doc.text('Hours from Face ID / clock punches (and shift-clock edits)', 14, 47)
 
     autoTable(doc, {
-      startY: 62,
+      startY: 54,
       head: [['Date', 'Guard', 'Clock In', 'Clock Out', 'Hours', 'Day type']],
       body: payRows.map((row) => [
         row.date,
@@ -442,8 +439,7 @@ export default function AdminPayroll() {
       {tab !== 'invoices' && (
         <div className="mb-4 rounded-xl border border-ink/10 bg-ink/5 p-4 text-sm text-ink">
           Payroll hours for <strong>{selectedSite?.name || 'selected site'}</strong> come from Face ID /
-          clock punches (and shift-clock edits). Site coverage window:{' '}
-          <strong>{hoursSummary}</strong>. Includes statutory holidays.
+          clock punches (and shift-clock edits) — not a fixed site schedule.
         </div>
       )}
 
