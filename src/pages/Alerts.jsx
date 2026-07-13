@@ -1,242 +1,269 @@
-import { useEffect, useState } from 'react'
-import { Bell, BellOff } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Check, Bell } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
-import RosterSitePicker from '../components/roster/RosterSitePicker.jsx'
-import { supabase } from '../lib/supabase.js'
+import RosterSitePicker, { ALL_SITES } from '../components/roster/RosterSitePicker.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { fetchSitesForAdmin } from '../lib/scans.js'
+import {
+  fetchAlertEvents,
+  acknowledgeAlertEvent,
+  ALERT_TYPE_LABELS,
+  ALERT_TYPE_TONE,
+} from '../lib/alertEvents.js'
+
+const STATUS_FILTERS = [
+  { id: 'open', label: 'Open' },
+  { id: 'acked', label: 'Acknowledged' },
+  { id: 'all', label: 'All' },
+]
+
+const TYPE_FILTERS = [
+  { id: 'all', label: 'All types' },
+  { id: 'late', label: 'Late' },
+  { id: 'no_show', label: 'No-show' },
+  { id: 'stale_patrol', label: 'Stale patrol' },
+]
+
+const PILL_TONE = {
+  amber: 'bg-[#E8A33D]/15 text-[#E8A33D]',
+  red: 'bg-accent-red/15 text-accent-red',
+  cyan: 'bg-accent-cyan/15 text-accent-cyan-line',
+  muted: 'bg-white/10 text-ink-2',
+}
+
+const NUM_TONE = {
+  amber: 'text-[#E8A33D]',
+  red: 'text-accent-red',
+  cyan: 'text-accent-cyan-line',
+  muted: 'text-ink',
+}
+
+function formatWhen(iso) {
+  const d = new Date(iso)
+  const now = new Date()
+  const sameDay = d.toDateString() === now.toDateString()
+  const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  if (sameDay) return time
+  return `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })} · ${time}`
+}
+
+function FilterChip({ active, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+        active
+          ? 'bg-white text-black'
+          : 'border border-white/10 bg-transparent text-ink-2 hover:bg-white/5 hover:text-ink'
+      }`}
+    >
+      {children}
+    </button>
+  )
+}
 
 export default function Alerts() {
   const { user, isSuperAdmin } = useAuth()
   const [sites, setSites] = useState([])
-  const [selectedSite, setSelectedSite] = useState('')
-  const [checkpoints, setCheckpoints] = useState([])
-  const [configs, setConfigs] = useState({})
-  const [recentAlerts, setRecentAlerts] = useState([])
+  const [selectedSite, setSelectedSite] = useState(ALL_SITES)
+  const [statusFilter, setStatusFilter] = useState('open')
+  const [typeFilter, setTypeFilter] = useState('all')
+  const [events, setEvents] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [ackBusy, setAckBusy] = useState(null)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     if (!user) return
-    fetchSitesForAdmin(user.id, isSuperAdmin ? 'super_admin' : 'admin').then((s) => {
-      setSites(s)
-      if (s.length) setSelectedSite((prev) => prev || s[0].id)
-    })
+    const role = isSuperAdmin ? 'super_admin' : 'admin'
+    fetchSitesForAdmin(user.id, role).then(setSites)
   }, [user?.id, isSuperAdmin])
 
-  useEffect(() => {
-    if (!selectedSite) return
-
-    const load = async () => {
-      const { data: floors } = await supabase.from('floors').select('id').eq('site_id', selectedSite)
-      if (!floors?.length) {
-        setCheckpoints([])
-        setRecentAlerts([])
-        return
-      }
-
-      const { data: cps } = await supabase
-        .from('checkpoints')
-        .select('id, name, floors(floor_name)')
-        .in('floor_id', floors.map((f) => f.id))
-
-      setCheckpoints(cps || [])
-
-      if (cps?.length) {
-        const { data: alertConfigs } = await supabase
-          .from('alert_configs')
-          .select('*')
-          .in('checkpoint_id', cps.map((c) => c.id))
-
-        const configMap = {}
-        for (const cfg of alertConfigs || []) {
-          configMap[cfg.checkpoint_id] = cfg
-        }
-        setConfigs(configMap)
-      } else {
-        setConfigs({})
-      }
-
-      const { data: alerts } = await supabase
-        .from('alerts')
-        .select('*, checkpoints(name)')
-        .eq('site_id', selectedSite)
-        .order('triggered_at', { ascending: false })
-        .limit(20)
-
-      setRecentAlerts(alerts || [])
-    }
-
-    load()
-  }, [selectedSite])
-
-  const updateConfig = async (checkpointId, minutes, enabled) => {
-    const existing = configs[checkpointId]
-
-    if (existing) {
-      await supabase
-        .from('alert_configs')
-        .update({ minutes_until_alert: minutes, enabled })
-        .eq('id', existing.id)
-    } else {
-      await supabase.from('alert_configs').insert({
-        checkpoint_id: checkpointId,
-        minutes_until_alert: minutes,
-        enabled,
+  const load = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const acknowledged =
+        statusFilter === 'open' ? false : statusFilter === 'acked' ? true : null
+      const rows = await fetchAlertEvents({
+        acknowledged,
+        siteId: selectedSite === ALL_SITES ? undefined : selectedSite,
+        eventType: typeFilter === 'all' ? undefined : typeFilter,
+        limit: 150,
       })
-    }
-
-    const { data } = await supabase
-      .from('alert_configs')
-      .select('*')
-      .eq('checkpoint_id', checkpointId)
-      .single()
-
-    if (data) {
-      setConfigs((prev) => ({ ...prev, [checkpointId]: data }))
+      setEvents(rows)
+    } catch (err) {
+      setError(err.message || 'Failed to load alerts')
+      setEvents([])
+    } finally {
+      setLoading(false)
     }
   }
 
-  const acknowledgeAlert = async (alertId) => {
-    await supabase.from('alerts').update({ acknowledged: true }).eq('id', alertId)
-    setRecentAlerts((prev) =>
-      prev.map((a) => (a.id === alertId ? { ...a, acknowledged: true } : a)),
-    )
+  useEffect(() => {
+    if (!user) return
+    load()
+  }, [user?.id, selectedSite, statusFilter, typeFilter])
+
+  const counts = useMemo(() => {
+    const base = { late: 0, no_show: 0, stale_patrol: 0, open: 0 }
+    for (const e of events) {
+      if (!e.acknowledged) base.open += 1
+      if (base[e.event_type] !== undefined) base[e.event_type] += 1
+    }
+    return base
+  }, [events])
+
+  const summary = [
+    { label: 'Open alerts', value: counts.open, tone: counts.open ? 'red' : 'muted', pill: 'Open' },
+    { label: 'Running late', value: counts.late, tone: counts.late ? 'amber' : 'muted', pill: 'Late' },
+    { label: 'No-show', value: counts.no_show, tone: counts.no_show ? 'red' : 'muted', pill: 'No-show' },
+    {
+      label: 'Stale patrol',
+      value: counts.stale_patrol,
+      tone: counts.stale_patrol ? 'cyan' : 'muted',
+      pill: 'Stale',
+    },
+  ]
+
+  const onAcknowledge = async (id) => {
+    setAckBusy(id)
+    try {
+      await acknowledgeAlertEvent(id)
+      if (statusFilter === 'open') {
+        setEvents((prev) => prev.filter((e) => e.id !== id))
+      } else {
+        setEvents((prev) =>
+          prev.map((e) => (e.id === id ? { ...e, acknowledged: true } : e)),
+        )
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to acknowledge')
+    } finally {
+      setAckBusy(null)
+    }
   }
 
   return (
     <Layout variant="admin">
       <PageHeader
-        title="Alert Configuration"
-        description="Per-checkpoint missed-window settings and recent alerts for each site."
+        title="Alerts"
+        description="Late clock-ins, no-shows, and stale patrols across your sites."
       />
 
       {sites.length > 0 && (
-        <div className="mb-6">
+        <div className="mb-5">
           <RosterSitePicker
             sites={sites}
             value={selectedSite}
             onChange={setSelectedSite}
-            allowAll={false}
+            allowAll
           />
         </div>
       )}
 
-      <div className="mb-8">
-        <h2 className="mb-3 text-lg font-semibold text-ink">Checkpoint Alert Windows</h2>
-        <p className="mb-4 text-sm text-ink-2">
-          Set how many minutes after shift start before a checkpoint is considered missed.
-        </p>
-        <div className="overflow-hidden rounded-xl border border-ink/10 bg-surface">
-          <table className="w-full text-sm">
-            <thead className="bg-ink/5 text-left text-ink-2">
-              <tr>
-                <th className="px-4 py-3 font-medium">Checkpoint</th>
-                <th className="px-4 py-3 font-medium">Floor</th>
-                <th className="px-4 py-3 font-medium">Alert After (min)</th>
-                <th className="px-4 py-3 font-medium">Enabled</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-ink/5">
-              {checkpoints.map((cp) => {
-                const cfg = configs[cp.id] || { minutes_until_alert: 60, enabled: true }
-                return (
-                  <tr key={cp.id}>
-                    <td className="px-4 py-3 font-medium text-ink">{cp.name}</td>
-                    <td className="px-4 py-3 text-ink-2">{cp.floors?.floor_name}</td>
-                    <td className="px-4 py-3">
-                      <input
-                        type="number"
-                        min={5}
-                        max={480}
-                        value={cfg.minutes_until_alert}
-                        onChange={(e) =>
-                          updateConfig(cp.id, parseInt(e.target.value, 10) || 60, cfg.enabled)
-                        }
-                        className="w-20 rounded-full border-0 bg-black px-3 py-1.5 text-center text-xs font-semibold text-white"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updateConfig(cp.id, cfg.minutes_until_alert, !cfg.enabled)
-                        }
-                        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                          cfg.enabled
-                            ? 'bg-black text-white'
-                            : 'bg-[#FFFFFF] text-black ring-1 ring-black/10'
-                        }`}
-                      >
-                        {cfg.enabled ? (
-                          <>
-                            <Bell className="h-3.5 w-3.5" /> On
-                          </>
-                        ) : (
-                          <>
-                            <BellOff className="h-3.5 w-3.5" /> Off
-                          </>
-                        )}
-                      </button>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-          {checkpoints.length === 0 && (
-            <p className="p-8 text-center text-ink-2">No checkpoints for this site.</p>
-          )}
-        </div>
+      <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {summary.map((s) => (
+          <div
+            key={s.label}
+            className="rounded-[26px] border border-white/8 bg-surface p-5 shadow-[var(--card-shine)]"
+          >
+            <span
+              className={`inline-block rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${PILL_TONE[s.tone]}`}
+            >
+              {s.pill}
+            </span>
+            <p className={`mt-4 text-4xl font-bold tabular-nums ${NUM_TONE[s.tone]}`}>{s.value}</p>
+            <p className="mt-1 text-xs text-ink-3">{s.label}</p>
+          </div>
+        ))}
       </div>
 
-      <div>
-        <h2 className="mb-3 text-lg font-semibold text-ink">Recent Alerts</h2>
-        <div className="space-y-2">
-          {recentAlerts.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-ink/10 p-6 text-center text-ink-2">
-              No alerts triggered yet.
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        {STATUS_FILTERS.map((f) => (
+          <FilterChip
+            key={f.id}
+            active={statusFilter === f.id}
+            onClick={() => setStatusFilter(f.id)}
+          >
+            {f.label}
+          </FilterChip>
+        ))}
+        <span className="mx-1 hidden h-4 w-px bg-white/10 sm:inline-block" aria-hidden />
+        {TYPE_FILTERS.map((f) => (
+          <FilterChip
+            key={f.id}
+            active={typeFilter === f.id}
+            onClick={() => setTypeFilter(f.id)}
+          >
+            {f.label}
+          </FilterChip>
+        ))}
+      </div>
+
+      {error && (
+        <p className="mb-4 rounded-xl border border-accent-red/30 bg-accent-red/10 px-4 py-3 text-sm text-accent-red">
+          {error}
+        </p>
+      )}
+
+      <div className="overflow-hidden rounded-[26px] border border-white/8 bg-surface">
+        {loading ? (
+          <p className="p-10 text-center text-sm text-ink-3">Loading alerts…</p>
+        ) : events.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 p-12 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5">
+              <Bell className="h-5 w-5 text-ink-3" />
+            </div>
+            <p className="text-sm font-medium text-ink">No alerts here</p>
+            <p className="max-w-sm text-sm text-ink-3">
+              Late (≥10 min), no-show (≥30 min), and stale-patrol events from the roster cron show up on
+              this page.
             </p>
-          ) : (
-            recentAlerts.map((alert) => (
+          </div>
+        ) : (
+          events.map((e) => {
+            const tone = ALERT_TYPE_TONE[e.event_type] || 'muted'
+            const guardName = e.profiles?.name
+            return (
               <div
-                key={alert.id}
-                className={`flex items-center justify-between rounded-xl border p-4 ${
-                  alert.acknowledged
-                    ? 'border-ink/10 bg-ink/5'
-                    : 'border-accent-red/30 bg-accent-red/10'
+                key={e.id}
+                className={`flex items-start gap-3 border-t border-white/5 px-4 py-4 first:border-t-0 ${
+                  e.acknowledged ? 'opacity-60' : ''
                 }`}
               >
-                <div>
-                  <div className="mb-1 flex flex-wrap items-center gap-2">
-                    <p className="font-medium text-ink">{alert.checkpoints?.name || 'Checkpoint'}</p>
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
-                        alert.acknowledged
-                          ? 'bg-[#FFFFFF] text-black ring-1 ring-black/10'
-                          : 'bg-black text-white'
-                      }`}
-                    >
-                      {alert.acknowledged ? 'Acknowledged' : 'Open'}
-                    </span>
-                  </div>
-                  <p className="text-sm text-ink-2">{alert.message}</p>
-                  <p className="text-xs text-ink-2">
-                    {new Date(alert.triggered_at).toLocaleString()}
+                <span
+                  className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${PILL_TONE[tone]}`}
+                >
+                  {ALERT_TYPE_LABELS[e.event_type] || e.event_type}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm leading-snug text-ink">{e.message}</p>
+                  <p className="mt-1 text-[11px] text-ink-3">
+                    {e.sites?.name || 'Site'}
+                    {guardName ? ` · ${guardName}` : ''}
+                    {' · '}
+                    {formatWhen(e.created_at)}
+                    {e.acknowledged ? ' · Acknowledged' : ''}
                   </p>
                 </div>
-                {!alert.acknowledged && (
+                {!e.acknowledged && (
                   <button
                     type="button"
-                    onClick={() => acknowledgeAlert(alert.id)}
-                    className="rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800"
+                    onClick={() => onAcknowledge(e.id)}
+                    disabled={ackBusy === e.id}
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold text-ink-2 transition hover:bg-white/10 hover:text-ink disabled:opacity-50"
                   >
-                    Acknowledge
+                    <Check className="h-3.5 w-3.5" />
+                    Ack
                   </button>
                 )}
               </div>
-            ))
-          )}
-        </div>
+            )
+          })
+        )}
       </div>
     </Layout>
   )

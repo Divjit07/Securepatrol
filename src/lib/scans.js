@@ -103,6 +103,52 @@ export async function fetchSitesForAdmin(userId, role) {
   return data || []
 }
 
+/**
+ * Recent clock-in / clock-out events across the given sites, newest first.
+ * Derived from pass scans on shift_clock_in / shift_clock_out checkpoints.
+ * Returns [{ id, guardId, guardName, siteId, type: 'in'|'out', at }].
+ * Caller supplies site names (it already has them).
+ */
+export async function fetchRecentClockEvents(siteIds, { limit = 25, sinceHours = 24 } = {}) {
+  if (!siteIds?.length) return []
+
+  const { data: floors } = await supabase.from('floors').select('id, site_id').in('site_id', siteIds)
+  if (!floors?.length) return []
+  const floorSite = Object.fromEntries(floors.map((f) => [f.id, f.site_id]))
+
+  const { data: cps } = await supabase
+    .from('checkpoints')
+    .select('id, checkpoint_role, floor_id')
+    .in('floor_id', floors.map((f) => f.id))
+    .in('checkpoint_role', ['shift_clock_in', 'shift_clock_out'])
+  if (!cps?.length) return []
+  const cpMeta = Object.fromEntries(
+    cps.map((c) => [c.id, { role: c.checkpoint_role, siteId: floorSite[c.floor_id] }]),
+  )
+
+  const since = new Date(Date.now() - sinceHours * 3600000).toISOString()
+  const { data: scans } = await supabase
+    .from('scans')
+    .select('id, guard_id, checkpoint_id, scanned_at, profiles:guard_id(name)')
+    .in('checkpoint_id', cps.map((c) => c.id))
+    .eq('status', 'pass')
+    .gte('scanned_at', since)
+    .order('scanned_at', { ascending: false })
+    .limit(limit)
+
+  return (scans || []).map((s) => {
+    const meta = cpMeta[s.checkpoint_id] || {}
+    return {
+      id: s.id,
+      guardId: s.guard_id,
+      guardName: s.profiles?.name || 'Guard',
+      siteId: meta.siteId,
+      type: meta.role === 'shift_clock_in' ? 'in' : 'out',
+      at: s.scanned_at,
+    }
+  })
+}
+
 export async function fetchScansWithDetails(filters = {}) {
   let query = supabase
     .from('scans')

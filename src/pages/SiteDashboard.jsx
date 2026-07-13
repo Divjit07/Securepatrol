@@ -1,11 +1,14 @@
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, CheckCircle2, Radio } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import ClientShiftBar from '../components/ClientShiftBar.jsx'
+import ClockActivity from '../components/overview/ClockActivity.jsx'
 import LiveFeed from '../components/LiveFeed.jsx'
 import { useClientShift } from '../hooks/useClientShift.js'
 import { useSiteHours } from '../hooks/useSiteHours.js'
 import { useClientSiteData } from '../hooks/useClientSiteData.js'
+import { fetchRecentClockEvents } from '../lib/scans.js'
 
 export default function SiteDashboard() {
   const { id } = useParams()
@@ -13,6 +16,22 @@ export default function SiteDashboard() {
   const { date, setDate, shift, scheduled } = useClientShift(operatingHours)
   const { site, guards, scans, checkpoints, loading, rounds, patrolScanCount, patrolCheckpointCount, scannedCount } =
     useClientSiteData(id, date, shift)
+
+  const [clockEvents, setClockEvents] = useState([])
+  useEffect(() => {
+    if (!id) return
+    let cancelled = false
+    const load = () =>
+      fetchRecentClockEvents([id])
+        .then((e) => !cancelled && setClockEvents(e))
+        .catch(() => !cancelled && setClockEvents([]))
+    load()
+    window.addEventListener('focus', load)
+    return () => {
+      cancelled = true
+      window.removeEventListener('focus', load)
+    }
+  }, [id])
 
   return (
     <Layout variant="admin">
@@ -120,7 +139,8 @@ export default function SiteDashboard() {
             </div>
           </div>
 
-          <div>
+          <div className="space-y-6">
+            <ClockActivity events={clockEvents} showSite={false} />
             <LiveFeed siteId={id} limit={20} passesOnly />
           </div>
         </div>

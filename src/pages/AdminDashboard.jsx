@@ -8,7 +8,7 @@ import SiteHoursModal from '../components/SiteHoursModal.jsx'
 import OverviewBoard from '../components/overview/OverviewBoard.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { getScheduledShiftForDate } from '../hooks/useClientShift.js'
-import { fetchSitesForAdmin } from '../lib/scans.js'
+import { fetchSitesForAdmin, fetchRecentClockEvents } from '../lib/scans.js'
 import { fetchGuardsWithSites } from '../lib/guards.js'
 import { fetchOpenAlertEvents, acknowledgeAlertEvent, ALERT_TYPE_LABELS } from '../lib/alertEvents.js'
 import { supabase } from '../lib/supabase.js'
@@ -28,6 +28,7 @@ export default function AdminDashboard() {
   const [hoursSite, setHoursSite] = useState(null)
   const [ackBusy, setAckBusy] = useState(null)
   const [query, setQuery] = useState('')
+  const [clockEvents, setClockEvents] = useState([])
 
   const loadSites = async () => {
     if (!user) return
@@ -38,6 +39,9 @@ export default function AdminDashboard() {
       setSites(siteList)
 
       fetchOpenAlertEvents().then(setAlerts).catch(() => setAlerts([]))
+      fetchRecentClockEvents(siteList.map((s) => s.id))
+        .then(setClockEvents)
+        .catch(() => setClockEvents([]))
 
       const dayStart = new Date()
       dayStart.setHours(0, 0, 0, 0)
@@ -235,6 +239,11 @@ export default function AdminDashboard() {
     message: a.message,
   }))
 
+  const siteNameById = Object.fromEntries(sites.map((s) => [s.id, s.name]))
+  const clockActivity = clockEvents
+    .filter((e) => !q || scopedSiteIds.has(e.siteId))
+    .map((e) => ({ ...e, siteName: siteNameById[e.siteId] || 'Site' }))
+
   const siteRows = matchedSites.map((site) => {
     const s = scopedStats[site.id] || stats[site.id] || {}
     return {
@@ -321,6 +330,7 @@ export default function AdminDashboard() {
         onDeleteSite={handleDeleteSite}
         removingId={removingId}
         loading={loading}
+        clockActivity={clockActivity}
         emptyLabel={sites.length ? 'No sites match your search.' : 'No sites yet. Create your first site to get started.'}
       />
 
