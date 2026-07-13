@@ -410,11 +410,11 @@
   /* ---- Kratos auth — Dark Ops (locked night palette) ---- */
   .kratos-auth {
     @apply relative min-h-dvh overflow-hidden;
-    background: #1c1f1a;
+    background: #0e110e;
     color-scheme: dark;
-    --auth-canvas: #1c1f1a;
-    --auth-surface: #272b25;
-    --auth-inset: #151814;
+    --auth-canvas: #0e110e;
+    --auth-surface: #1a1f1a;
+    --auth-inset: #121512;
     --auth-ink: #f4f6f1;
     --auth-ink-2: #b6bdb0;
     --auth-ink-3: #8b9284;
@@ -426,46 +426,66 @@
     @apply pointer-events-none absolute inset-0 overflow-hidden;
   }
 
-  .kratos-auth-bg {
-    @apply absolute left-1/2 top-1/2 max-h-none max-w-none object-cover;
-    width: max(100vw, 177.78vh);
-    height: max(100dvh, 56.25vw);
-    transform: translate(-50%, -50%);
+  .kratos-auth-sparkle {
+    @apply absolute block;
+    width: 10px;
+    height: 10px;
+    background: var(--auth-lime);
+    opacity: 0.45;
+    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--auth-lime) 70%, transparent));
   }
 
-  .kratos-auth-bg--live {
-    @apply opacity-100;
-    transform: translate(-50%, -50%) scale(1.06);
+  .kratos-auth-sparkle--a {
+    right: 8%;
+    bottom: 14%;
+    animation: kratos-sparkle 4.5s ease-in-out infinite;
   }
 
-  .kratos-auth-bg--hidden {
-    @apply pointer-events-none opacity-0;
+  .kratos-auth-sparkle--b {
+    right: 22%;
+    bottom: 28%;
+    width: 7px;
+    height: 7px;
+    opacity: 0.3;
+    animation: kratos-sparkle 5.5s ease-in-out 1.2s infinite;
   }
 
-  @media (prefers-reduced-motion: no-preference) {
-    .kratos-auth-bg--animate {
-      animation: kratos-bg-kenburns 28s ease-in-out infinite;
-    }
+  .kratos-auth-sparkle--c {
+    left: 42%;
+    top: 18%;
+    width: 6px;
+    height: 6px;
+    opacity: 0.25;
+    animation: kratos-sparkle 6s ease-in-out 0.6s infinite;
   }
 
-  @keyframes kratos-bg-kenburns {
-    0% {
-      transform: translate(-50%, -50%) scale(1.06);
+  @keyframes kratos-sparkle {
+    0%,
+    100% {
+      opacity: 0.2;
+      transform: scale(0.85);
     }
     50% {
-      transform: translate(-50%, -50%) scale(1.12);
-    }
-    100% {
-      transform: translate(-50%, -50%) scale(1.06);
+      opacity: 0.55;
+      transform: scale(1.15);
     }
   }
 
   .kratos-auth-layout {
-    @apply relative z-10 mx-auto grid min-h-dvh w-full max-w-6xl grid-cols-1 lg:grid-cols-[1.05fr_0.95fr];
+    @apply relative z-10 mx-auto grid min-h-dvh w-full max-w-7xl grid-cols-1 items-center;
+    gap: 0.5rem;
+  }
+
+  @media (min-width: 1024px) {
+    .kratos-auth-layout {
+      grid-template-columns: minmax(0, 1.05fr) minmax(220px, 0.7fr) minmax(0, 0.95fr);
+      gap: 0;
+    }
   }
 
   .kratos-auth-hero-panel {
-    @apply flex flex-col justify-center px-6 py-12 sm:px-10 lg:px-12 lg:py-16;
+    @apply flex flex-col justify-center px-6 py-10 sm:px-10 lg:px-12 lg:py-16;
   }
 
   .kratos-auth-brand {
@@ -473,27 +493,27 @@
   }
 
   .kratos-auth-brand-mark {
-    @apply flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl;
-    background: color-mix(in srgb, var(--auth-lime) 16%, transparent);
+    @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-xl;
+    background: color-mix(in srgb, var(--auth-lime) 18%, transparent);
     color: var(--auth-lime);
-    border: 1px solid color-mix(in srgb, var(--auth-lime) 28%, transparent);
+    border: 1px solid color-mix(in srgb, var(--auth-lime) 35%, transparent);
   }
 
   .kratos-auth-brand-name {
-    @apply font-display text-xl font-bold tracking-[0.28em] sm:text-2xl;
+    @apply font-display text-xl font-bold tracking-[0.22em] sm:text-2xl;
     color: var(--auth-ink);
   }
 
   .kratos-auth-headline {
     @apply font-display max-w-lg font-semibold tracking-tight;
-    font-size: clamp(1.85rem, 4.2vw, 2.75rem);
-    line-height: 1.12;
+    font-size: clamp(1.85rem, 4.2vw, 2.85rem);
+    line-height: 1.1;
     color: var(--auth-ink);
   }
 
   .kratos-auth-lead {
     @apply mt-4 max-w-md text-base font-medium leading-relaxed sm:text-lg;
-    color: var(--auth-ink-2);
+    color: color-mix(in srgb, var(--auth-ink) 88%, transparent);
   }
 
   .kratos-auth-copy {
@@ -501,19 +521,62 @@
     color: var(--auth-ink-3);
   }
 
+  .kratos-auth-mascot {
+    @apply relative mx-auto flex w-full max-w-[220px] items-end justify-center px-2 sm:max-w-[260px] lg:max-w-[320px];
+    min-height: 200px;
+  }
+
+  @media (min-width: 1024px) {
+    .kratos-auth-mascot {
+      min-height: 340px;
+    }
+  }
+
+  .kratos-auth-mascot-glow {
+    @apply absolute bottom-[8%] left-1/2 h-24 w-40 -translate-x-1/2 rounded-full;
+    background: radial-gradient(ellipse at center, color-mix(in srgb, var(--auth-lime) 35%, transparent), transparent 70%);
+    filter: blur(12px);
+  }
+
+  .kratos-auth-mascot-img {
+    @apply relative z-[1] h-auto w-full max-h-[min(58vh,460px)] object-contain select-none;
+    filter: drop-shadow(0 24px 40px rgba(0, 0, 0, 0.55));
+    animation: kratos-mascot-float 5.5s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .kratos-auth-mascot-img,
+    .kratos-auth-sparkle {
+      animation: none;
+    }
+  }
+
+  @keyframes kratos-mascot-float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
   .kratos-auth-aside {
     @apply flex items-center justify-center px-6 pb-12 pt-2 sm:px-10 lg:px-8 lg:py-16;
   }
 
   .kratos-auth-card {
-    @apply relative w-full max-w-[24rem] rounded-2xl p-6 sm:max-w-[26rem] sm:p-7;
-    background: var(--auth-surface);
+    @apply relative w-full max-w-[24rem] rounded-[1.25rem] p-6 sm:max-w-[26rem] sm:p-8;
+    background: color-mix(in srgb, #1c221c 92%, black);
     border: 1px solid var(--auth-hairline);
-    box-shadow: inset 0 1px 0 0 color-mix(in srgb, white 7%, transparent);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--auth-lime) 6%, transparent),
+      0 28px 60px -28px rgba(0, 0, 0, 0.65),
+      inset 0 1px 0 0 color-mix(in srgb, white 8%, transparent);
   }
 
   .kratos-auth-card-title {
-    @apply font-display text-xl font-semibold tracking-tight;
+    @apply font-display text-2xl font-semibold tracking-tight;
     color: var(--auth-ink);
   }
 

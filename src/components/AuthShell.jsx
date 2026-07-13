@@ -3,7 +3,7 @@ import { Shield } from 'lucide-react'
 import { BRAND } from '../lib/brand.js'
 import AuthBackground from './AuthBackground.jsx'
 
-/** Dark Ops auth shell — brand hero left, sign-in card right. */
+/** Dark Ops auth shell — brand hero, mascot, sign-in card (matches login art). */
 export default function AuthShell({ children, mode = 'signin' }) {
   return (
     <div className="kratos-auth">
@@ -13,7 +13,7 @@ export default function AuthShell({ children, mode = 'signin' }) {
         <section className="kratos-auth-hero-panel">
           <div className="kratos-auth-brand">
             <span className="kratos-auth-brand-mark" aria-hidden>
-              <Shield className="h-7 w-7" strokeWidth={1.75} />
+              <Shield className="h-6 w-6" strokeWidth={2} fill="currentColor" fillOpacity={0.15} />
             </span>
             <p className="kratos-auth-brand-name">{BRAND.nameUpper}</p>
           </div>
@@ -22,6 +22,16 @@ export default function AuthShell({ children, mode = 'signin' }) {
           <p className="kratos-auth-lead">{BRAND.tagline}</p>
           <p className="kratos-auth-copy">{BRAND.heroSub}</p>
         </section>
+
+        <div className="kratos-auth-mascot" aria-hidden>
+          <div className="kratos-auth-mascot-glow" />
+          <img
+            src="/brand/kratos-guard-mascot.png"
+            alt=""
+            className="kratos-auth-mascot-img"
+            draggable={false}
+          />
+        </div>
 
         <aside className="kratos-auth-aside">
           <div className="kratos-auth-card">
