@@ -642,6 +642,11 @@
     color: var(--auth-ink-3);
   }
 
+  .kratos-auth-copyright {
+    @apply absolute bottom-4 left-0 right-0 z-10 px-4 text-center text-[10px] font-medium uppercase tracking-[0.14em];
+    color: color-mix(in srgb, var(--auth-ink-3) 85%, transparent);
+  }
+
   .kratos-auth-error {
     @apply rounded-xl border px-4 py-3 text-sm;
     border-color: color-mix(in srgb, #ef4444 35%, transparent);

@@ -56,6 +56,8 @@ export default function AuthShell({ children, mode = 'signin' }) {
           </div>
         </aside>
       </div>
+
+      <p className="kratos-auth-copyright">Copyrighted by Divjit Singh Dhatt</p>
     </div>
   )
 }
