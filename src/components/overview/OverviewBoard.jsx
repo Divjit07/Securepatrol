@@ -1,7 +1,7 @@
 // Operations-first Overview. Answers the only question an admin opens the app
 // for — "is everyone where they should be, and who needs attention?" — before
 // any detail. No rings, donuts, sparklines or load animations: a status band,
-// four plain KPIs, an alert list, and clean site rows. Pure presentational;
+// KPI tiles, an alert list, and clean site rows. Pure presentational;
 // both the live dashboard and the /dev preview render it.
 import { Link } from 'react-router-dom'
 import { Building2, Clock, Trash2, ChevronRight, Check, MapPin } from 'lucide-react'
@@ -32,7 +32,7 @@ function WidgetTile({ children, className = '' }) {
 
 function StatusBand({ segments }) {
   return (
-    <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
       {segments.map((s) => (
         <WidgetTile key={s.label}>
           <span className={`inline-block rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${PILL_TONE[s.tone] || PILL_TONE.muted}`}>
@@ -48,7 +48,7 @@ function StatusBand({ segments }) {
 
 function KpiRow({ kpis }) {
   return (
-    <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div className="mb-6 grid grid-cols-2 gap-3">
       {kpis.map((k) => (
         <WidgetTile key={k.label}>
           <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-3">{k.label}</p>

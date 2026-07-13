@@ -199,35 +199,22 @@ export default function AdminDashboard() {
 
   const unassignedGuards = guards.filter((g) => g.unassigned)
   const activeGuards = scopedGuards.filter((g) => g.active)
-  const totalScansToday = Object.values(scopedStats).reduce((sum, s) => sum + (s.scannedToday || 0), 0)
-  const complianceValues = Object.values(scopedStats).map((s) => s.compliance || 0)
-  const avgCompliance = complianceValues.length
-    ? Math.round(complianceValues.reduce((a, b) => a + b, 0) / complianceValues.length)
-    : 0
 
   const onDutyIds = new Set(
     scopedShifts.filter((s) => new Date(s.starts_at) <= now && new Date(s.ends_at) > now).map((s) => s.guard_id),
   )
   const lateIds = new Set(scopedAlerts.filter((a) => a.event_type === 'late').map((a) => a.guard_id))
   const noShowIds = new Set(scopedAlerts.filter((a) => a.event_type === 'no_show').map((a) => a.guard_id))
-  const upNextIds = new Set(scopedShifts.filter((s) => new Date(s.starts_at) > now).map((s) => s.guard_id))
-  const unscheduledCount = Math.max(
-    0,
-    activeGuards.length - onDutyIds.size - upNextIds.size - noShowIds.size,
-  )
 
   const statusSegments = [
     { label: 'On duty now', pill: 'On duty', value: onDutyIds.size, tone: 'green' },
     { label: 'Running late', pill: 'Late', value: lateIds.size, tone: lateIds.size ? 'amber' : 'muted' },
     { label: 'No-show', pill: 'No-show', value: noShowIds.size, tone: noShowIds.size ? 'red' : 'muted' },
-    { label: 'Up next / off', pill: 'Off', value: upNextIds.size + unscheduledCount, tone: 'muted' },
   ]
 
   const kpis = [
     { label: 'Sites', value: matchedSites.length },
     { label: 'Active guards', value: activeGuards.length, hint: unassignedGuards.length ? `${unassignedGuards.length} unassigned` : '' },
-    { label: 'Scans today', value: totalScansToday },
-    { label: 'Avg compliance', value: `${avgCompliance}%`, danger: complianceValues.length > 0 && avgCompliance === 0 },
   ]
 
   const alertItems = scopedAlerts.map((a) => ({

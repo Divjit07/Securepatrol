@@ -46,21 +46,16 @@ function buildBoard(seed) {
     }
   })
 
-  const avgCompliance = Math.round(siteRows.reduce((s, r) => s + r.compliance, 0) / siteRows.length)
-  const totalScans = dayScans.length
   const openSites = data.sites.filter((s) => !getScheduledShiftForDate(day, s.operating_hours).isClosed).length
 
   const statusSegments = [
     { label: 'On duty now', pill: 'On duty', value: workedToday.size, tone: 'green' },
     { label: 'Running late', pill: 'Late', value: late, tone: late ? 'amber' : 'muted' },
     { label: 'No-show', pill: 'No-show', value: noShow, tone: noShow ? 'red' : 'muted' },
-    { label: 'Off / not scheduled', pill: 'Off', value: Math.max(0, data.guards.length - workedToday.size - late - noShow), tone: 'muted' },
   ]
   const kpis = [
     { label: 'Sites', value: data.sites.length, hint: `${openSites} open today` },
     { label: 'Active guards', value: data.guards.length },
-    { label: 'Scans today', value: totalScans },
-    { label: 'Avg compliance', value: `${avgCompliance}%` },
   ]
   const alerts = dayAlerts.map((a, i) => ({
     id: i,
