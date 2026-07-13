@@ -9,7 +9,6 @@ import { readFnError } from '../lib/fnError.js'
 import {
   assignClientToSite,
   fetchClientsWithSites,
-  formatClientSiteLabel,
   removeClient,
 } from '../lib/clients.js'
 
@@ -192,79 +191,73 @@ export default function ClientManager() {
         </form>
       )}
 
-      <div className="sp-card overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-white/5 text-left text-ink-2">
-            <tr>
-              <th className="px-4 py-3 font-medium">Client</th>
-              <th className="px-4 py-3 font-medium">Email</th>
-              <th className="px-4 py-3 font-medium">Site</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5">
-            {clients.map((client) => (
-              <tr key={client.id} className={client.unassigned ? 'bg-accent-orange/10' : ''}>
-                <td className="px-4 py-3 font-medium">{client.name}</td>
-                <td className="px-4 py-3 text-ink-2">{client.email}</td>
-                <td className="px-4 py-3">
-                  <select
-                    className={`max-w-xs rounded border px-2 py-1.5 text-sm ${
-                      client.unassigned ? 'border-amber-300 bg-accent-orange/10' : 'border-white/10 bg-surface'
-                    }`}
-                    value={client.site_id || ''}
-                    disabled={assigningId === client.id}
-                    onChange={(e) => handleAssignSite(client.id, e.target.value)}
-                  >
-                    <option value="">— Not assigned —</option>
-                    {sites.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}{s.address ? ` — ${s.address}` : ''}
-                      </option>
-                    ))}
-                  </select>
-                  {!client.unassigned && (
-                    <p className="mt-1 text-xs text-ink-2">{formatClientSiteLabel(client)}</p>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      client.active ? 'bg-accent-green/15 text-accent-green' : 'bg-accent-red/15 text-accent-red'
-                    }`}
-                  >
-                    {client.active ? 'Active' : 'Inactive'}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => toggleActive(client)}
-                      className="text-ink-2 hover:text-ink-2"
-                      title={client.active ? 'Deactivate' : 'Activate'}
-                      disabled={removingId === client.id}
-                    >
-                      {client.active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveClient(client)}
-                      className="text-accent-red hover:text-accent-red disabled:opacity-40"
-                      title="Remove client permanently"
-                      disabled={removingId === client.id}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Responsive card list — actions (incl. Remove) always visible on mobile. */}
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {clients.map((client) => (
+          <div
+            key={client.id}
+            className={`rounded-xl border bg-surface p-4 ${
+              client.unassigned ? 'border-accent-orange/40' : 'border-white/10'
+            }`}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="truncate font-semibold text-ink">{client.name}</p>
+                <p className="truncate text-xs text-ink-2">{client.email}</p>
+              </div>
+              <span
+                className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                  client.active ? 'bg-accent-green/15 text-accent-green' : 'bg-accent-red/15 text-accent-red'
+                }`}
+              >
+                {client.active ? 'Active' : 'Inactive'}
+              </span>
+            </div>
+
+            <label className="mt-3 block text-[10px] font-semibold uppercase tracking-wider text-ink-3">
+              Assigned site
+            </label>
+            <select
+              className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${
+                client.unassigned ? 'border-accent-orange/40 bg-accent-orange/10' : 'border-white/10 bg-inset'
+              }`}
+              value={client.site_id || ''}
+              disabled={assigningId === client.id}
+              onChange={(e) => handleAssignSite(client.id, e.target.value)}
+            >
+              <option value="">— Not assigned —</option>
+              {sites.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}{s.address ? ` — ${s.address}` : ''}
+                </option>
+              ))}
+            </select>
+
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                onClick={() => toggleActive(client)}
+                disabled={removingId === client.id}
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-ink-2 hover:bg-white/5 disabled:opacity-40"
+              >
+                {client.active ? <UserX className="h-3.5 w-3.5" /> : <UserCheck className="h-3.5 w-3.5" />}
+                {client.active ? 'Deactivate' : 'Activate'}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRemoveClient(client)}
+                disabled={removingId === client.id}
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-accent-red/30 px-3 py-2 text-xs font-semibold text-accent-red hover:bg-accent-red/10 disabled:opacity-40"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Remove
+              </button>
+            </div>
+          </div>
+        ))}
         {clients.length === 0 && (
-          <p className="p-8 text-center text-ink-2">No client accounts yet. Click Add Client to create one for Ali.</p>
+          <p className="rounded-xl border border-white/10 bg-surface p-8 text-center text-ink-2 sm:col-span-2 xl:col-span-3">
+            No client accounts yet. Click Add Client to create one.
+          </p>
         )}
       </div>
     </Layout>

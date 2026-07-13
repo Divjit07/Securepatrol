@@ -493,8 +493,8 @@ export default function AdminPayroll() {
             ))}
           </div>
 
-          <div className="overflow-hidden rounded-xl border border-white/10 bg-surface">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto rounded-xl border border-white/10 bg-surface">
+            <table className="w-full min-w-[44rem] text-sm">
               <thead className="bg-white/5 text-left text-ink-2">
                 <tr>
                   <th className="px-4 py-3 font-medium">Date</th>

@@ -167,7 +167,7 @@ export default function OverviewBoard({
 
       <div className="grid gap-5 lg:grid-cols-12">
         {/* Sites */}
-        <div className="lg:col-span-7 xl:col-span-8">
+        <div className="min-w-0 lg:col-span-7 xl:col-span-8">
           <div className="mb-2 flex items-center justify-between px-1">
             <h2 className="text-sm font-semibold text-ink">Sites</h2>
             <Link to="/admin/sites" className="text-xs font-medium text-ink-3 hover:text-ink">View all →</Link>
@@ -194,7 +194,7 @@ export default function OverviewBoard({
         </div>
 
         {/* Alerts */}
-        <div className="lg:col-span-5 xl:col-span-4">
+        <div className="min-w-0 space-y-5 lg:col-span-5 xl:col-span-4">
           <div className="mb-2 flex items-center justify-between px-1">
             <h2 className="text-sm font-semibold text-ink">Needs attention</h2>
             <Link
