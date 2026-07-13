@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, Send, CalendarDays, X, Check } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Send, CalendarDays, LayoutGrid, List, X, Check } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import RosterGrid from '../components/roster/RosterGrid.jsx'
+import RosterAgenda from '../components/roster/RosterAgenda.jsx'
 import ShiftSheet from '../components/roster/ShiftSheet.jsx'
 import RosterSitePicker, { ALL_SITES } from '../components/roster/RosterSitePicker.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
@@ -44,6 +45,7 @@ export default function AdminRoster() {
   const [templates, setTemplates] = useState([])
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()))
   const [numDays, setNumDays] = useState(7)
+  const [view, setView] = useState('grid') // grid | agenda
   const [sheet, setSheet] = useState(null)
   const [loading, setLoading] = useState(true)
   const [publishing, setPublishing] = useState(false)
@@ -394,6 +396,26 @@ export default function AdminRoster() {
 
         <div className="ml-auto flex items-center gap-2">
           <div className="flex rounded-full border border-ink/10 bg-ink/5 p-1">
+            {[
+              { id: 'grid', label: 'Grid', icon: LayoutGrid },
+              { id: 'agenda', label: 'By day', icon: List },
+            ].map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setView(id)}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                  view === id
+                    ? 'bg-black text-white shadow-sm'
+                    : 'text-ink-2 hover:text-ink'
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="flex rounded-full border border-ink/10 bg-ink/5 p-1">
             {[7, 14].map((n) => (
               <button
                 key={n}
@@ -418,6 +440,13 @@ export default function AdminRoster() {
             <div className="sp-card flex items-center justify-center gap-3 px-6 py-16 text-sm text-ink-3">
               <CalendarDays className="h-5 w-5 animate-pulse" /> Loading roster…
             </div>
+          ) : view === 'agenda' ? (
+            <RosterAgenda
+              days={days}
+              shifts={shifts}
+              showSite={isAllSites}
+              onShiftClick={(shift) => setSheet(shift)}
+            />
           ) : (
             <RosterGrid
               days={days}
