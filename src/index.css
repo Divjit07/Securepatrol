@@ -74,92 +74,50 @@
   --chart-muted: color-mix(in srgb, white 20%, transparent);
 }
 
-/* Night — Apple elevated dark with forest soul (default) */
+/* Night — pure black + white, the primary theme. Colour lives only in the
+   pills/badges (accent tokens), never the surfaces. */
 [data-theme='night'] {
   color-scheme: dark;
-  --color-canvas: #1c1f1a;
-  --color-surface: #272b25;
-  --color-surface-2: #343a31;
-  --color-inset: #151814;
-  --color-paper: #f7f6f2;
-  --color-ink: #f4f6f1;
-  --color-ink-2: #b6bdb0;
-  --color-ink-3: #8b9284;
-  --color-accent-orange: #96ee60;
+  --color-canvas: #000000;
+  --color-surface: #121212;
+  --color-surface-2: #1f1f1f;
+  --color-inset: #0a0a0a;
+  --color-paper: #ffffff;
+  --color-ink: #ffffff;
+  --color-ink-2: #a3a3a3;
+  --color-ink-3: #6e6e6e;
+  --color-accent-orange: #4ade80;
   --color-accent-cyan: #d9f0ff;
-  --color-accent-cyan-line: #7fd09f;
-  --color-accent-green: #7fd09f;
+  --color-accent-cyan-line: #4ade80;
+  --color-accent-green: #4ade80;
+  --hairline: color-mix(in srgb, white 10%, transparent);
+  --hairline-strong: color-mix(in srgb, white 16%, transparent);
 }
 
-/* Day — warm paper daylight (not pure white) */
+/* Day — clean white + black light mode (no warm tint). */
 [data-theme='day'] {
   color-scheme: light;
-  --color-canvas: #ebe8e1;
-  --color-surface: #f7f5f0;
-  --color-surface-2: #ddd8ce;
-  --color-inset: #e3dfd6;
-  --color-paper: #fffcf7;
-  --color-ink: #1c1a15;
-  --color-ink-2: #5a554b;
-  --color-ink-3: #7a7468;
-  --color-accent-orange: #5a9e2e;
-  --color-accent-cyan: #d4ebf7;
-  --color-accent-cyan-line: #4f9e6f;
-  --color-accent-green: #3d8a5a;
-  --hairline: color-mix(in srgb, #1c1a15 10%, transparent);
-  --hairline-strong: color-mix(in srgb, #1c1a15 16%, transparent);
-  --fill-subtle: color-mix(in srgb, #1c1a15 4%, transparent);
-  --fill-hover: color-mix(in srgb, #1c1a15 7%, transparent);
-  --card-shine: inset 0 1px 0 0 color-mix(in srgb, white 70%, transparent);
-  --elev-shadow: 0 12px 32px -16px color-mix(in srgb, #1c1a15 14%, transparent);
-  --soft-shadow: 0 6px 20px -10px rgba(28, 26, 21, 0.12);
-  --chart-grid: color-mix(in srgb, #1c1a15 8%, transparent);
-  --chart-muted: color-mix(in srgb, #1c1a15 18%, transparent);
-}
-
-/* Forest — deeper olive night, lime still leads */
-[data-theme='forest'] {
-  color-scheme: dark;
-  --color-canvas: #141812;
-  --color-surface: #1e241c;
-  --color-surface-2: #2c3429;
-  --color-inset: #10140f;
-  --color-paper: #fbfdf8;
-  --color-ink: #f5f8f2;
-  --color-ink-2: #b0b8a8;
-  --color-ink-3: #87907f;
-  --color-accent-orange: #96ee60;
-  --color-accent-cyan: #d9f0ff;
-  --color-accent-cyan-line: #7fd09f;
-  --color-accent-green: #7fd09f;
-}
-
-/* Midnight (was Matte Black) — soft charcoal, KEEP lime soul */
-
-/* Sky — cool daylight; accent is deep sky blue (never = canvas) */
-[data-theme='sky'] {
-  color-scheme: light;
-  --color-canvas: #dceaf4;
-  --color-surface: #f4f9fc;
-  --color-surface-2: #c5d9e8;
-  --color-inset: #d0e0ec;
+  --color-canvas: #f4f4f4;
+  --color-surface: #ffffff;
+  --color-surface-2: #ececec;
+  --color-inset: #f0f0f0;
   --color-paper: #ffffff;
-  --color-ink: #0f1a22;
-  --color-ink-2: #3d5260;
-  --color-ink-3: #5f7585;
-  --color-accent-orange: #0a7ea4;
-  --color-accent-cyan: #c8e4f5;
-  --color-accent-cyan-line: #0a7ea4;
-  --color-accent-green: #2f8f6a;
-  --hairline: color-mix(in srgb, #0f1a22 10%, transparent);
-  --hairline-strong: color-mix(in srgb, #0f1a22 16%, transparent);
-  --fill-subtle: color-mix(in srgb, #0f1a22 4%, transparent);
-  --fill-hover: color-mix(in srgb, #0f1a22 7%, transparent);
-  --card-shine: inset 0 1px 0 0 color-mix(in srgb, white 80%, transparent);
-  --elev-shadow: 0 12px 32px -16px color-mix(in srgb, #0f1a22 12%, transparent);
-  --soft-shadow: 0 6px 20px -10px rgba(15, 26, 34, 0.1);
-  --chart-grid: color-mix(in srgb, #0f1a22 8%, transparent);
-  --chart-muted: color-mix(in srgb, #0f1a22 18%, transparent);
+  --color-ink: #0a0a0a;
+  --color-ink-2: #565656;
+  --color-ink-3: #8a8a8a;
+  --color-accent-orange: #16a34a;
+  --color-accent-cyan: #d4ebf7;
+  --color-accent-cyan-line: #16a34a;
+  --color-accent-green: #16a34a;
+  --hairline: color-mix(in srgb, #0a0a0a 10%, transparent);
+  --hairline-strong: color-mix(in srgb, #0a0a0a 16%, transparent);
+  --fill-subtle: color-mix(in srgb, #0a0a0a 4%, transparent);
+  --fill-hover: color-mix(in srgb, #0a0a0a 7%, transparent);
+  --card-shine: inset 0 1px 0 0 color-mix(in srgb, white 70%, transparent);
+  --elev-shadow: 0 12px 32px -16px color-mix(in srgb, #0a0a0a 14%, transparent);
+  --soft-shadow: 0 6px 20px -10px rgba(10, 10, 10, 0.12);
+  --chart-grid: color-mix(in srgb, #0a0a0a 8%, transparent);
+  --chart-muted: color-mix(in srgb, #0a0a0a 18%, transparent);
 }
 
 .guard-clock-in-card {
@@ -186,52 +144,6 @@
   --color-ink-3: #7a7468;
   color-scheme: light;
 }
-
-/* Light appearance: light recessed wells (not dark pits with white text) */
-[data-theme='day'] .dk-inset,
-[data-theme='day'] .bg-inset,
-[data-theme='sky'] .dk-inset,
-[data-theme='sky'] .bg-inset,
-
-[data-theme='day'] .sp-input,
-[data-theme='sky'] .sp-input,
-
-[data-theme='day'] .dk-card,
-[data-theme='day'] .sp-card,
-[data-theme='day'] .sp-card-elevated,
-[data-theme='day'] .sp-stat-card,
-[data-theme='sky'] .dk-card,
-[data-theme='sky'] .sp-card,
-[data-theme='sky'] .sp-card-elevated,
-[data-theme='sky'] .sp-stat-card,
-
-[data-theme='day'] .dk-card:hover,
-[data-theme='sky'] .dk-card:hover,
-
-[data-theme='day'] .app-sidebar,
-[data-theme='sky'] .app-sidebar,
-
-[data-theme='day'] .app-header,
-[data-theme='sky'] .app-header,
-
-[data-theme='day'] .dk-btn-2,
-[data-theme='day'] .sp-btn-secondary,
-[data-theme='sky'] .dk-btn-2,
-[data-theme='sky'] .sp-btn-secondary,
-
-[data-theme='day'] .dk-btn-2:hover,
-[data-theme='day'] .sp-btn-secondary:hover,
-[data-theme='sky'] .dk-btn-2:hover,
-[data-theme='sky'] .sp-btn-secondary:hover,
-
-[data-theme='day'] .theme-picker-panel,
-[data-theme='sky'] .theme-picker-panel,
-
-[data-theme='day'] .theme-picker-option:hover,
-[data-theme='sky'] .theme-picker-option:hover,
-
-[data-theme='day'] .sidebar-nav-active,
-[data-theme='sky'] .sidebar-nav-active,
 
 @layer base {
   body {

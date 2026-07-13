@@ -21,12 +21,9 @@
       <script>
       try {
         var saved = localStorage.getItem('sp-theme')
-        var aliases = { moss: 'forest', lagoon: 'sky', meadow: 'day', orchid: 'ivory', rose: 'ivory' }
-        var id = aliases[saved] || saved
-        var valid = { night:1, day:1, forest:1, matte:1, graphite:1, ivory:1, sky:1, studio:1 }
-        if (!valid[id]) {
-          id = window.matchMedia('(prefers-color-scheme: light)').matches ? 'day' : 'night'
-        }
+        // Retired themes collapse to the black primary; only night + day remain.
+        var valid = { night: 1, day: 1 }
+        var id = valid[saved] ? saved : 'night'
         document.documentElement.dataset.theme = id
       } catch (e) {
         document.documentElement.dataset.theme = 'night'

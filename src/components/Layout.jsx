@@ -294,7 +294,7 @@ function SidebarLayout({ children, groups, roleLabel, homeTo }) {
       )}
 
       <main className={`transition-[padding] duration-200 ${collapsed ? 'lg:pl-14' : 'lg:pl-[260px]'}`}>
-        <div className="app-main animate-rise px-4 py-6 sm:px-6 lg:px-10 lg:py-8">{children}</div>
+        <div className="app-main px-4 py-6 sm:px-6 lg:px-10 lg:py-8">{children}</div>
       </main>
     </div>
   )
@@ -430,7 +430,7 @@ function GuardLayout({ children }) {
         )}
       </header>
 
-      <main className="app-main animate-rise mx-auto max-w-7xl px-4 py-8 sm:px-6">{children}</main>
+      <main className="app-main mx-auto max-w-7xl px-4 py-8 sm:px-6">{children}</main>
     </div>
   )
 }

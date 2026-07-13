@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check, ChevronsUpDown } from 'lucide-react'
-import { PALETTE } from '../lib/brandPalette.js'
 
 export const THEME_GROUPS = [
   {
@@ -9,22 +8,15 @@ export const THEME_GROUPS = [
       {
         id: 'night',
         label: 'Night',
-        hint: 'Elevated dark',
-        dot: 'linear-gradient(145deg, #272b25 35%, #1c1f1a 70%, #96ee60)',
+        hint: 'Black · primary',
+        dot: 'linear-gradient(145deg, #1f1f1f 40%, #000 70%, #4ade80)',
       },
       {
         id: 'day',
         label: 'Day',
-        hint: 'Warm paper',
-        dot: 'linear-gradient(145deg, #f7f5f0 40%, #ebe8e1 70%, #5a9e2e)',
+        hint: 'White',
+        dot: 'linear-gradient(145deg, #ffffff 45%, #ececec 70%, #16a34a)',
       },
-    ],
-  },
-  {
-    label: 'Moods',
-    themes: [
-      { id: 'forest', label: 'Forest', dot: PALETTE.lime },
-      { id: 'sky', label: 'Sky', dot: 'linear-gradient(135deg, #f4f9fc, #0a7ea4)' },
     ],
   },
 ]
@@ -32,25 +24,23 @@ export const THEME_GROUPS = [
 const ALL_THEMES = THEME_GROUPS.flatMap((g) => g.themes)
 const VALID_IDS = new Set(ALL_THEMES.map((t) => t.id))
 
-/** Map retired / invalid ids → current defaults. */
+/** Every retired theme collapses to the black primary; day is the only light option. */
 const THEME_ALIASES = {
-  moss: 'forest',
-  lagoon: 'sky',
   meadow: 'day',
   orchid: 'day',
   rose: 'day',
   ivory: 'day',
+  sky: 'day',
+  moss: 'night',
+  lagoon: 'night',
+  forest: 'night',
   matte: 'night',
   graphite: 'night',
   studio: 'night',
 }
 
+// Black is the primary theme — default to it regardless of system preference.
 function systemDefaultTheme() {
-  try {
-    if (window.matchMedia('(prefers-color-scheme: light)').matches) return 'day'
-  } catch {
-    /* ignore */
-  }
   return 'night'
 }
 
