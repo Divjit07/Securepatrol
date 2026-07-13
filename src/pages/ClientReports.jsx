@@ -44,6 +44,7 @@ export default function ClientReports() {
   const [guards, setGuards] = useState([])
   const [hoursScans, setHoursScans] = useState([])
   const [hoursAdjustments, setHoursAdjustments] = useState({})
+  const [publishedShifts, setPublishedShifts] = useState([])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -124,7 +125,7 @@ export default function ClientReports() {
     const from = localDayStart(hoursFilters.fromDate)
     const to = localDayEnd(hoursFilters.toDate)
 
-    const [{ data, error }, adjRows] = await Promise.all([
+    const [{ data, error }, adjRows, { data: shiftRows }] = await Promise.all([
       supabase
         .from('scans')
         .select('id, guard_id, checkpoint_id, scanned_at, status')
@@ -134,15 +135,25 @@ export default function ClientReports() {
         .lte('scanned_at', to.toISOString())
         .order('scanned_at', { ascending: true }),
       fetchShiftAdjustmentsForSite(siteId, hoursFilters.fromDate, hoursFilters.toDate),
+      supabase
+        .from('shifts')
+        .select('id, guard_id, starts_at, ends_at')
+        .eq('site_id', siteId)
+        .eq('status', 'published')
+        .not('guard_id', 'is', null)
+        .gte('starts_at', from.toISOString())
+        .lte('starts_at', to.toISOString()),
     ])
 
     if (error) {
       alert(error.message)
       setHoursScans([])
       setHoursAdjustments({})
+      setPublishedShifts([])
     } else {
       setHoursScans(data || [])
       setHoursAdjustments(mapShiftAdjustments(adjRows))
+      setPublishedShifts(shiftRows || [])
     }
 
     setLoading(false)
@@ -208,6 +219,7 @@ export default function ClientReports() {
     dates: dateRangeDays(hoursFilters.fromDate, hoursFilters.toDate),
     adjustmentsByKey: hoursAdjustments,
     operatingHours: site?.operating_hours,
+    publishedShifts,
   })
 
   const exportHoursPdf = () => {

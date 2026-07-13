@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { CalendarHeart, Clock, RotateCcw, Save } from 'lucide-react'
+import { Clock, RotateCcw, Save } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import RosterSitePicker from '../components/roster/RosterSitePicker.jsx'
@@ -13,13 +13,10 @@ import { computeGuardShiftForDay, formatShiftDuration, formatShiftTime } from '.
 import {
   combineDateAndTime,
   fetchShiftAdjustmentsForDate,
-  isStatutoryHolidayAdjustment,
   mapShiftAdjustments,
   removeShiftAdjustment,
   saveShiftAdjustment,
   shiftAdjustmentKey,
-  statutoryHolidayNote,
-  statutoryHolidayName,
   toTimeInputValue,
 } from '../lib/shiftAdjustments.js'
 
@@ -202,19 +199,15 @@ export default function AdminShiftClock() {
     }
   })
 
-  const startEdit = (row, { statutoryHoliday = false } = {}) => {
+  const startEdit = (row) => {
     const defaults = row.dayShift || {
       clockInAt: combineDateAndTime(date, scheduled.start),
       clockOutAt: combineDateAndTime(date, scheduled.end),
     }
-    const isHoliday = statutoryHoliday || isStatutoryHolidayAdjustment(row.adjustment)
-
     setEditing({
       guardId: row.guard.id,
       clockIn: toTimeInputValue(defaults.clockInAt),
       clockOut: toTimeInputValue(defaults.clockOutAt),
-      statutoryHoliday: isHoliday,
-      holidayName: isHoliday ? statutoryHolidayName(row.adjustment?.note) : '',
       note: row.adjustment?.note || '',
     })
     setMessage(null)
@@ -238,27 +231,16 @@ export default function AdminShiftClock() {
         throw new Error('Clock-out must be after clock-in')
       }
 
-      let note = editing.note
-      if (editing.statutoryHoliday) {
-        if (!editing.holidayName?.trim()) {
-          throw new Error('Enter a holiday name (e.g. Canada Day)')
-        }
-        note = statutoryHolidayNote(editing.holidayName)
-      }
-
       await saveShiftAdjustment({
         siteId: selectedSite,
         guardId,
         shiftDate: date,
         clockInAt: clockInAt.toISOString(),
         clockOutAt: clockOutAt.toISOString(),
-        note,
+        note: editing.note,
       })
 
-      setMessage({
-        type: 'success',
-        text: editing.statutoryHoliday ? 'Statutory holiday saved.' : 'Shift times saved.',
-      })
+      setMessage({ type: 'success', text: 'Shift times saved.' })
       setEditing(null)
       await loadSiteData()
     } catch (err) {
@@ -290,7 +272,7 @@ export default function AdminShiftClock() {
     <Layout variant="admin">
       <PageHeader
         title="Shift Clock"
-        description="View guard sign-in times, edit clock-in/out per guard, or add a paid statutory holiday with a note."
+        description="View guard sign-in times and edit clock-in/out per guard."
       />
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
@@ -318,8 +300,8 @@ export default function AdminShiftClock() {
       ) : (
         <>
           <p className="mb-4 text-sm text-ink-2">
-            {scheduled.scheduleLabel}. Use <strong>Add holiday</strong> on a guard to credit hours
-            (e.g. 11:00 AM–8:00 PM) with a statutory holiday note — it will show on the client portal.
+            {scheduled.scheduleLabel}. Use <strong>Edit times</strong> to correct a guard's clock-in
+            or clock-out — the change shows on payroll and the client portal.
           </p>
 
           {message && (
@@ -357,14 +339,9 @@ export default function AdminShiftClock() {
                           <td className="px-6 py-4">
                             <p className="font-medium text-ink">{guard.name}</p>
                             <div className="mt-1.5 flex flex-wrap gap-1.5">
-                              {dayShift?.isAdjusted && !isStatutoryHolidayAdjustment(adjustment) && (
+                              {dayShift?.isAdjusted && (
                                 <span className="rounded-full bg-black px-2.5 py-0.5 text-[10px] font-semibold text-white">
                                   Adjusted
-                                </span>
-                              )}
-                              {isStatutoryHolidayAdjustment(adjustment) && (
-                                <span className="rounded-full bg-black px-2.5 py-0.5 text-[10px] font-semibold text-white">
-                                  Statutory holiday
                                 </span>
                               )}
                               {dayShift?.onShift && (
@@ -427,41 +404,15 @@ export default function AdminShiftClock() {
                           <td className="px-6 py-4">
                             {isEditing ? (
                               <div className="space-y-2">
-                                <label className="flex items-center gap-2 text-xs font-medium text-ink-2">
-                                  <input
-                                    type="checkbox"
-                                    checked={editing.statutoryHoliday}
-                                    onChange={(e) =>
-                                      setEditing((prev) => ({
-                                        ...prev,
-                                        statutoryHoliday: e.target.checked,
-                                        holidayName: e.target.checked ? prev.holidayName : '',
-                                      }))
-                                    }
-                                  />
-                                  Statutory holiday
-                                </label>
-                                {editing.statutoryHoliday ? (
-                                  <input
-                                    type="text"
-                                    className="sp-input w-full min-w-[200px]"
-                                    placeholder="Holiday name, e.g. Canada Day"
-                                    value={editing.holidayName}
-                                    onChange={(e) =>
-                                      setEditing((prev) => ({ ...prev, holidayName: e.target.value }))
-                                    }
-                                  />
-                                ) : (
-                                  <textarea
-                                    className="sp-input w-full min-w-[200px]"
-                                    rows={2}
-                                    placeholder="Note (optional)"
-                                    value={editing.note}
-                                    onChange={(e) =>
-                                      setEditing((prev) => ({ ...prev, note: e.target.value }))
-                                    }
-                                  />
-                                )}
+                                <textarea
+                                  className="sp-input w-full min-w-[200px]"
+                                  rows={2}
+                                  placeholder="Note (optional)"
+                                  value={editing.note}
+                                  onChange={(e) =>
+                                    setEditing((prev) => ({ ...prev, note: e.target.value }))
+                                  }
+                                />
                                 <div className="flex flex-wrap gap-2">
                                   <button
                                     type="button"
@@ -483,18 +434,6 @@ export default function AdminShiftClock() {
                               </div>
                             ) : (
                               <div className="flex flex-wrap gap-2">
-                                {!dayShift && (
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      startEdit({ guard, dayShift, adjustment }, { statutoryHoliday: true })
-                                    }
-                                    className="inline-flex items-center gap-1.5 rounded-full bg-black px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-zinc-800"
-                                  >
-                                    <CalendarHeart className="h-3.5 w-3.5" />
-                                    Add holiday
-                                  </button>
-                                )}
                                 <button
                                   type="button"
                                   onClick={() => startEdit({ guard, dayShift, adjustment })}

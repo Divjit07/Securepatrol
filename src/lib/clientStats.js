@@ -169,11 +169,19 @@ export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustm
     return t >= shiftStartBound && t <= scheduledEnd
   })
 
+  // Scheduled shift length for THIS site/day: the published roster shift when
+  // one exists (12–6 = 6h), otherwise the site's own operating hours. Statutory
+  // holidays credit this — never a shared company-default template.
+  const scheduledShiftMinutes =
+    publishedShift?.starts_at && publishedShift?.ends_at
+      ? Math.max(0, Math.round((new Date(publishedShift.ends_at) - new Date(publishedShift.starts_at)) / 60000))
+      : Math.round(fixedShiftHours(date, operatingHours) * 60)
+
   if (adjustment) {
     clockInAt = new Date(adjustment.clock_in_at)
     clockOutAt = new Date(adjustment.clock_out_at)
     hoursWorked = isStatutoryHolidayAdjustment(adjustment)
-      ? fixedShiftHours(date, operatingHours)
+      ? scheduledShiftMinutes / 60
       : hoursFromShiftTimes(clockInAt, clockOutAt)
     isAdjusted = true
   }
@@ -195,6 +203,7 @@ export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustm
       ? checkpoints.find((cp) => cp.id === clockInScan.checkpoint_id)?.name
       : 'Manual entry',
     hoursWorked,
+    scheduledShiftMinutes,
     scanCount: inWindow.length,
     hasClockOutPunch: Boolean(clockOutScan) || isAdjusted,
     // Guard's early clock-out reason (typed at punch time, stored on the scan).
@@ -237,7 +246,7 @@ export function computeGuardHoursReport({
 
       const statutoryHoliday = isStatutoryHolidayAdjustment(adjustment)
       const durationMinutes = statutoryHoliday
-        ? fixedShiftHours(date, operatingHours) * 60
+        ? dayShift.scheduledShiftMinutes
         : durationFromShiftTimes(dayShift.clockInAt, dayShift.clockOutAt).totalMinutes
 
       rows.push({

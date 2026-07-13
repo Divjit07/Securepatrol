@@ -11,6 +11,7 @@ export function useClientSiteData(siteId, date, shift, guardId = null) {
   const [guards, setGuards] = useState([])
   const [scans, setScans] = useState([])
   const [adjustments, setAdjustments] = useState({})
+  const [dayShiftsByGuard, setDayShiftsByGuard] = useState({})
   const [loading, setLoading] = useState(true)
   const checkpointIdsRef = useRef(new Set())
 
@@ -53,7 +54,13 @@ export function useClientSiteData(siteId, date, shift, guardId = null) {
 
     if (cps?.length && !shift.isClosed) {
       const { start, end } = shiftScanBounds(date, shift.start, shift.end)
-      const [{ data: scanData }, adjRows] = await Promise.all([
+      // Published roster shifts overlapping this day — the source of truth for
+      // each guard's shift window (a new site follows its schedule, not the
+      // company-default template).
+      const [y, m, d] = date.split('-').map(Number)
+      const dayStart = new Date(y, m - 1, d, 0, 0, 0, 0)
+      const dayEnd = new Date(y, m - 1, d, 23, 59, 59, 999)
+      const [{ data: scanData }, adjRows, { data: shiftRows }] = await Promise.all([
         (() => {
           let query = supabase
             .from('scans')
@@ -67,13 +74,27 @@ export function useClientSiteData(siteId, date, shift, guardId = null) {
           return query
         })(),
         fetchShiftAdjustmentsForDate(siteId, date),
+        supabase
+          .from('shifts')
+          .select('id, guard_id, starts_at, ends_at')
+          .eq('site_id', siteId)
+          .eq('status', 'published')
+          .not('guard_id', 'is', null)
+          .lt('starts_at', dayEnd.toISOString())
+          .gt('ends_at', dayStart.toISOString()),
       ])
 
       setScans(scanData || [])
       setAdjustments(mapShiftAdjustments(adjRows))
+      const byGuard = {}
+      for (const s of shiftRows || []) {
+        if (!byGuard[s.guard_id]) byGuard[s.guard_id] = s
+      }
+      setDayShiftsByGuard(byGuard)
     } else {
       setScans([])
       setAdjustments({})
+      setDayShiftsByGuard({})
     }
 
     setLoading(false)
@@ -143,7 +164,7 @@ export function useClientSiteData(siteId, date, shift, guardId = null) {
       const dayShift = computeGuardShiftForDay(
         scans.filter((s) => s.guard_id === guard.id),
         checkpoints,
-        { date, adjustment, operatingHours: site?.operating_hours },
+        { date, adjustment, operatingHours: site?.operating_hours, publishedShift: dayShiftsByGuard[guard.id] },
       )
       if (!dayShift) return null
       return {
