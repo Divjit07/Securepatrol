@@ -18,7 +18,6 @@ function buildBoard(seed) {
   const cpAll = Object.values(data.checkpointsBySite).flat()
   const patrolIds = new Set(cpAll.filter((cp) => cp.checkpoint_role === 'patrol').map((cp) => cp.id))
   const clockInIds = new Set(cpAll.filter((cp) => cp.checkpoint_role === 'shift_clock_in').map((cp) => cp.id))
-  const guardName = Object.fromEntries(data.guards.map((g) => [g.id, g.name]))
 
   const dayScans = Object.values(data.scansBySite).flat().filter((s) => s.scanned_at.slice(0, 10) === day)
   const dayAlerts = data.alerts.filter((a) => a.date === day)
@@ -66,24 +65,7 @@ function buildBoard(seed) {
     message: a.message,
   }))
 
-  // Clock in/out events for the day (from clock-checkpoint scans), newest first.
-  const clockInIdSet = new Set(cpAll.filter((cp) => cp.checkpoint_role === 'shift_clock_in').map((cp) => cp.id))
-  const clockOutIdSet = new Set(cpAll.filter((cp) => cp.checkpoint_role === 'shift_clock_out').map((cp) => cp.id))
-  const siteOfCp = {}
-  for (const site of data.sites) for (const cp of data.checkpointsBySite[site.id]) siteOfCp[cp.id] = site.name
-  const clockActivity = dayScans
-    .filter((s) => clockInIdSet.has(s.checkpoint_id) || clockOutIdSet.has(s.checkpoint_id))
-    .sort((a, b) => new Date(b.scanned_at) - new Date(a.scanned_at))
-    .slice(0, 25)
-    .map((s) => ({
-      id: s.id,
-      guardName: guardName[s.guard_id] || 'Guard',
-      siteName: siteOfCp[s.checkpoint_id] || 'Site',
-      type: clockInIdSet.has(s.checkpoint_id) ? 'in' : 'out',
-      at: s.scanned_at,
-    }))
-
-  return { day, sitesCount: data.sites.length, guardsCount: data.guards.length, statusSegments, kpis, alerts, siteRows, clockActivity }
+  return { day, sitesCount: data.sites.length, guardsCount: data.guards.length, statusSegments, kpis, alerts, siteRows }
 }
 
 export default function ScaleAdminPreview() {
@@ -111,7 +93,6 @@ export default function ScaleAdminPreview() {
         kpis={b.kpis}
         alerts={b.alerts}
         sites={b.siteRows}
-        clockActivity={b.clockActivity}
         loading={false}
       />
     </Layout>

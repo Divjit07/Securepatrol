@@ -5,7 +5,6 @@
 // both the live dashboard and the /dev preview render it.
 import { Link } from 'react-router-dom'
 import { Building2, Clock, Trash2, ChevronRight, Check, MapPin } from 'lucide-react'
-import ClockActivity from './ClockActivity.jsx'
 
 // Colored pills — the only place colour lives on the black/white canvas.
 const PILL_TONE = {
@@ -159,7 +158,6 @@ export default function OverviewBoard({
   onDeleteSite,
   removingId,
   loading,
-  clockActivity = [],
   emptyLabel = 'No sites yet. Create your first site to get started.',
 }) {
   return (
@@ -195,32 +193,28 @@ export default function OverviewBoard({
           </div>
         </div>
 
-        {/* Alerts + clock activity */}
-        <div className="space-y-5 lg:col-span-5 xl:col-span-4">
-          <div>
-            <div className="mb-2 flex items-center justify-between px-1">
-              <h2 className="text-sm font-semibold text-ink">Needs attention</h2>
-              <Link
-                to="/admin/alerts"
-                className="text-xs font-medium text-ink-3 transition hover:text-ink"
-              >
-                {alerts.length ? `${alerts.length} open →` : 'View all →'}
-              </Link>
-            </div>
-            <div className="overflow-hidden rounded-[26px] border border-white/8 bg-surface">
-              {alerts.length === 0 ? (
-                <p className="p-10 text-center text-sm text-ink-3">
-                  No open alerts. Late, no-show and stale-patrol events show up here.
-                </p>
-              ) : (
-                alerts.map((a) => (
-                  <AlertRow key={a.id} alert={a} onAcknowledge={onAcknowledge} busy={ackBusy === a.id} />
-                ))
-              )}
-            </div>
+        {/* Alerts */}
+        <div className="lg:col-span-5 xl:col-span-4">
+          <div className="mb-2 flex items-center justify-between px-1">
+            <h2 className="text-sm font-semibold text-ink">Needs attention</h2>
+            <Link
+              to="/admin/alerts"
+              className="text-xs font-medium text-ink-3 transition hover:text-ink"
+            >
+              {alerts.length ? `${alerts.length} open →` : 'View all →'}
+            </Link>
           </div>
-
-          <ClockActivity events={clockActivity} />
+          <div className="overflow-hidden rounded-[26px] border border-white/8 bg-surface">
+            {alerts.length === 0 ? (
+              <p className="p-10 text-center text-sm text-ink-3">
+                No open alerts. Late, no-show and stale-patrol events show up here.
+              </p>
+            ) : (
+              alerts.map((a) => (
+                <AlertRow key={a.id} alert={a} onAcknowledge={onAcknowledge} busy={ackBusy === a.id} />
+              ))
+            )}
+          </div>
         </div>
       </div>
     </>

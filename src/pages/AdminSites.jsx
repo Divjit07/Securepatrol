@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Building2, ChevronRight, MapPin, Search, ShieldCheck, X } from 'lucide-react'
+import { Building2, ChevronRight, MapPin, Plus, Search, ShieldCheck, X } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { fetchSitesForAdmin } from '../lib/scans.js'
 import { fetchGuardsWithSites } from '../lib/guards.js'
+import { supabase } from '../lib/supabase.js'
 
 /** Site directory — search across all sites, GPS/geofence status at a glance.
  *  Click a site → Live Map geofence panel for that site (type address, no visit).
@@ -16,19 +17,26 @@ export default function AdminSites() {
   const [guards, setGuards] = useState([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
+  const [showNewSite, setShowNewSite] = useState(false)
+  const [newSite, setNewSite] = useState({ name: '', address: '' })
+  const [creating, setCreating] = useState(false)
+
+  const loadSites = async () => {
+    if (!user) return
+    const [siteList, guardList] = await Promise.all([
+      fetchSitesForAdmin(user.id, isSuperAdmin ? 'super_admin' : 'admin'),
+      fetchGuardsWithSites().catch(() => []),
+    ])
+    setSites(siteList)
+    setGuards(guardList)
+  }
 
   useEffect(() => {
     if (!user) return
     let cancelled = false
-    Promise.all([
-      fetchSitesForAdmin(user.id, isSuperAdmin ? 'super_admin' : 'admin'),
-      fetchGuardsWithSites().catch(() => []),
-    ])
-      .then(([siteList, guardList]) => {
-        if (cancelled) return
-        setSites(siteList)
-        setGuards(guardList)
-      })
+    setLoading(true)
+    loadSites()
+      .catch(() => {})
       .finally(() => {
         if (!cancelled) setLoading(false)
       })
@@ -36,6 +44,28 @@ export default function AdminSites() {
       cancelled = true
     }
   }, [user?.id, isSuperAdmin])
+
+  const createSite = async (e) => {
+    e.preventDefault()
+    if (!user) return
+    setCreating(true)
+    try {
+      const { error } = await supabase.from('sites').insert({
+        name: newSite.name.trim(),
+        address: newSite.address.trim(),
+        admin_id: user.id,
+      })
+      if (error) {
+        alert(`Could not create site: ${error.message}`)
+        return
+      }
+      setNewSite({ name: '', address: '' })
+      setShowNewSite(false)
+      await loadSites()
+    } finally {
+      setCreating(false)
+    }
+  }
 
   const guardCountBySite = useMemo(() => {
     const counts = {}
@@ -60,11 +90,55 @@ export default function AdminSites() {
         title="Sites"
         description={`${sites.length} site${sites.length === 1 ? '' : 's'} under management. Click a site to set its address geofence on Live Map.`}
         action={
-          <Link to="/admin/map" className="dk-cta">
-            <MapPin className="h-4 w-4" /> Live Map
-          </Link>
+          <>
+            <button type="button" onClick={() => setShowNewSite(true)} className="dk-cta">
+              <Plus className="h-4 w-4" /> New Site
+            </button>
+            <Link to="/admin/map" className="dk-btn-2">
+              <MapPin className="h-4 w-4" /> Live Map
+            </Link>
+          </>
         }
       />
+
+      {showNewSite && (
+        <form onSubmit={createSite} className="dk-card mb-6 p-6">
+          <h3 className="font-display text-lg font-semibold text-ink">Create Site</h3>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="sp-label">Site name</label>
+              <input
+                placeholder="e.g. 800 Bathurst St"
+                value={newSite.name}
+                onChange={(e) => setNewSite({ ...newSite, name: e.target.value })}
+                required
+                className="sp-input"
+              />
+            </div>
+            <div>
+              <label className="sp-label">Address</label>
+              <input
+                placeholder="Full street address"
+                value={newSite.address}
+                onChange={(e) => setNewSite({ ...newSite, address: e.target.value })}
+                className="sp-input"
+              />
+            </div>
+          </div>
+          <div className="mt-5 flex gap-3">
+            <button type="submit" disabled={creating} className="dk-cta">
+              {creating ? 'Creating…' : 'Create site'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowNewSite(false)}
+              className="dk-btn-2"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
 
       <div className="mb-5 flex items-center gap-3 rounded-xl border border-white/10 bg-surface px-4 py-3">
         <Search className="h-4 w-4 shrink-0 text-ink-3" />
@@ -112,13 +186,14 @@ export default function AdminSites() {
         <div className="rounded-xl border border-white/10 bg-surface p-10 text-center text-sm text-ink-2">
           {sites.length === 0 ? (
             <>
-              No sites yet — create one from{' '}
-              <Link
-                to="/admin/map"
+              No sites yet —{' '}
+              <button
+                type="button"
+                onClick={() => setShowNewSite(true)}
                 className="font-semibold text-accent-cyan-line underline underline-offset-2"
               >
-                Live Map
-              </Link>
+                add your first site
+              </button>
               .
             </>
           ) : (

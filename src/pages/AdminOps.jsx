@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Activity,
-  Clock,
   MapPin,
   Radio,
   Users,
@@ -309,7 +308,7 @@ export default function AdminOps() {
       )}
 
       {/* KPI strip */}
-      <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <div className="rounded-2xl border border-accent-green/30 bg-accent-green/20 p-4">
           <div className="inline-flex rounded-full bg-[#FFFFFF] px-3 py-1 text-[11px] font-semibold text-black shadow-sm ring-1 ring-black/10">
             Clocked in
@@ -326,15 +325,6 @@ export default function AdminOps() {
           <p className="mt-3 flex items-end gap-2 text-3xl font-light tracking-tight text-ink">
             <Activity className="mb-1 h-5 w-5 text-accent-orange" />
             {liveShifts.length}
-          </p>
-        </div>
-        <div className="rounded-2xl border border-accent-cyan-line/30 bg-accent-cyan/50 p-4">
-          <div className="inline-flex rounded-full bg-[#FFFFFF] px-3 py-1 text-[11px] font-semibold text-black shadow-sm ring-1 ring-black/10">
-            Upcoming today
-          </div>
-          <p className="mt-3 flex items-end gap-2 text-3xl font-light tracking-tight text-ink">
-            <Clock className="mb-1 h-5 w-5 text-accent-cyan-line" />
-            {upcomingShifts.length}
           </p>
         </div>
         <div className="rounded-2xl border border-ink/15 bg-ink/10 p-4">
