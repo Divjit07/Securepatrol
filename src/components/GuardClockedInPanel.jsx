@@ -1,5 +1,4 @@
 import { formatShiftTime } from '../lib/clientStats.js'
-import { formatTimeLabel } from '../hooks/useClientShift.js'
 
 // Local initials avatar — the old ui-avatars.com call leaked guard names to a
 // third party and blocked render on slow networks.
@@ -49,29 +48,19 @@ function shiftSiteLine(siteName, publishedShift, guardShift) {
   return detail ? `${site} : ${detail}` : site
 }
 
-function formatShiftRangeLine(dateStr, startTime, endTime) {
-  const start = new Date(`${dateStr}T${startTime}:00`)
-  const end = new Date(`${dateStr}T${endTime}:00`)
-  const fmt = (d) => {
-    const weekday = d.toLocaleDateString('en-US', { weekday: 'short' })
-    const month = d.toLocaleDateString('en-US', { month: 'short' })
-    const day = ordinalDay(d.getDate())
-    const time = d.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).replace(' ', '')
-    return `${weekday} ${month} ${day} ${time}`
-  }
-  return `Shift Time - ${fmt(start)} - ${fmt(end)}`
-}
-
-/** Guard dashboard: clocked-in identity card + lime shift status (reference layout). */
+/**
+ * Guard dashboard: identity + shift status.
+ * Grey while clocked out; lime green only after Face ID / clock-in.
+ * Shift times come from the published roster only.
+ */
 export default function GuardClockedInPanel({
   profile,
   siteName,
-  scheduled,
   guardShift,
   publishedShift,
+  clockedIn: clockedInProp,
   loading,
 }) {
-  // Cards render even on closed days — hiding them reads as "removed" (Div).
   if (loading) {
     return (
       <div className="guard-clock-in-card mb-4 animate-pulse rounded-2xl p-5">
@@ -82,80 +71,78 @@ export default function GuardClockedInPanel({
 
   const name = profile?.name || 'Guard'
   const roleLine = `Guarding Security - BYOD`
-  const clockedIn = Boolean(guardShift)
-  // Admin shift-clock edits win over the raw punch time for display.
+  // Prefer the punch-based flag from the parent; fall back to punch-derived shift row.
+  const clockedIn = clockedInProp ?? Boolean(guardShift)
   const signedInAt = guardShift?.isAdjusted
     ? guardShift?.clockInAt
     : guardShift?.signedInAt || guardShift?.clockInAt
-  const dayClosed = Boolean(scheduled?.isClosed) && !publishedShift
+
   const shiftTimeLine = publishedShift
     ? formatShiftRangeFromIso(publishedShift.starts_at, publishedShift.ends_at)
-    : dayClosed
-      ? 'No shift scheduled today'
-      : formatShiftRangeLine(
-          guardShift?.date || new Date().toISOString().slice(0, 10),
-          scheduled?.start || '11:00',
-          scheduled?.end || '20:00',
-        )
+    : clockedIn
+      ? 'On duty · no published roster shift for today'
+      : 'No shift scheduled today'
   const siteLine = shiftSiteLine(siteName, publishedShift, guardShift)
+
+  // Grey off duty → green on duty (both identity + shift status cards).
+  const cardClass = clockedIn ? 'guard-shift-status-card' : 'guard-clock-in-card'
+  const titleClass = clockedIn ? 'text-white' : 'text-white'
+  const bodyClass = clockedIn ? 'text-white/95' : 'text-[#B0BEC5]'
+  const strongClass = clockedIn ? 'text-white' : 'text-white'
 
   return (
     <div className="mb-6 space-y-3">
-      <div className="guard-clock-in-card flex items-center gap-4 rounded-2xl p-5">
+      <div className={`${cardClass} flex items-center gap-4 rounded-2xl p-5`}>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-xl font-semibold text-white">{name}</p>
-          <p className="mt-1 text-sm text-[#B0BEC5]">{roleLine}</p>
+          <p className={`truncate text-xl font-semibold ${strongClass}`}>{name}</p>
+          <p className={`mt-1 text-sm ${bodyClass}`}>{roleLine}</p>
           {clockedIn && signedInAt ? (
-            <p className="mt-2 text-sm text-[#B0BEC5]">{formatClockInStamp(signedInAt)}</p>
+            <p className={`mt-2 text-sm ${bodyClass}`}>{formatClockInStamp(signedInAt)}</p>
           ) : (
-            <p className="mt-2 text-sm text-[#B0BEC5]">
+            <p className={`mt-2 text-sm ${bodyClass}`}>
               Not clocked in yet — use Face ID clock-in below.
             </p>
           )}
         </div>
-        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-2 border-white/20 bg-[#2d3840] text-xl font-bold text-white">
+        <div
+          className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-2 text-xl font-bold ${
+            clockedIn
+              ? 'border-white/40 bg-[#3e4e56] text-white'
+              : 'border-white/20 bg-[#2d3840] text-white'
+          }`}
+        >
           {initialsOf(name)}
         </div>
       </div>
 
-      {clockedIn && (
-        <div className="guard-shift-status-card flex flex-wrap items-center gap-4 rounded-2xl p-5">
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold uppercase tracking-wide text-white">Shift Status</p>
-            <p className="mt-2 text-sm text-white/95">{shiftTimeLine}</p>
-            <p className="mt-1 text-sm font-medium text-white">{siteLine}</p>
-            {guardShift.onShift && (
-              <p className="mt-2 text-xs uppercase tracking-wide text-white/80">
-                On shift · ends {formatShiftTime(guardShift.clockOutAt)}
-              </p>
-            )}
-          </div>
-          {guardShift.onShift && (
-            <a
-              href="#face-clock"
-              className="guard-clock-out-btn shrink-0 rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-110"
-            >
-              Clock Out
-            </a>
+      <div
+        className={`${cardClass} ${clockedIn ? '' : 'is-off-duty'} flex flex-wrap items-center gap-4 rounded-2xl p-5`}
+      >
+        <div className="min-w-0 flex-1">
+          <p className={`text-sm font-bold uppercase tracking-wide ${titleClass}`}>Shift Status</p>
+          <p className={`mt-2 text-sm ${bodyClass}`}>{shiftTimeLine}</p>
+          {publishedShift || clockedIn ? (
+            <p className={`mt-1 text-sm font-medium ${strongClass}`}>{siteLine}</p>
+          ) : (
+            <p className={`mt-1 text-sm ${bodyClass}`}>
+              Your admin publishes shifts on the roster — they’ll show up here and in Schedule.
+            </p>
+          )}
+          {clockedIn && guardShift?.onShift && (
+            <p className={`mt-2 text-xs uppercase tracking-wide ${bodyClass}`}>
+              On shift · ends {formatShiftTime(guardShift.clockOutAt)}
+            </p>
           )}
         </div>
-      )}
-
-      {!clockedIn && scheduled && (
-        <div className="guard-shift-status-card rounded-2xl p-5">
-          <p className="text-sm font-bold uppercase tracking-wide text-white">Shift Status</p>
-          <p className="mt-2 text-sm text-white/95">
-            {publishedShift
-              ? formatShiftRangeFromIso(publishedShift.starts_at, publishedShift.ends_at)
-              : dayClosed
-                ? 'No shift scheduled today'
-                : scheduled.scheduleLabel || `${formatTimeLabel(scheduled.start)} – ${formatTimeLabel(scheduled.end)}`}
-          </p>
-          <p className="mt-1 text-sm font-medium text-white">
-            {shiftSiteLine(siteName, publishedShift, null)}
-          </p>
-        </div>
-      )}
+        {clockedIn && guardShift?.onShift && (
+          <a
+            href="#face-clock"
+            className="guard-clock-out-btn shrink-0 rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-110"
+          >
+            Clock Out
+          </a>
+        )}
+      </div>
     </div>
   )
 }

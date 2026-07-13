@@ -11,7 +11,12 @@ function GuardStatCard({ label, value, hint, accent = false }) {
   )
 }
 
-export default function ClientShiftBar({ date, setDate, scheduled, stats }) {
+export default function ClientShiftBar({ date, setDate, scheduled, stats, hoursLabel }) {
+  const label =
+    hoursLabel ??
+    scheduled?.scheduleLabel ??
+    (scheduled?.isClosed ? 'Closed' : null)
+
   return (
     <>
       <div className="dk-card guard-shift-date-bar mb-6 flex flex-wrap gap-4 p-4">
@@ -24,19 +29,21 @@ export default function ClientShiftBar({ date, setDate, scheduled, stats }) {
             className="sp-input rounded-lg px-3 py-2"
           />
         </div>
-        <div className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${scheduled?.isClosed ? 'bg-accent-orange/10 text-accent-orange' : 'bg-white/5 text-ink-2'}`}>
-          <Clock className="h-4 w-4 shrink-0 opacity-70" />
-          <span>{scheduled?.scheduleLabel || '11:00 AM – 8:00 PM'}</span>
-        </div>
+        {label && (
+          <div className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${scheduled?.isClosed && !hoursLabel ? 'bg-accent-orange/10 text-accent-orange' : 'bg-white/5 text-ink-2'}`}>
+            <Clock className="h-4 w-4 shrink-0 opacity-70" />
+            <span>{label}</span>
+          </div>
+        )}
       </div>
 
-      {scheduled?.isClosed && (
+      {scheduled?.isClosed && !hoursLabel && (
         <div className="mb-6 rounded-xl border border-accent-orange/30 bg-accent-orange/10 px-4 py-3 text-sm text-accent-orange">
           The building is closed on Sundays. No patrol shift or hours are recorded for this date.
         </div>
       )}
 
-      {stats && !scheduled?.isClosed && (
+      {stats && (!scheduled?.isClosed || hoursLabel) && (
         <div className="mb-6 grid gap-4 sm:grid-cols-2">
           <GuardStatCard
             label="Patrol rounds"

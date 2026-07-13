@@ -23,18 +23,12 @@ function fmtTime(d) {
   return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
 }
 
-/** Today's shift window: published shift first, site operating hours fallback.
+/** Today's shift window from the published roster only.
+ *  Site operating hours are NOT used — guards only see times admin published.
  *  (Exported for the /dev/scale logic tests.) */
-export function shiftWindow(publishedShift, scheduled, date) {
+export function shiftWindow(publishedShift, _scheduled, _date) {
   if (publishedShift?.starts_at && publishedShift?.ends_at) {
     return { start: new Date(publishedShift.starts_at), end: new Date(publishedShift.ends_at) }
-  }
-  if (scheduled && !scheduled.isClosed && scheduled.start && scheduled.end) {
-    const d = date || new Date().toISOString().slice(0, 10)
-    const start = new Date(`${d}T${scheduled.start}:00`)
-    const end = new Date(`${d}T${scheduled.end}:00`)
-    if (end <= start) end.setDate(end.getDate() + 1) // overnight shift
-    return { start, end }
   }
   return null
 }

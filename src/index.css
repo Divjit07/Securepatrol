@@ -125,9 +125,15 @@
   box-shadow: 0 10px 32px -12px rgba(20, 20, 20, 0.35);
 }
 
+/* On duty — lime. Off duty uses .guard-clock-in-card grey. */
 .guard-shift-status-card {
   background: #96ee60;
   box-shadow: 0 10px 32px -12px color-mix(in srgb, #96ee60 40%, rgba(20, 20, 20, 0.25));
+}
+
+.guard-shift-status-card.is-off-duty {
+  background: #3e4e56;
+  box-shadow: 0 10px 32px -12px rgba(20, 20, 20, 0.35);
 }
 
 .guard-clock-out-btn {

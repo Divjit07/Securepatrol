@@ -16,18 +16,42 @@ import { useGuardClockStatus } from '../hooks/useGuardClockStatus.js'
 import { getCheckpointStatus } from '../lib/scans.js'
 import { flushOfflineQueue } from '../lib/offlineQueue.js'
 import { useGuardPublishedShift } from '../hooks/useGuardPublishedShift.js'
-import { fetchNextShift } from '../lib/schedule.js'
+import { fetchNextShift, formatTimeRange } from '../lib/schedule.js'
+
+/** Build the { start, end, isClosed } shape useClientSiteData expects from a published shift. */
+function shiftFromPublished(publishedShift) {
+  if (!publishedShift?.starts_at || !publishedShift?.ends_at) {
+    return { start: '00:00', end: '23:59', isClosed: true, scheduleLabel: 'No published shift' }
+  }
+  const start = new Date(publishedShift.starts_at)
+  const end = new Date(publishedShift.ends_at)
+  const hhmm = (d) =>
+    `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  return {
+    start: hhmm(start),
+    end: hhmm(end),
+    isClosed: false,
+    scheduleLabel: formatTimeRange(publishedShift),
+  }
+}
 
 export default function GuardDashboard() {
   const { profile, user } = useAuth()
   const siteId = profile?.site_id
   const operatingHours = useSiteHours(siteId)
-  const { date, setDate, shift, scheduled } = useClientShift(operatingHours)
+  const { date, setDate } = useClientShift(operatingHours)
   const { shift: publishedShift } = useGuardPublishedShift(user?.id, date)
   // Punch-based clock state (latest clock scan) — the single source of truth
   // for locking the portal. The whole dashboard collapses to the clock card
   // until the guard is on the clock.
   const { clockedIn, loading: clockLoading, refresh: refreshClock } = useGuardClockStatus(user?.id)
+  // Data window follows the published roster — never the site's fixed hours.
+  // If they're already on the clock without a published row, use the full day.
+  const shift = publishedShift
+    ? shiftFromPublished(publishedShift)
+    : clockedIn
+      ? { start: '00:00', end: '23:59', isClosed: false, scheduleLabel: 'On duty' }
+      : shiftFromPublished(null)
   const {
     site,
     checkpoints,
@@ -104,9 +128,9 @@ export default function GuardDashboard() {
         <GuardClockedInPanel
           profile={profile}
           siteName={site?.name || profile?.sites?.name}
-          scheduled={scheduled}
           guardShift={null}
           publishedShift={publishedShift}
+          clockedIn={false}
           loading={loading}
         />
 
@@ -116,7 +140,7 @@ export default function GuardDashboard() {
           clockedIn={false}
           onPunched={handlePunched}
           publishedShift={publishedShift}
-          scheduled={scheduled}
+          scheduled={null}
           date={date}
           nextShift={nextShift}
         />
@@ -146,9 +170,9 @@ export default function GuardDashboard() {
       <GuardClockedInPanel
         profile={profile}
         siteName={site?.name || profile?.sites?.name}
-        scheduled={scheduled}
         guardShift={myShiftWithDate}
         publishedShift={publishedShift}
+        clockedIn={clockedIn}
         loading={loading || clockLoading}
       />
 
@@ -158,7 +182,7 @@ export default function GuardDashboard() {
         clockedIn={clockedIn}
         onPunched={handlePunched}
         publishedShift={publishedShift}
-        scheduled={scheduled}
+        scheduled={null}
         date={date}
         nextShift={nextShift}
       />
@@ -188,14 +212,23 @@ export default function GuardDashboard() {
           <ClientShiftBar
             date={date}
             setDate={setDate}
-            scheduled={scheduled}
-            stats={{
-              rounds,
-              patrolScanCount,
-              patrolCheckpointCount,
-              scannedCount,
-              totalCheckpoints: checkpoints.length,
-            }}
+            scheduled={shift}
+            hoursLabel={
+              publishedShift
+                ? formatTimeRange(publishedShift)
+                : 'No published shift today'
+            }
+            stats={
+              publishedShift
+                ? {
+                    rounds,
+                    patrolScanCount,
+                    patrolCheckpointCount,
+                    scannedCount,
+                    totalCheckpoints: checkpoints.length,
+                  }
+                : null
+            }
           />
 
           {loading ? (
@@ -209,14 +242,14 @@ export default function GuardDashboard() {
                   <h2 className="font-display text-lg font-semibold">Scan history</h2>
                   <p className="mt-0.5 text-sm text-ink-2">
                     Your successful check-ins for {date}
-                    {!scheduled?.isClosed ? ` · ${shift.start}–${shift.end}` : ''}
+                    {publishedShift ? ` · ${formatTimeRange(publishedShift)}` : ''}
                   </p>
                 </div>
 
                 {scans.length === 0 ? (
                   <p className="p-10 text-center text-sm text-ink-2">
-                    {scheduled?.isClosed
-                      ? 'No shift on this date.'
+                    {!publishedShift
+                      ? 'No published shift for this date.'
                       : 'No successful scans during this shift yet. Tap Scan checkpoint to start.'}
                   </p>
                 ) : (
@@ -257,7 +290,7 @@ export default function GuardDashboard() {
                 )}
               </div>
 
-              {!scheduled?.isClosed && checkpoints.length > 0 && (
+              {publishedShift && checkpoints.length > 0 && (
                 <>
                   <h2 className="mb-4 font-display text-lg font-semibold">Checkpoints</h2>
                   <div className="grid gap-3 sm:grid-cols-2">
