@@ -118,7 +118,7 @@ function initialsOf(name) {
 }
 
 const sidebarItemClass = ({ isActive }) =>
-  `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
+  `flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm transition ${
     isActive
       ? 'sidebar-nav-active'
       : 'text-ink-2 hover:bg-white/5 hover:text-ink'
@@ -126,11 +126,11 @@ const sidebarItemClass = ({ isActive }) =>
 
 function SidebarNav({ groups, onNavigate }) {
   return (
-    <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
+    <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-3">
       {groups.map((group) => (
         <div key={group.label || 'home'}>
           {group.label && (
-            <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-ink-3">
+            <p className="mb-1.5 px-3 text-xs font-semibold uppercase tracking-wider text-ink-3">
               {group.label}
             </p>
           )}
