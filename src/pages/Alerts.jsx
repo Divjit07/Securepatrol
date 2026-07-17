@@ -4,6 +4,7 @@ import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import RosterSitePicker, { ALL_SITES } from '../components/roster/RosterSitePicker.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
+import { supabase } from '../lib/supabase.js'
 import { fetchSitesForAdmin } from '../lib/scans.js'
 import {
   fetchAlertEvents,
@@ -105,6 +106,38 @@ export default function Alerts() {
   useEffect(() => {
     if (!user) return
     load()
+  }, [user?.id, selectedSite, statusFilter, typeFilter])
+
+  // New alerts land live — the roster cron fires every 10 min, and without
+  // this the page only refreshed when a filter changed. Silent reload (no
+  // spinner) so the list doesn't flash while the admin is reading it.
+  useEffect(() => {
+    if (!user) return undefined
+    const reloadQuietly = async () => {
+      try {
+        const acknowledged =
+          statusFilter === 'open' ? false : statusFilter === 'acked' ? true : null
+        const rows = await fetchAlertEvents({
+          acknowledged,
+          siteId: selectedSite === ALL_SITES ? undefined : selectedSite,
+          eventType: typeFilter === 'all' ? undefined : typeFilter,
+          limit: 150,
+        })
+        setEvents(rows)
+      } catch {
+        /* keep showing the last good list */
+      }
+    }
+    const channel = supabase
+      .channel('alerts-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'alert_events' }, reloadQuietly)
+      .subscribe()
+    const onFocus = () => reloadQuietly()
+    window.addEventListener('focus', onFocus)
+    return () => {
+      supabase.removeChannel(channel)
+      window.removeEventListener('focus', onFocus)
+    }
   }, [user?.id, selectedSite, statusFilter, typeFilter])
 
   const counts = useMemo(() => {

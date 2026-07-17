@@ -36,15 +36,48 @@ export async function submitScan({
   scannedAt,
   syncMethod = 'realtime',
   scanInputMethod = 'nfc',
+  nfcSerial = null,
 }) {
-  const { data: checkpoint, error: cpError } = await supabase
-    .from('checkpoints')
-    .select('id, latitude, longitude, radius_metres, altitude_metres, name, checkpoint_role, floors(floor_number, elevation_metres)')
-    .eq('id', checkpointId)
-    .single()
+  const scanRecord = {
+    checkpoint_id: checkpointId,
+    guard_id: guardId,
+    scanned_at: scannedAt || new Date().toISOString(),
+    guard_lat: guardLat,
+    guard_lng: guardLng,
+    guard_altitude: guardAltitude,
+    gps_accuracy: gpsAccuracy,
+    distance_metres: 0,
+    status: 'fail',
+    sync_method: syncMethod,
+    scan_input_method: scanInputMethod,
+    ...(nfcSerial ? { nfc_serial: nfcSerial } : {}),
+  }
 
-  if (cpError || !checkpoint) {
-    throw new Error('Checkpoint not found')
+  // Queue BEFORE any network call — the checkpoint metadata fetch below is a
+  // live Supabase request, so doing it first made genuinely-offline scans
+  // throw "Checkpoint not found" instead of ever reaching the queue.
+  if (!navigator.onLine) {
+    queueOfflineScan(scanRecord)
+    return { ...scanRecord, checkpoint: null, offline: true, serverValidated: false }
+  }
+
+  let checkpoint = null
+  try {
+    const { data, error: cpError } = await supabase
+      .from('checkpoints')
+      .select('id, latitude, longitude, radius_metres, altitude_metres, name, checkpoint_role, floors(floor_number, elevation_metres)')
+      .eq('id', checkpointId)
+      .single()
+    if (cpError || !data) throw new Error('Checkpoint not found')
+    checkpoint = data
+  } catch (err) {
+    // navigator.onLine can lie (captive portal, dead basement signal): if the
+    // fetch itself failed at the network layer, queue rather than drop the scan.
+    if (!navigator.onLine || err instanceof TypeError || /fetch|network/i.test(err.message || '')) {
+      queueOfflineScan(scanRecord)
+      return { ...scanRecord, checkpoint: null, offline: true, serverValidated: false }
+    }
+    throw err
   }
 
   // Clock punches are never accepted by QR — Face ID (dashboard) or a physical
@@ -62,31 +95,12 @@ export async function submitScan({
   const checkpointAltitude =
     checkpoint.altitude_metres ?? checkpoint.floors?.elevation_metres ?? null
 
-  const scanRecord = {
-    checkpoint_id: checkpointId,
-    guard_id: guardId,
-    scanned_at: scannedAt || new Date().toISOString(),
-    guard_lat: guardLat,
-    guard_lng: guardLng,
-    guard_altitude: guardAltitude,
-    gps_accuracy: gpsAccuracy,
-    distance_metres: 0,
-    status: 'fail',
-    sync_method: syncMethod,
-    scan_input_method: scanInputMethod,
+  let { data, error } = await supabase.from('scans').insert(scanRecord).select().single()
+  // Pre-035 the nfc_serial column doesn't exist yet — retry without it.
+  if (error && scanRecord.nfc_serial && /nfc_serial/.test(error.message || '')) {
+    const { nfc_serial: _drop, ...legacyRecord } = scanRecord
+    ;({ data, error } = await supabase.from('scans').insert(legacyRecord).select().single())
   }
-
-  if (!navigator.onLine) {
-    queueOfflineScan(scanRecord)
-    return {
-      ...scanRecord,
-      checkpoint,
-      offline: true,
-      serverValidated: false,
-    }
-  }
-
-  const { data, error } = await supabase.from('scans').insert(scanRecord).select().single()
   if (error) throw error
 
   const clientCheck =
@@ -121,11 +135,11 @@ export async function flushOfflineQueue() {
 
   let synced = 0
   let failed = 0
-  const remaining = []
+  const remaining = [...queue]
 
   for (const scan of queue) {
     try {
-      const { error } = await supabase.from('scans').insert({
+      const record = {
         checkpoint_id: scan.checkpoint_id,
         guard_id: scan.guard_id,
         scanned_at: scan.scanned_at,
@@ -137,12 +151,21 @@ export async function flushOfflineQueue() {
         status: 'fail',
         sync_method: 'offline_sync',
         scan_input_method: scan.scan_input_method ?? 'nfc',
-      })
+        ...(scan.nfc_serial ? { nfc_serial: scan.nfc_serial } : {}),
+      }
+      let { error } = await supabase.from('scans').insert(record)
+      if (error && record.nfc_serial && /nfc_serial/.test(error.message || '')) {
+        const { nfc_serial: _drop, ...legacyRecord } = record
+        ;({ error } = await supabase.from('scans').insert(legacyRecord))
+      }
       if (error) throw error
       synced++
+      // Persist after every success — saving only once at the end meant a
+      // crash/tab-close mid-loop re-submitted already-synced scans next flush.
+      remaining.splice(remaining.indexOf(scan), 1)
+      saveOfflineQueue(remaining)
     } catch {
       failed++
-      remaining.push(scan)
     }
   }
 
@@ -150,7 +173,7 @@ export async function flushOfflineQueue() {
   return { synced, failed }
 }
 
-export async function submitScanWithGps(checkpointId, guardId, { scanInputMethod = 'nfc' } = {}) {
+export async function submitScanWithGps(checkpointId, guardId, { scanInputMethod = 'nfc', nfcSerial = null } = {}) {
   const position =
     scanInputMethod === 'nfc'
       ? (await getOptionalPosition(8000, 2)) ?? (await getBestPosition(1))
@@ -166,6 +189,7 @@ export async function submitScanWithGps(checkpointId, guardId, { scanInputMethod
     scannedAt: new Date().toISOString(),
     syncMethod: navigator.onLine ? 'realtime' : 'offline_sync',
     scanInputMethod,
+    nfcSerial,
   })
 }
 

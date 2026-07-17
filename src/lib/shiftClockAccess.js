@@ -1,15 +1,12 @@
 import { supabase } from './supabase.js'
-import { getUserEmail, SCAN_APPROVER_EMAIL } from './scanApproval.js'
 
-export const SHIFT_CLOCK_ADMIN_EMAIL = 'rose@prodsec.ca'
-
-export function isShiftClockAdmin(user, profile) {
-  if (profile?.can_manage_shift_clock === true) return true
-  const email = getUserEmail(user)
-  if (email === SHIFT_CLOCK_ADMIN_EMAIL || email === SCAN_APPROVER_EMAIL) return true
-  const name = profile?.name?.trim().toLowerCase() || ''
-  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin'
-  return isAdmin && name.startsWith('divjit')
+/**
+ * Fast-path UI check: the profile flag only. The DB (`is_shift_clock_admin`,
+ * migration 019) is the enforcement point — hardcoded email/name fallbacks
+ * were removed in favor of the flag, which migrations 019/035 seed.
+ */
+export function isShiftClockAdmin(_user, profile) {
+  return profile?.can_manage_shift_clock === true
 }
 
 export async function checkShiftClockAdminFromDb() {

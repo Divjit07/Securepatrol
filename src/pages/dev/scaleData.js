@@ -16,6 +16,7 @@ import {
 } from '../../lib/payroll.js'
 import {
   computePaystub,
+  cppExemptionForPeriod,
   periodTotalsForGuard,
   DEFAULT_DEDUCTION_RATES,
   OVERTIME_MULTIPLIER,
@@ -323,10 +324,11 @@ export function runScaleChecks(data, pipeline) {
     `${stubs.length} paystubs`,
   )
   add(
-    'Net = Gross − (Gross×EI%) − ((Gross−134.62)×CPP%) on every stub',
+    'Net = Gross − (Gross×EI%) − ((Gross−exemption)×CPP%) on every stub',
     stubs.every(({ stub }) => {
+      const exemption = cppExemptionForPeriod(DEFAULT_DEDUCTION_RATES.cppAnnualExemption, 14)
       const ei = stub.gross * (DEFAULT_DEDUCTION_RATES.eiPct / 100)
-      const cpp = Math.max(0, stub.gross - DEFAULT_DEDUCTION_RATES.cppExemption) * (DEFAULT_DEDUCTION_RATES.cppPct / 100)
+      const cpp = Math.max(0, stub.gross - exemption) * (DEFAULT_DEDUCTION_RATES.cppPct / 100)
       return near(stub.net, stub.gross - ei - cpp)
     }),
   )

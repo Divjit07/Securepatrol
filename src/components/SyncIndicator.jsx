@@ -11,10 +11,24 @@ export default function SyncIndicator({ dark = false }) {
   useEffect(() => {
     refresh()
     const interval = setInterval(refresh, 5000)
-    window.addEventListener('online', refresh)
+    // Coming back online auto-flushes — previously this only refreshed the
+    // badge count, so queued scans sat until app reload or a manual tap.
+    const onOnline = async () => {
+      refresh()
+      if (getPendingScanCount() > 0) {
+        setSyncing(true)
+        try {
+          await flushOfflineQueue()
+        } finally {
+          refresh()
+          setSyncing(false)
+        }
+      }
+    }
+    window.addEventListener('online', onOnline)
     return () => {
       clearInterval(interval)
-      window.removeEventListener('online', refresh)
+      window.removeEventListener('online', onOnline)
     }
   }, [])
 

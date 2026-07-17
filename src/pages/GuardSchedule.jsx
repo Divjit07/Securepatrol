@@ -280,7 +280,7 @@ export default function GuardSchedule() {
           <CalendarDays className="mx-auto h-10 w-10 text-ink-3" />
           <p className="mt-3 font-medium text-ink-2">No shifts scheduled yet</p>
           <p className="mt-1 text-sm text-ink-3">
-            When your admin publishes the roster, your shifts show up here and land in your email.
+            When your admin publishes the roster, your shifts show up here — live, no refresh needed.
           </p>
         </div>
       ) : (

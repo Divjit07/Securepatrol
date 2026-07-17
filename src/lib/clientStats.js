@@ -206,6 +206,14 @@ export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustm
     scheduledShiftMinutes,
     scanCount: inWindow.length,
     hasClockOutPunch: Boolean(clockOutScan) || isAdjusted,
+    // Clocked in, never clocked out, and the day is over: hours above are the
+    // SCHEDULED end, not a real punch — payroll must see this, not assume a
+    // normal shift.
+    missingClockOut:
+      Boolean(clockInScan) &&
+      !clockOutScan &&
+      !isAdjusted &&
+      !(date === localDateStr(now) && now < defaultClockOut),
     // Guard's early clock-out reason (typed at punch time, stored on the scan).
     clockOutNote: clockOutScan?.approval_note || null,
   }
@@ -265,6 +273,7 @@ export function computeGuardHoursReport({
         isStatutoryHoliday: dayShift.isStatutoryHoliday,
         statutoryHolidayLabel: dayShift.statutoryHolidayLabel,
         clockOutNote: dayShift.clockOutNote,
+        missingClockOut: dayShift.missingClockOut,
       })
     }
   }

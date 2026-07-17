@@ -151,11 +151,17 @@ Deno.serve(async (req) => {
     const resendKey = Deno.env.get('RESEND_API_KEY')
     let emailed = 0
     let emailError: string | null = resendKey ? null : 'RESEND_API_KEY not configured'
+    // Guards with no real address on file get no email — surface who, so the
+    // admin knows to reach them another way instead of assuming everyone knows.
+    const skippedGuards: string[] = []
 
     if (resendKey) {
       for (const [guardId, guardShifts] of byGuard) {
         const guard = guardById.get(guardId)
-        if (!guard?.email || guard.email.endsWith('@guard.local')) continue
+        if (!guard?.email || guard.email.endsWith('@guard.local')) {
+          if (guard) skippedGuards.push(guard.name)
+          continue
+        }
 
         const rows = guardShifts.sort((a, b) => a.starts_at.localeCompare(b.starts_at)).map(formatShiftLine).join('')
         const openRows = openShifts.map(formatShiftLine).join('')
@@ -204,7 +210,13 @@ Deno.serve(async (req) => {
     })
 
     return new Response(
-      JSON.stringify({ success: true, published: shifts.length, emailed, email_error: emailError }),
+      JSON.stringify({
+        success: true,
+        published: shifts.length,
+        emailed,
+        skipped: skippedGuards,
+        email_error: emailError,
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     )
   } catch (err) {

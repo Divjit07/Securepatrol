@@ -1,7 +1,8 @@
 // Paystub math + PDF (Dayforce-style layout: logo top-left, employer/employee
 // blocks, one bordered grid with Current + YTD columns and Earnings / Taxes /
 // Net Pay sections). Earnings come from the same derived payroll rows as the
-// hours report (raw punches stay immutable); rates live on guards.hourly_rate.
+// hours report (raw punches stay immutable); rates live in guard_pay_rates
+// (admin-only RLS, migration 034).
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
@@ -14,13 +15,28 @@ export const EMPLOYER = {
 
 // Statutory deductions are PERCENTAGES computed off gross, not typed amounts:
 // Net = Gross − (Gross × EI%) − ((Gross − exemption) × CPP%) − other fees.
-// Defaults per the owner: EI 1.63%, CPP 5.95% over the $134.62 per-period
-// basic exemption ($3,500/yr ÷ 26 weekly periods). Editable in the UI so a
-// rate-year change doesn't need a deploy.
+// Defaults per the owner: EI 1.63%, CPP 5.95% over the CPP basic exemption.
+// The exemption is stored ANNUALLY ($3,500/yr) and prorated to the actual pay
+// period the admin selected (CRA per-period method: annual ÷ pay periods per
+// year); a hardcoded per-period figure was only correct for 14-day runs.
+// Editable in the UI so a rate-year change doesn't need a deploy.
 export const DEFAULT_DEDUCTION_RATES = {
   eiPct: 1.63,
   cppPct: 5.95,
-  cppExemption: 134.62,
+  cppAnnualExemption: 3500,
+}
+
+/**
+ * CPP basic exemption for a pay period of `periodDays` days: annual amount ÷
+ * pay periods per year (365 ÷ length, rounded — 14 days ⇒ 26 periods ⇒
+ * $134.62), capped at the annual exemption for long ranges like YTD.
+ */
+export function cppExemptionForPeriod(annualExemption, periodDays) {
+  const annual = Number(annualExemption) || 0
+  const days = Number(periodDays) || 0
+  if (annual <= 0 || days <= 0) return 0
+  const periodsPerYear = Math.max(1, Math.round(365 / days))
+  return Math.min(annual, annual / periodsPerYear)
 }
 
 const money = (n) => `$${(Math.round(n * 100) / 100).toFixed(2)}`
@@ -39,7 +55,7 @@ export function periodTotalsForGuard(weeklyRows, guardId) {
   return totals
 }
 
-export function computePaystub({ totals, rate, rates = DEFAULT_DEDUCTION_RATES, otherFees = 0 }) {
+export function computePaystub({ totals, rate, rates = DEFAULT_DEDUCTION_RATES, otherFees = 0, periodDays = 14 }) {
   const r = Number(rate) || 0
   const lines = [
     { code: 'REG HRS', minutes: totals.regularMinutes, rate: r, amount: (totals.regularMinutes / 60) * r },
@@ -51,7 +67,12 @@ export function computePaystub({ totals, rate, rates = DEFAULT_DEDUCTION_RATES, 
 
   const eiPct = Number(rates.eiPct) || 0
   const cppPct = Number(rates.cppPct) || 0
-  const cppExemption = Number(rates.cppExemption) || 0
+  // Legacy callers may still pass a fixed per-period `cppExemption`; otherwise
+  // prorate the annual exemption to this period's length.
+  const cppExemption =
+    rates.cppExemption != null
+      ? Number(rates.cppExemption) || 0
+      : cppExemptionForPeriod(rates.cppAnnualExemption, periodDays)
   const other = Number(otherFees) || 0
 
   const deductionLines = [

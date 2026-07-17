@@ -13,8 +13,9 @@ import {
   enrollPasskey,
   verifyWithPasskey,
 } from '../lib/passkeys.js'
-import { fetchSiteGeofence, geofenceStatus, clockPunch } from '../lib/clockPunch.js'
+import { fetchSiteGeofence, geofenceStatus, clockPunch, CLOCK_MAX_GPS_ACCURACY_M } from '../lib/clockPunch.js'
 import { getOptionalPosition } from '../lib/gps.js'
+import { shiftBounds } from '../hooks/useClientShift.js'
 
 const EARLY_WINDOW_MIN = 15 // clock-in opens this many minutes before the shift
 const LATE_GRACE_MIN = 10 // matches the roster-alerts "late" threshold
@@ -23,12 +24,18 @@ function fmtTime(d) {
   return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
 }
 
-/** Today's shift window from the published roster only.
- *  Site operating hours are NOT used — guards only see times admin published.
+/** Today's shift window. The published roster wins when it exists; otherwise
+ *  the site's operating hours gate the clock (a "Closed" day blocks clock-in),
+ *  so the Site Hours modal's "drives the shift clock" promise actually holds.
  *  (Exported for the /dev/scale logic tests.) */
-export function shiftWindow(publishedShift, _scheduled, _date) {
+export function shiftWindow(publishedShift, scheduled, date) {
   if (publishedShift?.starts_at && publishedShift?.ends_at) {
     return { start: new Date(publishedShift.starts_at), end: new Date(publishedShift.ends_at) }
+  }
+  if (scheduled && date) {
+    if (scheduled.isClosed) return { closed: true }
+    const { start, end } = shiftBounds(date, scheduled.start, scheduled.end)
+    return { start, end }
   }
   return null
 }
@@ -37,6 +44,14 @@ export function shiftWindow(publishedShift, _scheduled, _date) {
  *  (Exported for the /dev/scale logic tests.) */
 export function punchState(type, window, now = new Date()) {
   if (!window) return { tone: type === 'out' ? 'green' : 'grey', allowed: true, note: null }
+  // Site closed today (operating hours, no published shift): clock-in is
+  // blocked; clock-out stays allowed for overnight shifts running past midnight.
+  if (window.closed) {
+    if (type === 'in') {
+      return { tone: 'grey', allowed: false, note: 'Site is closed today — no shift scheduled.' }
+    }
+    return { tone: 'green', allowed: true, note: null }
+  }
   const min = 60_000
   if (type === 'in') {
     // Shift already over → not "late", the day is done. Caller fills in the
@@ -162,7 +177,7 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
 
   // Clocking out before the shift's last 15 minutes = early → confirm + note.
   const earlyOut =
-    clockedIn && window_ && Date.now() < window_.end.getTime() - EARLY_WINDOW_MIN * 60_000
+    clockedIn && window_?.end && Date.now() < window_.end.getTime() - EARLY_WINDOW_MIN * 60_000
 
   // Off-duty note: once today's shift is over (or there's none), point at the
   // next scheduled shift instead of yelling "you're late".
@@ -228,9 +243,15 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
         })
         onPunched?.()
       } else {
+        // Mirror the server's two rejection reasons (migration 031): weak GPS
+        // accuracy is a hard fail independent of distance — don't tell the
+        // guard to "get closer" when distance wasn't the problem.
+        const weakAccuracy = scan.gps_accuracy != null && scan.gps_accuracy > CLOCK_MAX_GPS_ACCURACY_M
         setMessage({
           tone: 'error',
-          text: `Punch rejected — GPS puts you ${Math.round(scan.distance_metres)}m from the site. Get closer and try again.`,
+          text: weakAccuracy
+            ? `Punch rejected — GPS signal too weak (±${Math.round(scan.gps_accuracy)}m accuracy). Step outside or near a window and try again.`
+            : `Punch rejected — GPS puts you ${Math.round(scan.distance_metres)}m from the site. Get closer and try again.`,
         })
       }
     } catch (err) {
@@ -271,7 +292,7 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
           <span
             className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
               fence?.located
-                ? fence.inside
+                ? fence.inside && fence.accuracyOk
                   ? 'bg-accent-green/15 text-accent-green'
                   : 'bg-accent-orange/15 text-accent-orange'
                 : 'bg-white/5 text-ink-3'
@@ -279,9 +300,11 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
           >
             <MapPin className="h-3 w-3" />
             {fence?.located
-              ? fence.inside
-                ? `On site · ${Math.round(fence.distance)}m`
-                : `${Math.round(fence.distance)}m away`
+              ? !fence.accuracyOk
+                ? `GPS too weak · ±${Math.round(fence.accuracy)}m`
+                : fence.inside
+                  ? `On site · ${Math.round(fence.distance)}m`
+                  : `${Math.round(fence.distance)}m away`
               : gpsError || 'Locating…'}
           </span>
         )}
@@ -355,8 +378,9 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
           disabled={
             busy === 'punching' ||
             !punch.allowed ||
-            // Clock-IN needs to be inside the geofence; clock-OUT works anywhere.
-            (!clockedIn && (!siteLocated || !fence?.located || !fence?.inside))
+            // Clock-IN needs to be inside the geofence with usable GPS accuracy
+            // (server hard-fails accuracy > 100m); clock-OUT works anywhere.
+            (!clockedIn && (!siteLocated || !fence?.located || !fence?.inside || !fence?.accuracyOk))
           }
           className={`mt-4 flex min-h-[3.25rem] w-full items-center justify-center gap-2 rounded-xl text-base font-semibold transition active:scale-[0.99] disabled:opacity-50 ${TONE_BUTTON[clockedIn ? (punch.tone === 'red' ? 'red' : 'green') : punch.tone]}`}
         >
@@ -396,6 +420,12 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
       {enrolled && !clockedIn && punch.allowed && siteLocated && fence?.located && !fence.inside && (
         <p className="mt-2 text-center text-xs text-ink-3">
           The button unlocks when you’re within {site.geofence_radius_m ?? 120}m of the site.
+        </p>
+      )}
+
+      {enrolled && !clockedIn && punch.allowed && siteLocated && fence?.located && fence.inside && !fence.accuracyOk && (
+        <p className="mt-2 text-center text-xs text-ink-3">
+          GPS accuracy is ±{Math.round(fence.accuracy)}m — it must be under {CLOCK_MAX_GPS_ACCURACY_M}m to clock in. Step outside or near a window.
         </p>
       )}
 

@@ -44,7 +44,9 @@ export default function NFCScanner({ onScan, disabled }) {
           }
         }
 
-        onScan?.(checkpointId.trim())
+        // The tag's hardware serial rides along so the server can verify the
+        // scan came from the physical tag bound to this checkpoint (035).
+        onScan?.(checkpointId.trim(), serialNumber || null)
         setScanning(false)
       })
 
@@ -70,8 +72,8 @@ export default function NFCScanner({ onScan, disabled }) {
       <div className="dk-inset p-6 text-center">
         <Nfc className="mx-auto h-10 w-10 text-ink-3" />
         <p className="mt-2 text-sm text-ink-2">
-          Web NFC is not available on this device. iPhone does not support NFC in browsers — tap <strong className="text-ink">QR Code</strong> above.
-          Android users: use Chrome for NFC tap-to-scan.
+          Web NFC is not available on this device — checkpoint scans need Chrome on an Android
+          phone. Clock in/out still works from your dashboard with Face ID.
         </p>
       </div>
     )
