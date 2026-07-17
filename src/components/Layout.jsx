@@ -21,6 +21,7 @@ import {
   Wallet,
   ScrollText,
 } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import Logo from './Logo.jsx'
 import { useMemo, useState } from 'react'
 import { useAuth } from '../hooks/useAuth.jsx'
@@ -46,6 +47,7 @@ function buildAdminNavGroups({ canApproveScans, canManageShiftClock, isSuperAdmi
         { to: '/admin', label: 'Overview', end: true, icon: LayoutDashboard },
         { to: '/admin/ops', label: 'Ops Board', icon: Activity },
         { to: '/admin/roster', label: 'Roster', icon: CalendarDays },
+        { to: '/admin/assistant', label: 'Assistant', icon: Sparkles },
       ],
     },
     {

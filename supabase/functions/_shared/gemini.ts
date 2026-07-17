@@ -69,3 +69,66 @@ export async function callGemini({
   }
   return text
 }
+
+// ---------------------------------------------------------------------------
+// Function-calling turn (Phase 4 chat). Returns the raw candidate content so
+// the caller can loop on functionCall parts. The tool RESULTS come from
+// RLS-scoped queries — the model still never computes a number.
+// ---------------------------------------------------------------------------
+
+export interface GeminiContent {
+  role: 'user' | 'model'
+  parts: Array<Record<string, unknown>>
+}
+
+export interface GeminiFunctionDeclaration {
+  name: string
+  description: string
+  parameters: Record<string, unknown> // JSON schema
+}
+
+export async function callGeminiChat({
+  model = GEMINI_FLASH,
+  systemPrompt,
+  contents,
+  tools,
+  temperature = 0.2,
+  maxOutputTokens = 1024,
+}: {
+  model?: string
+  systemPrompt: string
+  contents: GeminiContent[]
+  tools?: GeminiFunctionDeclaration[]
+  temperature?: number
+  maxOutputTokens?: number
+}): Promise<{ parts: Array<Record<string, unknown>>; finishReason: string }> {
+  const apiKey = Deno.env.get('GEMINI_API_KEY')
+  if (!apiKey) throw new Error('GEMINI_API_KEY is not set (Supabase → Edge Functions → Secrets)')
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents,
+        ...(tools?.length ? { tools: [{ functionDeclarations: tools }] } : {}),
+        generationConfig: { temperature, maxOutputTokens },
+      }),
+    },
+  )
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    throw new Error(`Gemini ${model} returned ${res.status}: ${body.slice(0, 300)}`)
+  }
+
+  const json = await res.json()
+  const candidate = json?.candidates?.[0]
+  if (!candidate?.content?.parts?.length) {
+    const reason = candidate?.finishReason || json?.promptFeedback?.blockReason || 'empty response'
+    throw new Error(`Gemini returned no content (${reason})`)
+  }
+  return { parts: candidate.content.parts, finishReason: candidate.finishReason || 'STOP' }
+}
