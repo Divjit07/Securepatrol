@@ -31,6 +31,18 @@ export async function fetchAlertEvents({
   return data || []
 }
 
+/**
+ * AI-phrased digest of the open alerts (edge function ai-alert-digest).
+ * Returns { narrative: string|null, count: number }. Never throws numbers of
+ * its own — the function only rewords alert_events rows.
+ */
+export async function fetchAlertNarrative() {
+  const { data, error } = await supabase.functions.invoke('ai-alert-digest', { body: {} })
+  if (error) throw new Error(error.message || 'Digest unavailable')
+  if (data?.error) throw new Error(data.error)
+  return data
+}
+
 export async function acknowledgeAlertEvent(id) {
   const { error } = await supabase.from('alert_events').update({ acknowledged: true }).eq('id', id)
   if (error) throw error

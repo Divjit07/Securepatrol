@@ -9,8 +9,10 @@
 // submitted content. Test data only until the key is switched to a paid
 // project; cost is pennies at this volume.
 
-export const GEMINI_FLASH = 'gemini-2.5-flash'
-export const GEMINI_FLASH_LITE = 'gemini-2.5-flash-lite'
+// The "-latest" aliases track Google's current model — pinned versions get
+// retired for new accounts (gemini-2.5-flash already 404s on this project).
+export const GEMINI_FLASH = 'gemini-flash-latest'
+export const GEMINI_FLASH_LITE = 'gemini-flash-lite-latest'
 
 export interface GeminiPart {
   text?: string

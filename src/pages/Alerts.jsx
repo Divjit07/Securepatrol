@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Check, Bell } from 'lucide-react'
+import { Check, Bell, Sparkles } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import RosterSitePicker, { ALL_SITES } from '../components/roster/RosterSitePicker.jsx'
@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabase.js'
 import { fetchSitesForAdmin } from '../lib/scans.js'
 import {
   fetchAlertEvents,
+  fetchAlertNarrative,
   acknowledgeAlertEvent,
   ALERT_TYPE_LABELS,
   ALERT_TYPE_TONE,
@@ -75,6 +76,29 @@ export default function Alerts() {
   const [loading, setLoading] = useState(true)
   const [ackBusy, setAckBusy] = useState(null)
   const [error, setError] = useState(null)
+  const [narrative, setNarrative] = useState(null)
+  const [narrativeLoading, setNarrativeLoading] = useState(true)
+
+  // AI digest of open alerts — purely additive: if the function is down or the
+  // key is missing, the card just doesn't render and the list works as always.
+  useEffect(() => {
+    if (!user) return
+    let cancelled = false
+    setNarrativeLoading(true)
+    fetchAlertNarrative()
+      .then((d) => {
+        if (!cancelled) setNarrative(d?.narrative || null)
+      })
+      .catch(() => {
+        if (!cancelled) setNarrative(null)
+      })
+      .finally(() => {
+        if (!cancelled) setNarrativeLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id])
 
   useEffect(() => {
     if (!user) return
@@ -185,6 +209,25 @@ export default function Alerts() {
         title="Alerts"
         description="Late clock-ins, no-shows, and stale patrols across your sites."
       />
+
+      {(narrativeLoading || narrative) && (
+        <div className="dk-card mb-5 p-5">
+          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-ink-2">
+            <Sparkles className="h-3.5 w-3.5 text-accent-orange" /> AI digest — open alerts
+          </p>
+          {narrativeLoading ? (
+            <div className="mt-3 space-y-2">
+              <div className="h-3.5 w-3/4 animate-pulse rounded bg-white/10" />
+              <div className="h-3.5 w-1/2 animate-pulse rounded bg-white/10" />
+            </div>
+          ) : (
+            <p className="mt-2.5 text-sm leading-relaxed text-ink">{narrative}</p>
+          )}
+          <p className="mt-3 border-t border-white/5 pt-2 text-[10px] text-ink-3">
+            Rephrased from the alert rows below — every name and count comes from the data, not the model.
+          </p>
+        </div>
+      )}
 
       {sites.length > 0 && (
         <div className="mb-5">

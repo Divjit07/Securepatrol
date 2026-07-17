@@ -84,9 +84,10 @@ GEMINI_API_KEY=...              # required for every AI phase
 # SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY
 ```
 
-Model: **Gemini 2.5 Flash** for narrative/chat; **2.5 Flash-Lite** for high-volume cheap
-tagging (Phase 5a priority). Endpoint: `https://generativelanguage.googleapis.com/v1beta/
-models/<model>:generateContent?key=<GEMINI_API_KEY>`.
+Model: **`gemini-flash-latest`** for narrative/chat; **`gemini-flash-lite-latest`** for
+high-volume cheap tagging (Phase 5a priority). Use the `-latest` aliases — pinned versions
+(e.g. `gemini-2.5-flash`) get retired for new accounts and 404. Endpoint:
+`https://generativelanguage.googleapis.com/v1beta/models/<model>:generateContent?key=<GEMINI_API_KEY>`.
 
 ---
 
