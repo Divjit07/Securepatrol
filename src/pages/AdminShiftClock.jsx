@@ -339,7 +339,7 @@ export default function AdminShiftClock() {
 
                       return (
                         <tr key={guard.id}>
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 align-top">
                             <p className="font-medium text-ink">{guard.name}</p>
                             <div className="mt-1.5 flex flex-wrap gap-1.5">
                               {day?.isAdjusted && (
@@ -348,23 +348,13 @@ export default function AdminShiftClock() {
                                 </span>
                               )}
                               {multi && (
-                                <span className="rounded-full bg-[#FFFFFF] px-2.5 py-0.5 text-[10px] font-semibold text-black ring-1 ring-black/10">
+                                <span className="rounded-full bg-black/[0.06] px-2.5 py-0.5 text-[10px] font-semibold text-ink-2">
                                   {sessions.length} sessions
-                                </span>
-                              )}
-                              {day?.onShift && (
-                                <span className="rounded-full bg-[#FFFFFF] px-2.5 py-0.5 text-[10px] font-semibold text-black ring-1 ring-black/10">
-                                  On shift
-                                </span>
-                              )}
-                              {day?.anyMissingClockOut && (
-                                <span className="rounded-full bg-[#EF4444] px-2.5 py-0.5 text-[10px] font-semibold text-white">
-                                  No clock-out — hours assumed
                                 </span>
                               )}
                             </div>
                           </td>
-                          <td className="px-6 py-4 text-ink-2">
+                          <td className="px-6 py-4 align-top text-ink-2">
                             {clockInScan
                               ? formatShiftTime(new Date(clockInScan.scanned_at))
                               : '—'}
@@ -379,19 +369,21 @@ export default function AdminShiftClock() {
                                   setEditing((prev) => ({ ...prev, clockIn: e.target.value }))
                                 }
                               />
-                            ) : sessions.length ? (
-                              <div className="space-y-1.5">
+                            ) : !sessions.length ? (
+                              '—'
+                            ) : multi ? (
+                              <div className="divide-y divide-black/[0.06]">
                                 {sessions.map((s) => (
-                                  <div key={s.index} className="flex items-center gap-2">
-                                    {multi && (
-                                      <span className="text-[10px] font-semibold text-ink-3">#{s.index + 1}</span>
-                                    )}
-                                    <span>{formatShiftTime(s.clockInAt)}</span>
+                                  <div key={s.index} className="flex min-h-[4rem] items-center gap-2.5">
+                                    <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-black/[0.06] text-[10px] font-bold text-ink-2">
+                                      {s.index + 1}
+                                    </span>
+                                    <span className="tabular-nums">{formatShiftTime(s.clockInAt)}</span>
                                   </div>
                                 ))}
                               </div>
                             ) : (
-                              '—'
+                              <span className="tabular-nums">{formatShiftTime(sessions[0].clockInAt)}</span>
                             )}
                           </td>
                           <td className="px-6 py-4 align-top">
@@ -404,53 +396,72 @@ export default function AdminShiftClock() {
                                   setEditing((prev) => ({ ...prev, clockOut: e.target.value }))
                                 }
                               />
-                            ) : sessions.length ? (
-                              <div className="space-y-1.5">
+                            ) : !sessions.length ? (
+                              '—'
+                            ) : (
+                              <div className={multi ? 'divide-y divide-black/[0.06]' : ''}>
                                 {sessions.map((s) => (
-                                  <div key={s.index}>
+                                  <div
+                                    key={s.index}
+                                    className={`flex flex-col justify-center gap-1 ${multi ? 'min-h-[4rem]' : ''}`}
+                                  >
                                     {s.onShift ? (
-                                      <span className="text-accent-green">On shift…</span>
+                                      <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-accent-green/10 px-2.5 py-0.5 text-xs font-semibold text-accent-green">
+                                        <span className="h-1.5 w-1.5 rounded-full bg-accent-green" />
+                                        On shift
+                                      </span>
                                     ) : (
-                                      formatShiftTime(s.clockOutAt)
+                                      <span className="tabular-nums">{formatShiftTime(s.clockOutAt)}</span>
                                     )}
                                     {s.clockOutNote && (
                                       <span
-                                        className="mt-0.5 block max-w-[14rem] truncate text-xs text-accent-orange"
+                                        className="inline-flex w-fit max-w-[14rem] items-center truncate rounded-full bg-accent-orange/10 px-2 py-0.5 text-[11px] font-medium text-accent-orange"
                                         title={s.clockOutNote}
                                       >
-                                        Early out: {s.clockOutNote}
+                                        Early out · {s.clockOutNote}
                                       </span>
                                     )}
                                     {s.missingClockOut && (
-                                      <span className="mt-0.5 block text-xs text-accent-red">
+                                      <span className="inline-flex w-fit rounded-full bg-accent-red/10 px-2 py-0.5 text-[11px] font-medium text-accent-red">
                                         No clock-out — assumed
                                       </span>
                                     )}
                                   </div>
                                 ))}
                               </div>
-                            ) : (
-                              '—'
                             )}
                           </td>
                           <td className="px-6 py-4 align-top font-medium">
-                            {sessions.length ? (
-                              <div className="space-y-1.5">
-                                {multi &&
-                                  sessions.map((s) => (
-                                    <div key={s.index} className="text-ink-2">
+                            {!sessions.length ? (
+                              '—'
+                            ) : multi ? (
+                              <div>
+                                <div className="divide-y divide-black/[0.06]">
+                                  {sessions.map((s) => (
+                                    <div
+                                      key={s.index}
+                                      className="flex min-h-[4rem] items-center tabular-nums text-ink-2"
+                                    >
                                       {formatDurationFromMinutes(s.durationMinutes)}
                                     </div>
                                   ))}
-                                <div className="font-semibold">
-                                  {multi ? `Total ${formatDurationFromMinutes(day.totalMinutes)}` : formatDurationFromMinutes(day.totalMinutes)}
+                                </div>
+                                <div className="mt-2 flex items-baseline gap-1.5 border-t border-black/10 pt-2.5">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wide text-ink-3">
+                                    Total
+                                  </span>
+                                  <span className="font-semibold tabular-nums text-ink">
+                                    {formatDurationFromMinutes(day.totalMinutes)}
+                                  </span>
                                 </div>
                               </div>
                             ) : (
-                              '—'
+                              <span className="font-semibold tabular-nums">
+                                {formatDurationFromMinutes(day.totalMinutes)}
+                              </span>
                             )}
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 align-top">
                             {isEditing ? (
                               <div className="space-y-2">
                                 <textarea
