@@ -40,10 +40,12 @@ export const ALERT_TYPE_LABELS = {
   late: 'Late',
   no_show: 'No-show',
   stale_patrol: 'Stale patrol',
+  missed_checkpoint: 'Missed checkpoint',
 }
 
 export const ALERT_TYPE_TONE = {
   late: 'amber',
   no_show: 'red',
   stale_patrol: 'cyan',
+  missed_checkpoint: 'amber',
 }

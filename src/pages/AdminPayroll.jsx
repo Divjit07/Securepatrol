@@ -205,10 +205,13 @@ export default function AdminPayroll() {
     }
   }
 
+  // Inclusive day count of the selected pay period — drives CPP exemption proration.
+  const periodDays = dateRangeDays(filters.fromDate, filters.toDate).length
+
   const paystubParamsFor = (guard) => {
     const totals = periodTotalsForGuard(weeklyPayroll, guard.id)
     const rate = rates[guard.id]
-    const stub = computePaystub({ totals, rate, rates: deductionRates, otherFees: otherFees[guard.id] })
+    const stub = computePaystub({ totals, rate, rates: deductionRates, otherFees: otherFees[guard.id], periodDays })
     return {
       guardName: guard.name,
       employeeNo: guard.id.slice(0, 8).toUpperCase(),
@@ -274,6 +277,8 @@ export default function AdminPayroll() {
         rate: rates[guard.id],
         rates: deductionRates,
         otherFees: otherFees[guard.id],
+        // YTD column spans Jan 1 → period end; proration caps at the annual exemption.
+        periodDays: dateRangeDays(`${filters.toDate.slice(0, 4)}-01-01`, filters.toDate).length,
       })
       params.ytd = { totals, stub }
     }
@@ -516,12 +521,19 @@ export default function AdminPayroll() {
                     <td className="px-4 py-3">
                       <span
                         className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
-                          row.statutoryHolidayLabel
-                            ? 'bg-black text-white'
-                            : 'bg-[#FFFFFF] text-black ring-1 ring-black/10'
+                          row.missingClockOut
+                            ? 'bg-[#EF4444] text-white'
+                            : row.statutoryHolidayLabel
+                              ? 'bg-black text-white'
+                              : 'bg-[#FFFFFF] text-black ring-1 ring-black/10'
                         }`}
+                        title={
+                          row.missingClockOut
+                            ? 'No clock-out punch — clock-out defaulted to the scheduled end. Verify before paying.'
+                            : undefined
+                        }
                       >
-                        {row.statutoryHolidayLabel || 'Regular shift'}
+                        {row.missingClockOut ? 'No clock-out' : row.statutoryHolidayLabel || 'Regular shift'}
                       </span>
                     </td>
                   </tr>
@@ -709,8 +721,8 @@ export default function AdminPayroll() {
         <>
           {!ratesPersisted && (
             <div className="mb-4 rounded-xl border border-accent-orange/30 bg-accent-orange/10 p-4 text-sm text-accent-orange">
-              Pay rates can’t be saved yet — run migration <strong>031</strong> in the Supabase SQL
-              editor to add <code>guards.hourly_rate</code>. Rates entered below still work for this
+              Pay rates can’t be saved yet — run migration <strong>034</strong> in the Supabase SQL
+              editor to create <code>guard_pay_rates</code>. Rates entered below still work for this
               session’s paystubs.
               {rateError ? <span className="mt-1 block text-xs opacity-80">{rateError}</span> : null}
             </div>
@@ -724,7 +736,7 @@ export default function AdminPayroll() {
               {[
                 { id: 'eiPct', label: 'EI %', step: '0.01' },
                 { id: 'cppPct', label: 'CPP %', step: '0.01' },
-                { id: 'cppExemption', label: 'CPP exemption $ / period', step: '0.01' },
+                { id: 'cppAnnualExemption', label: 'CPP exemption $ / year', step: '1' },
               ].map((f) => (
                 <label key={f.id} className="text-[10px] font-semibold uppercase tracking-wider text-ink-3">
                   {f.label}

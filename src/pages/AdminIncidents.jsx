@@ -25,6 +25,7 @@ import {
   formatIncidentReportTime,
   getIncidentPhotoSignedUrl,
   incidentAttachmentCount,
+  markIncidentReportReviewed,
   previewImagePath,
   updateIncidentReportDescription,
 } from '../lib/incidentReports.js'
@@ -148,6 +149,23 @@ export default function AdminIncidents() {
     }
   }
 
+  const handlePublish = async () => {
+    if (!selected || !canEdit) return
+    setSaving(true)
+    setMessage(null)
+    try {
+      await markIncidentReportReviewed(selected.id, user.id)
+      const updated = { ...selected, reviewed_at: new Date().toISOString() }
+      setSelected(updated)
+      setReports((prev) => prev.map((r) => (r.id === selected.id ? updated : r)))
+      setMessage({ type: 'success', text: 'Report published — the client can now see it.' })
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message || 'Could not publish' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const handleDelete = async () => {
     if (!selected || !canEdit) return
     if (!window.confirm('Delete this incident report? Clients will no longer see it.')) return
@@ -227,6 +245,11 @@ export default function AdminIncidents() {
                     {incidentAttachmentCount(report) > 0 && (
                       <span className="rounded-full bg-black px-2.5 py-0.5 text-[10px] font-semibold text-white">
                         {incidentAttachmentCount(report)} file{incidentAttachmentCount(report) === 1 ? '' : 's'}
+                      </span>
+                    )}
+                    {!report.reviewed_at && (
+                      <span className="rounded-full bg-accent-orange/15 px-2.5 py-0.5 text-[10px] font-semibold text-accent-orange">
+                        Pending review — hidden from client
                       </span>
                     )}
                     {report.email_sent_at ? (
@@ -365,15 +388,28 @@ export default function AdminIncidents() {
             )}
 
             {canEdit && (
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={deleting}
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-accent-red hover:text-accent-red"
-              >
-                <Trash2 className="h-4 w-4" />
-                {deleting ? 'Deleting…' : 'Delete report'}
-              </button>
+              <div className="flex flex-wrap items-center gap-4">
+                {!selected.reviewed_at && (
+                  <button
+                    type="button"
+                    onClick={handlePublish}
+                    disabled={saving}
+                    className="sp-btn-primary inline-flex items-center gap-1.5 py-2 text-sm"
+                  >
+                    <Save className="h-4 w-4" />
+                    {saving ? 'Publishing…' : 'Publish to client'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-accent-red hover:text-accent-red"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {deleting ? 'Deleting…' : 'Delete report'}
+                </button>
+              </div>
             )}
           </ModalBody>
         </ViewportModal>

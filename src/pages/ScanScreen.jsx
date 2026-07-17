@@ -16,13 +16,13 @@ export default function ScanScreen() {
   const [processing, setProcessing] = useState(false)
   const [error, setError] = useState(null)
 
-  const handleScan = async (checkpointId) => {
+  const handleScan = async (checkpointId, nfcSerial = null) => {
     if (!user || processing) return
     setProcessing(true)
     setError(null)
 
     try {
-      const result = await submitScanWithGps(checkpointId, user.id, { scanInputMethod: 'nfc' })
+      const result = await submitScanWithGps(checkpointId, user.id, { scanInputMethod: 'nfc', nfcSerial })
 
       navigate('/guard/scan/result', {
         state: {

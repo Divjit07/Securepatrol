@@ -1,17 +1,16 @@
 import { supabase } from './supabase.js'
 
-export const SCAN_APPROVER_EMAIL = 'divjit007@gmail.com'
-
 export function getUserEmail(user) {
   return user?.email?.toLowerCase() || user?.user_metadata?.email?.toLowerCase() || ''
 }
 
-export function isScanApprover(user, profile) {
-  if (profile?.can_approve_scans === true) return true
-  if (getUserEmail(user) === SCAN_APPROVER_EMAIL) return true
-  const name = profile?.name?.trim().toLowerCase() || ''
-  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin'
-  return isAdmin && name.startsWith('divjit')
+/**
+ * Fast-path UI check: the profile flag only. The DB (`is_scan_approver`,
+ * migration 016) is the enforcement point — hardcoded email/name fallbacks
+ * were removed in favor of the flag, which migrations 016/035 seed.
+ */
+export function isScanApprover(_user, profile) {
+  return profile?.can_approve_scans === true
 }
 
 export async function checkScanApproverFromDb() {

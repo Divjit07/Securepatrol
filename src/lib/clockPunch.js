@@ -6,6 +6,10 @@ import { supabase } from './supabase.js'
 import { haversineDistance } from './gps.js'
 
 export const CLOCK_ACCURACY_BONUS_CAP = 40
+// Server trigger (migration 031) hard-fails any punch with gps_accuracy > 100,
+// independent of distance — the UI must mirror it or guards get a confusing
+// "On site ✓" button that server-rejects after Face ID.
+export const CLOCK_MAX_GPS_ACCURACY_M = 100
 
 export async function fetchSiteGeofence(siteId) {
   const { data, error } = await supabase
@@ -20,7 +24,7 @@ export async function fetchSiteGeofence(siteId) {
 /** Distance + inside/outside for the live "you are Xm away" readout. */
 export function geofenceStatus(position, site) {
   if (!site || site.latitude == null || site.longitude == null) {
-    return { located: false, distance: null, inside: false, radius: null }
+    return { located: false, distance: null, inside: false, radius: null, accuracyOk: true, accuracy: null }
   }
   const distance = haversineDistance(
     position.latitude,
@@ -33,7 +37,15 @@ export function geofenceStatus(position, site) {
     (position.accuracy != null
       ? Math.min(position.accuracy * 0.75, CLOCK_ACCURACY_BONUS_CAP)
       : 0)
-  return { located: true, distance, inside: distance <= radius, radius }
+  const accuracyOk = position.accuracy == null || position.accuracy <= CLOCK_MAX_GPS_ACCURACY_M
+  return {
+    located: true,
+    distance,
+    inside: distance <= radius,
+    radius,
+    accuracyOk,
+    accuracy: position.accuracy ?? null,
+  }
 }
 
 /**

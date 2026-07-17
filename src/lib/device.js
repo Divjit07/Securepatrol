@@ -7,8 +7,3 @@ export function isIOS() {
 export function supportsWebNfc() {
   return typeof window !== 'undefined' && 'NDEFReader' in window
 }
-
-export function preferredScanMode() {
-  if (isIOS() || !supportsWebNfc()) return 'qr'
-  return 'nfc'
-}

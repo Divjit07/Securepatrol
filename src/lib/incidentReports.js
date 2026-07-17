@@ -195,10 +195,22 @@ export async function submitIncidentReport({
   return data
 }
 
+/** Run `query(cols)`; before migration 033 lands, retry without reviewed_at
+ *  (reports read as already-reviewed, matching the old always-visible behavior). */
+async function selectWithReviewFallback(cols, run) {
+  const { data, error } = await run(cols)
+  if (!error) return data || []
+  if (/reviewed_at/.test(error.message || '')) {
+    const { data: legacy, error: legacyErr } = await run(cols.replace('reviewed_at,\n', ''))
+    if (legacyErr) throw legacyErr
+    return (legacy || []).map((r) => ({ ...r, reviewed_at: r.created_at }))
+  }
+  throw error
+}
+
 export async function fetchIncidentReportsForSite(siteId, { limit = 100 } = {}) {
-  const { data, error } = await supabase
-    .from('incident_reports')
-    .select(`
+  return selectWithReviewFallback(
+    `
       id,
       description,
       guard_lat,
@@ -206,22 +218,24 @@ export async function fetchIncidentReportsForSite(siteId, { limit = 100 } = {}) 
       photo_path,
       attachments,
       created_at,
+      reviewed_at,
       guard:profiles!guard_id(name)
-    `)
-    .eq('site_id', siteId)
-    .order('created_at', { ascending: false })
-    .limit(limit)
-
-  if (error) throw error
-  return data || []
+    `,
+    (cols) =>
+      supabase
+        .from('incident_reports')
+        .select(cols)
+        .eq('site_id', siteId)
+        .order('created_at', { ascending: false })
+        .limit(limit),
+  )
 }
 
 export async function fetchIncidentReportsForSites(siteIds, { limit = 100 } = {}) {
   if (!siteIds?.length) return []
 
-  const { data, error } = await supabase
-    .from('incident_reports')
-    .select(`
+  return selectWithReviewFallback(
+    `
       id,
       site_id,
       description,
@@ -232,15 +246,18 @@ export async function fetchIncidentReportsForSites(siteIds, { limit = 100 } = {}
       created_at,
       email_sent_at,
       email_error,
+      reviewed_at,
       guard:profiles!guard_id(name),
       site:sites(name)
-    `)
-    .in('site_id', siteIds)
-    .order('created_at', { ascending: false })
-    .limit(limit)
-
-  if (error) throw error
-  return data || []
+    `,
+    (cols) =>
+      supabase
+        .from('incident_reports')
+        .select(cols)
+        .in('site_id', siteIds)
+        .order('created_at', { ascending: false })
+        .limit(limit),
+  )
 }
 
 export async function updateIncidentReportDescription(reportId, description) {
@@ -257,6 +274,18 @@ export async function updateIncidentReportDescription(reportId, description) {
     .update({ description: trimmed })
     .eq('id', reportId)
 
+  if (error) throw error
+}
+
+/**
+ * Approve a report for client visibility (RLS hides unreviewed reports from
+ * clients since migration 033). Pre-033 this no-ops with a column error.
+ */
+export async function markIncidentReportReviewed(reportId, reviewerId) {
+  const { error } = await supabase
+    .from('incident_reports')
+    .update({ reviewed_at: new Date().toISOString(), reviewed_by: reviewerId })
+    .eq('id', reportId)
   if (error) throw error
 }
 

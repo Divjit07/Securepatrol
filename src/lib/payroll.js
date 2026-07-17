@@ -129,32 +129,52 @@ export function buildAccountingCsv(weeklyRows, approvalsByKey = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// Pay rates (guards.hourly_rate, migration 031)
+// Pay rates (guard_pay_rates, migration 034 — admin-only RLS, structurally
+// invisible to clients; previously guards.hourly_rate from 031)
 // ---------------------------------------------------------------------------
 
 /**
  * Hourly rates by guard id. Returns { rates, persisted } — persisted=false
- * when the hourly_rate column doesn't exist yet (migration 031 not applied),
- * so the UI can fall back to session-only rates instead of breaking.
+ * when neither the guard_pay_rates table (034) nor the legacy column (031)
+ * exists yet, so the UI falls back to session-only rates instead of breaking.
  */
 export async function fetchGuardRates(siteId) {
   const { data, error } = await supabase
+    .from('guard_pay_rates')
+    .select('guard_id, hourly_rate, guards!inner(site_id)')
+    .eq('guards.site_id', siteId)
+  if (!error) {
+    return {
+      rates: Object.fromEntries((data || []).map((g) => [g.guard_id, g.hourly_rate])),
+      persisted: true,
+    }
+  }
+
+  // Pre-034: rates may still live on guards.hourly_rate.
+  const { data: legacy, error: legacyErr } = await supabase
     .from('guards')
     .select('id, hourly_rate')
     .eq('site_id', siteId)
-  if (error) return { rates: {}, persisted: false }
+  if (legacyErr) return { rates: {}, persisted: false }
   return {
-    rates: Object.fromEntries((data || []).map((g) => [g.id, g.hourly_rate])),
+    rates: Object.fromEntries((legacy || []).map((g) => [g.id, g.hourly_rate])),
     persisted: true,
   }
 }
 
 export async function saveGuardRate(guardId, rate) {
+  const value = rate === '' || rate == null ? null : Number(rate)
   const { error } = await supabase
+    .from('guard_pay_rates')
+    .upsert({ guard_id: guardId, hourly_rate: value, updated_at: new Date().toISOString() })
+  if (!error) return
+
+  // Pre-034 fallback: legacy column on guards.
+  const { error: legacyErr } = await supabase
     .from('guards')
-    .update({ hourly_rate: rate === '' || rate == null ? null : Number(rate) })
+    .update({ hourly_rate: value })
     .eq('id', guardId)
-  if (error) throw error
+  if (legacyErr) throw legacyErr
 }
 
 // ---------------------------------------------------------------------------

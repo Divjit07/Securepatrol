@@ -312,12 +312,20 @@ export default function AdminRoster() {
     setPublishing(true)
     try {
       const result = await publishWeek(siteId, weekStart, rangeEnd, user.id)
-      flash(
-        'success',
-        result.method === 'function'
-          ? `Published ${result.published} shifts — ${result.emailed} guards emailed their schedule.`
-          : `Published ${result.published} shifts. Email delivery is off until the publish-schedule function is deployed.`,
-      )
+      if (result.method !== 'function') {
+        // Shifts are live in-app, but NOBODY was emailed — never bury that in a success toast.
+        flash(
+          'error',
+          `Published ${result.published} shifts, but NO emails were sent — the publish-schedule function isn't deployed. Guards only see this in the app.`,
+        )
+      } else {
+        const parts = [`Published ${result.published} shifts — ${result.emailed} guards emailed.`]
+        if (result.skipped?.length) {
+          parts.push(`No email on file for: ${result.skipped.join(', ')} — tell them directly.`)
+        }
+        if (result.emailError) parts.push(`Email issue: ${result.emailError}`)
+        flash(result.skipped?.length || result.emailError ? 'error' : 'success', parts.join(' '))
+      }
       reload()
     } catch (err) {
       flash('error', err.message)

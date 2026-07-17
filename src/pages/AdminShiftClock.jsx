@@ -349,6 +349,11 @@ export default function AdminShiftClock() {
                                   On shift
                                 </span>
                               )}
+                              {dayShift?.missingClockOut && (
+                                <span className="rounded-full bg-[#EF4444] px-2.5 py-0.5 text-[10px] font-semibold text-white">
+                                  No clock-out — hours assumed
+                                </span>
+                              )}
                             </div>
                           </td>
                           <td className="px-6 py-4 text-ink-2">

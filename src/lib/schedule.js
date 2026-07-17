@@ -302,7 +302,13 @@ export async function publishWeek(siteId, rangeStart, rangeEnd, publishedBy) {
     body: payload,
   })
   if (!fnError && data?.success) {
-    return { published: data.published, emailed: data.emailed, method: 'function' }
+    return {
+      published: data.published,
+      emailed: data.emailed,
+      skipped: data.skipped || [],
+      emailError: data.email_error || null,
+      method: 'function',
+    }
   }
 
   // Fallback: publish without emails.
@@ -325,7 +331,7 @@ export async function publishWeek(siteId, rangeStart, rangeEnd, publishedBy) {
     email_error: 'publish-schedule function not deployed; no emails sent',
   })
 
-  return { published: rows?.length || 0, emailed: 0, method: 'direct' }
+  return { published: rows?.length || 0, emailed: 0, skipped: [], emailError: null, method: 'direct' }
 }
 
 // ---------------------------------------------------------------------------
