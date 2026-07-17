@@ -50,6 +50,12 @@ const CLOCK_ROLES = ['shift_clock_in', 'shift_clock_out']
 // ---------------------------------------------------------------------------
 const TOOLS: GeminiFunctionDeclaration[] = [
   {
+    name: 'get_on_shift_now',
+    description:
+      'Who is clocked in RIGHT NOW across all of this admin\'s sites, plus recent clock-outs. Answers "who is on shift/working now" in a single call — always prefer this over stitching schedules and clock events.',
+    parameters: { type: 'object', properties: {} },
+  },
+  {
     name: 'resolve_guard',
     description:
       'Find guards by (partial) name. Returns ALL matches with ids and sites. If more than one matches, ask the user which one — never guess.',
@@ -127,6 +133,50 @@ const TOOLS: GeminiFunctionDeclaration[] = [
 // ---------------------------------------------------------------------------
 async function runTool(db: SupabaseClient, name: string, args: Record<string, unknown>) {
   switch (name) {
+    case 'get_on_shift_now': {
+      // Same signal as the Live Clock board: a guard is on shift when their
+      // most recent clock punch (16h window) is a clock-IN.
+      const { data: guards, error: gErr } = await db
+        .from('guards')
+        .select('id, name, active, sites(name)')
+        .eq('active', true)
+      if (gErr) return { error: gErr.message }
+      if (!guards?.length) return { on_shift: [], recently_clocked_out: [] }
+      const since = new Date(Date.now() - 16 * 3600000).toISOString()
+      const { data: punches, error: pErr } = await db
+        .from('scans')
+        .select('guard_id, scanned_at, approval_note, checkpoints!inner(checkpoint_role)')
+        .in('guard_id', guards.map((g) => g.id))
+        .eq('status', 'pass')
+        .in('checkpoints.checkpoint_role', CLOCK_ROLES)
+        .gte('scanned_at', since)
+        .order('scanned_at', { ascending: false })
+      if (pErr) return { error: pErr.message }
+      const lastByGuard = new Map<string, { at: string; role?: string; note: string | null }>()
+      for (const p of punches || []) {
+        if (!lastByGuard.has(p.guard_id)) {
+          lastByGuard.set(p.guard_id, {
+            at: p.scanned_at,
+            role: (p.checkpoints as { checkpoint_role?: string } | null)?.checkpoint_role,
+            note: p.approval_note || null,
+          })
+        }
+      }
+      const onShift: unknown[] = []
+      const recentOut: unknown[] = []
+      for (const g of guards) {
+        const last = lastByGuard.get(g.id)
+        if (!last) continue
+        const site = (g.sites as { name?: string } | null)?.name || null
+        if (last.role === 'shift_clock_in') {
+          onShift.push({ guard: g.name, site, clocked_in_at: last.at })
+        } else {
+          recentOut.push({ guard: g.name, site, clocked_out_at: last.at, note: last.note })
+        }
+      }
+      return { on_shift: onShift, recently_clocked_out: recentOut }
+    }
+
     case 'resolve_guard': {
       const q = String(args.name || '').trim()
       if (!q) return { error: 'name is required' }
@@ -304,6 +354,8 @@ const SYSTEM_PROMPT = [
   '- Ambiguous guard name (resolve_guard returns 2+ matches): list the matches and ask which one.',
   '- Empty tool result: say so plainly. Do not fill gaps.',
   '- Dates: resolve relative ranges ("this week", "biweekly") to explicit ISO ranges before calling tools.',
+  '- "Who is on shift / working right now" → call get_on_shift_now once. Do not stitch schedules and clock events for that.',
+  '- Use as FEW tool calls as possible; request independent lookups together in one turn.',
   '- Pay/paystubs: you may report hours from get_hours; for paystub PDFs and pay rates, direct the admin to the Payroll page — you cannot generate documents.',
   '- Keep answers short and factual. Plain text only, no markdown tables.',
 ].join('\n')
@@ -392,6 +444,25 @@ Deno.serve(async (req) => {
       contents.push({ role: 'user', parts: responseParts })
     }
 
+    // Lookup cap reached: force a final answer from whatever the tools already
+    // returned instead of giving up — no new tools allowed on this turn.
+    contents.push({
+      role: 'user',
+      parts: [{
+        text: 'Lookup limit reached. Answer the original question NOW using only the tool results above. If they are insufficient, say exactly what is missing. Do not request more tools.',
+      }],
+    })
+    if (takeBudget()) {
+      const { parts } = await callGeminiChat({
+        model: GEMINI_FLASH,
+        systemPrompt: SYSTEM_PROMPT,
+        contents,
+        temperature: 0.2,
+        maxOutputTokens: 3072,
+      })
+      const text = parts.map((p) => (p as { text?: string }).text || '').join('').trim()
+      if (text) return json({ reply: text, tools_used: toolsUsed })
+    }
     return json({
       reply: 'That took too many lookup steps — try narrowing the question.',
       tools_used: toolsUsed,
