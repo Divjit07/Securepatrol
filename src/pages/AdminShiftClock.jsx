@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import { Clock, RotateCcw, Save } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
@@ -37,6 +37,7 @@ function findClockInScan(guardScans, checkpoints, dateStr, shift) {
 
 export default function AdminShiftClock() {
   const { user, isSuperAdmin, canManageShiftClock, privilegesLoading } = useAuth()
+  const [searchParams] = useSearchParams()
   const [sites, setSites] = useState([])
   const [guards, setGuards] = useState([])
   const [selectedSite, setSelectedSite] = useState('')
@@ -153,7 +154,10 @@ export default function AdminShiftClock() {
     const role = isSuperAdmin ? 'super_admin' : 'admin'
     fetchSitesForAdmin(user.id, role).then((siteList) => {
       setSites(siteList)
-      if (siteList.length) setSelectedSite(siteList[0].id)
+      // Deep link (?site=) from the Live Clock board wins over the default.
+      const wanted = searchParams.get('site')
+      if (wanted && siteList.some((s) => s.id === wanted)) setSelectedSite(wanted)
+      else if (siteList.length) setSelectedSite(siteList[0].id)
     })
 
     fetchGuardsWithSites().then(setGuards)

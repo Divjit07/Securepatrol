@@ -31,6 +31,7 @@ import { BRAND } from '../lib/brand.js'
 
 function buildAdminNavGroups({ canApproveScans, canManageShiftClock, isSuperAdmin }) {
   const operations = [
+    ...(canManageShiftClock ? [{ to: '/admin/live-clock', label: 'Live Clock', icon: Radar }] : []),
     ...(canManageShiftClock ? [{ to: '/admin/shift-clock', label: 'Shift Clock', icon: Clock }] : []),
     ...((canApproveScans || canManageShiftClock || isSuperAdmin)
       ? [{ to: '/admin/incidents', label: 'Incidents', icon: AlertTriangle }]

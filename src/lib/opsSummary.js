@@ -200,6 +200,7 @@ function computeWindowStats({ checkpoints, shifts, scans, alerts, misses, incide
     .map((r) => ({
       guardId: r.guardId,
       guardName: r.guardName,
+      siteId: r.shift.site_id,
       shiftStart: r.shift.starts_at,
       shiftEnd: r.shift.ends_at,
       clockInAt: r.clockInAt,

@@ -86,6 +86,8 @@ export default function AdminSummary() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [copied, setCopied] = useState(false)
+  const [clockSearch, setClockSearch] = useState('')
+  const [clockStatus, setClockStatus] = useState('all')
 
   useEffect(() => {
     if (!user) return
@@ -139,6 +141,28 @@ export default function AdminSummary() {
   }
 
   const maxHour = summary ? Math.max(1, ...summary.activityByHour) : 1
+
+  const siteNameById = useMemo(() => new Map(sites.map((s) => [s.id, s.name])), [sites])
+
+  const rowStatus = (r) => {
+    if (r.noShow) return 'no-show'
+    if (r.onShift) return 'on-shift'
+    if (r.missingClockOut) return 'no-clock-out'
+    if (r.isLate) return 'late'
+    if (r.clockInAt) return 'complete'
+    return 'scheduled'
+  }
+
+  const filteredTimeline = useMemo(() => {
+    if (!summary) return []
+    const q = clockSearch.trim().toLowerCase()
+    return summary.clockTimeline.filter((r) => {
+      if (clockStatus !== 'all' && rowStatus(r) !== clockStatus) return false
+      if (!q) return true
+      const site = (siteNameById.get(r.siteId) || '').toLowerCase()
+      return r.guardName.toLowerCase().includes(q) || site.includes(q)
+    })
+  }, [summary, clockSearch, clockStatus, siteNameById])
 
   return (
     <Layout variant="admin">
@@ -294,19 +318,49 @@ export default function AdminSummary() {
 
           {/* Clock in / out timeline */}
           <div className="dk-card mt-4 overflow-hidden">
-            <div className="flex items-center justify-between px-6 pt-6">
+            <div className="flex flex-wrap items-center gap-3 px-6 pt-6">
               <p className="flex items-center gap-2 text-sm font-semibold text-ink">
                 <Clock className="h-4 w-4 text-accent-cyan-line" /> Clock in / out — {periodLabel}
               </p>
-              <span className="text-[11px] text-ink-3">
-                {summary.clockTimeline.length} shift{summary.clockTimeline.length === 1 ? '' : 's'}
-              </span>
+              <a
+                href="/admin/live-clock"
+                className="flex items-center gap-1 rounded-full bg-white/5 px-3 py-1 text-[11px] font-semibold text-ink-2 hover:bg-white/10"
+              >
+                Live board →
+              </a>
+              <div className="ml-auto flex flex-wrap items-center gap-2">
+                <input
+                  type="search"
+                  value={clockSearch}
+                  onChange={(e) => setClockSearch(e.target.value)}
+                  placeholder="Search guard or site…"
+                  className="rounded-full border-0 bg-white/5 px-3.5 py-1.5 text-xs text-ink placeholder:text-ink-3 focus:outline-none focus:ring-1 focus:ring-white/20"
+                />
+                <select
+                  value={clockStatus}
+                  onChange={(e) => setClockStatus(e.target.value)}
+                  className="rounded-full border-0 bg-white/5 px-3 py-1.5 text-xs font-semibold text-ink-2 focus:outline-none"
+                  aria-label="Filter by status"
+                >
+                  <option value="all">All statuses</option>
+                  <option value="on-shift">On shift</option>
+                  <option value="late">Late</option>
+                  <option value="no-show">No-show</option>
+                  <option value="no-clock-out">No clock-out</option>
+                  <option value="complete">Complete</option>
+                  <option value="scheduled">Scheduled</option>
+                </select>
+                <span className="text-[11px] text-ink-3 tabular-nums">
+                  {filteredTimeline.length}/{summary.clockTimeline.length}
+                </span>
+              </div>
             </div>
             <div className="mt-3 overflow-x-auto">
-              <table className="w-full min-w-[48rem] text-left text-sm">
+              <table className="w-full min-w-[52rem] text-left text-sm">
                 <thead className="bg-white/5 text-ink-2">
                   <tr>
                     <th className="px-6 py-2.5 font-medium">Guard</th>
+                    <th className="px-6 py-2.5 font-medium">Site</th>
                     <th className="px-6 py-2.5 font-medium">Shift</th>
                     <th className="px-6 py-2.5 font-medium">Clocked in</th>
                     <th className="px-6 py-2.5 font-medium">Clocked out</th>
@@ -315,16 +369,19 @@ export default function AdminSummary() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {summary.clockTimeline.length === 0 ? (
+                  {filteredTimeline.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-6 py-8 text-center text-ink-3">
-                        No shifts scheduled in this window.
+                      <td colSpan={7} className="px-6 py-8 text-center text-ink-3">
+                        {summary.clockTimeline.length
+                          ? 'No shifts match your filter.'
+                          : 'No shifts scheduled in this window.'}
                       </td>
                     </tr>
                   ) : (
-                    summary.clockTimeline.map((r, i) => (
+                    filteredTimeline.map((r, i) => (
                       <tr key={i}>
                         <td className="px-6 py-3 font-medium text-ink">{r.guardName}</td>
+                        <td className="px-6 py-3 text-ink-2">{siteNameById.get(r.siteId) || '—'}</td>
                         <td className="px-6 py-3 text-ink-2">{fmtShiftLabel(r.shiftStart, r.shiftEnd)}</td>
                         <td className="px-6 py-3 tabular-nums">
                           {r.clockInAt ? (

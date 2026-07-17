@@ -54,6 +54,7 @@ const AdminPayroll = lazyRetry(() => import('./pages/AdminPayroll.jsx'))
 const Alerts = lazyRetry(() => import('./pages/Alerts.jsx'))
 const ScanApproval = lazyRetry(() => import('./pages/ScanApproval.jsx'))
 const AdminShiftClock = lazyRetry(() => import('./pages/AdminShiftClock.jsx'))
+const AdminLiveClock = lazyRetry(() => import('./pages/AdminLiveClock.jsx'))
 const AdminIncidents = lazyRetry(() => import('./pages/AdminIncidents.jsx'))
 const ClientDashboard = lazyRetry(() => import('./pages/ClientDashboard.jsx'))
 const ClientCheckpoints = lazyRetry(() => import('./pages/ClientCheckpoints.jsx'))
@@ -251,6 +252,14 @@ export default function App() {
           element={
             <ProtectedRoute requireAdmin>
               <AdminShiftClock />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/live-clock"
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminLiveClock />
             </ProtectedRoute>
           }
         />
