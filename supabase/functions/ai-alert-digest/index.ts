@@ -16,6 +16,38 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
 
+// ---------------------------------------------------------------------------
+// Quota protection (free tier = hard $0, but requests/day are limited).
+// Per warm isolate: identical alert sets are served from cache without
+// touching Gemini; per-user cooldown stops refresh-spamming; a daily budget
+// hard-caps total model calls no matter what.
+// ---------------------------------------------------------------------------
+const CACHE_TTL_MS = 10 * 60_000 // reuse a digest for 10 min
+const USER_COOLDOWN_MS = 60_000 // at most 1 model call per user per minute
+const DAILY_MODEL_CALL_BUDGET = 200 // backstop well under free-tier limits
+
+const digestCache = new Map<string, { narrative: string; count: number; at: number }>()
+const lastCallByUser = new Map<string, number>()
+let budgetDay = new Date().toDateString()
+let modelCallsToday = 0
+
+function takeBudget(): boolean {
+  const today = new Date().toDateString()
+  if (today !== budgetDay) {
+    budgetDay = today
+    modelCallsToday = 0
+  }
+  if (modelCallsToday >= DAILY_MODEL_CALL_BUDGET) return false
+  modelCallsToday += 1
+  return true
+}
+
+async function eventsHash(userId: string, rows: unknown): Promise<string> {
+  const data = new TextEncoder().encode(userId + JSON.stringify(rows))
+  const digest = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('')
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -67,6 +99,29 @@ Deno.serve(async (req) => {
       message: e.message,
     }))
 
+    // Same alerts, same user → serve the cached digest, no model call.
+    const key = await eventsHash(user.id, rows)
+    const cached = digestCache.get(key)
+    if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
+      return json({ narrative: cached.narrative, count: cached.count, cached: true })
+    }
+
+    // Per-user cooldown + global daily budget before any model call.
+    const lastCall = lastCallByUser.get(user.id) || 0
+    if (Date.now() - lastCall < USER_COOLDOWN_MS) {
+      // Alerts changed within the cooldown: serve the stale digest if we have
+      // one, else quietly no-op — the page's own list is always live anyway.
+      return cached
+        ? json({ narrative: cached.narrative, count: cached.count, cached: true })
+        : json({ narrative: null, count: events.length, throttled: true })
+    }
+    if (!takeBudget()) {
+      return cached
+        ? json({ narrative: cached.narrative, count: cached.count, cached: true })
+        : json({ narrative: null, count: events.length, throttled: true })
+    }
+    lastCallByUser.set(user.id, Date.now())
+
     const narrative = await callGemini({
       model: GEMINI_FLASH,
       systemPrompt: [
@@ -83,6 +138,13 @@ Deno.serve(async (req) => {
       temperature: 0.2,
       maxOutputTokens: 256,
     })
+
+    digestCache.set(key, { narrative, count: events.length, at: Date.now() })
+    // Keep the per-isolate cache tiny — this is a quota guard, not a store.
+    if (digestCache.size > 100) {
+      const oldest = [...digestCache.entries()].sort((a, b) => a[1].at - b[1].at)[0]
+      if (oldest) digestCache.delete(oldest[0])
+    }
 
     return json({ narrative, count: events.length })
   } catch (err) {

@@ -31,15 +31,36 @@ export async function fetchAlertEvents({
   return data || []
 }
 
+const NARRATIVE_CACHE_KEY = 'sp-alert-narrative'
+const NARRATIVE_TTL_MS = 10 * 60_000
+
 /**
  * AI-phrased digest of the open alerts (edge function ai-alert-digest).
  * Returns { narrative: string|null, count: number }. Never throws numbers of
- * its own — the function only rewords alert_events rows.
+ * its own — the function only rewords alert_events rows. Cached in
+ * sessionStorage for 10 min so page revisits don't spend Gemini quota (the
+ * server throttles too — this just avoids the round trip).
  */
 export async function fetchAlertNarrative() {
+  try {
+    const raw = sessionStorage.getItem(NARRATIVE_CACHE_KEY)
+    if (raw) {
+      const cached = JSON.parse(raw)
+      if (Date.now() - cached.at < NARRATIVE_TTL_MS) return cached.data
+    }
+  } catch {
+    /* storage unavailable — fall through */
+  }
+
   const { data, error } = await supabase.functions.invoke('ai-alert-digest', { body: {} })
   if (error) throw new Error(error.message || 'Digest unavailable')
   if (data?.error) throw new Error(data.error)
+
+  try {
+    sessionStorage.setItem(NARRATIVE_CACHE_KEY, JSON.stringify({ at: Date.now(), data }))
+  } catch {
+    /* best effort */
+  }
   return data
 }
 
