@@ -30,7 +30,8 @@ import SyncIndicator from './SyncIndicator.jsx'
 import ThemeSwitcher from './ThemeSwitcher.jsx'
 import { BRAND } from '../lib/brand.js'
 
-function buildAdminNavGroups({ canApproveScans, canManageShiftClock, isSuperAdmin }) {
+// Exported for the DEV-only /dev/sidebar visual harness.
+export function buildAdminNavGroups({ canApproveScans, canManageShiftClock, isSuperAdmin }) {
   const operations = [
     ...(canManageShiftClock ? [{ to: '/admin/live-clock', label: 'Live Clock', icon: Radar }] : []),
     ...(canManageShiftClock ? [{ to: '/admin/shift-clock', label: 'Shift Clock', icon: Clock }] : []),
@@ -118,19 +119,19 @@ function initialsOf(name) {
 }
 
 const sidebarItemClass = ({ isActive }) =>
-  `flex items-center gap-3 rounded-lg px-3 py-[0.3rem] text-sm transition ${
+  `flex items-center gap-2.5 rounded-lg px-3 py-[3px] text-[13px] leading-5 transition ${
     isActive
       ? 'sidebar-nav-active'
       : 'text-ink-2 hover:bg-white/5 hover:text-ink'
   }`
 
-function SidebarNav({ groups, onNavigate }) {
+export function SidebarNav({ groups, onNavigate }) {
   return (
-    <nav className="flex-1 space-y-3 overflow-y-auto px-3 py-2">
+    <nav className="flex-1 space-y-1.5 overflow-y-auto px-3 py-1.5">
       {groups.map((group) => (
         <div key={group.label || 'home'}>
           {group.label && (
-            <p className="mb-1.5 px-3 text-xs font-semibold uppercase tracking-wider text-ink-3">
+            <p className="px-3 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-ink-3">
               {group.label}
             </p>
           )}
@@ -185,7 +186,7 @@ function SidebarLayout({ children, groups, roleLabel, homeTo }) {
 
   const sidebarInner = (
     <>
-      <div className="flex items-center gap-3 px-5 py-2.5">
+      <div className="flex items-center gap-3 px-5 py-1.5">
         <Logo size="sm" showText={false} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-base font-bold tracking-tight text-ink">{BRAND.name}</p>
@@ -206,20 +207,18 @@ function SidebarLayout({ children, groups, roleLabel, homeTo }) {
 
       <SidebarNav groups={groups} onNavigate={() => setMenuOpen(false)} />
 
-      <div className="border-t border-white/5 p-2">
-        <div className="mb-0.5">
-          <ThemeSwitcher />
-        </div>
-        <div className="mb-0.5 px-2">
+      <div className="border-t border-white/5 p-1.5">
+        <ThemeSwitcher />
+        <div className="px-2">
           <SyncIndicator />
         </div>
-        <div className="flex items-center gap-3 rounded-lg px-2 py-1">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-orange/15 text-xs font-bold text-accent-orange">
+        <div className="flex items-center gap-2.5 rounded-lg px-2 py-0.5">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-orange/15 text-[11px] font-bold text-accent-orange">
             {initialsOf(profile?.name)}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-ink">{profile?.name || '—'}</p>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-3">{roleLabel}</p>
+            <p className="truncate text-[13px] font-semibold leading-4 text-ink">{profile?.name || '—'}</p>
+            <p className="text-[9px] font-semibold uppercase tracking-wider text-ink-3">{roleLabel}</p>
           </div>
           <button
             type="button"

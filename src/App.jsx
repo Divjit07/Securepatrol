@@ -72,6 +72,7 @@ const AdminPreview = import.meta.env.DEV ? lazy(() => import('./pages/dev/AdminP
 const ApplePreview = import.meta.env.DEV ? lazy(() => import('./pages/dev/ApplePreview.jsx')) : null
 const ScalePreview = import.meta.env.DEV ? lazy(() => import('./pages/dev/ScalePreview.jsx')) : null
 const ScaleAdminPreview = import.meta.env.DEV ? lazy(() => import('./pages/dev/ScaleAdminPreview.jsx')) : null
+const SidebarPreview = import.meta.env.DEV ? lazy(() => import('./pages/dev/SidebarPreview.jsx')) : null
 
 function PageLoader() {
   return (
@@ -347,6 +348,7 @@ export default function App() {
         />
 
         {RosterPreview && <Route path="/dev/roster" element={<RosterPreview />} />}
+        {SidebarPreview && <Route path="/dev/sidebar" element={<SidebarPreview />} />}
         {AdminPreview && <Route path="/dev/admin" element={<AdminPreview />} />}
         {ApplePreview && <Route path="/dev/apple" element={<ApplePreview />} />}
         {ScalePreview && <Route path="/dev/scale" element={<ScalePreview />} />}
