@@ -56,10 +56,14 @@ export async function fetchAlertNarrative() {
   if (error) throw new Error(error.message || 'Digest unavailable')
   if (data?.error) throw new Error(data.error)
 
-  try {
-    sessionStorage.setItem(NARRATIVE_CACHE_KEY, JSON.stringify({ at: Date.now(), data }))
-  } catch {
-    /* best effort */
+  // Only cache real digests — an empty result must re-check next visit,
+  // otherwise a just-fired alert stays invisible for the whole TTL.
+  if (data?.narrative) {
+    try {
+      sessionStorage.setItem(NARRATIVE_CACHE_KEY, JSON.stringify({ at: Date.now(), data }))
+    } catch {
+      /* best effort */
+    }
   }
   return data
 }
