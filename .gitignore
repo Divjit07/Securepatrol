@@ -30,8 +30,11 @@ supabase/.temp/
 # Local tooling (bundled Node.js runtime)
 .tools/
 
-testsprite_tests/tmp/config.json
-testsprite_tests/tmp/qa_accounts.json
-testsprite_tests/tmp/create_qa_accounts.mjs
-testsprite_tests/tmp/mcp.log
-testsprite_tests/tmp/execution.lock
+# TestSprite + local QA tooling (session artifacts, not product code)
+testsprite_tests/
+venv/
+downloads/
+.theme-preview/
+fix_blocked_tests.py
+fix_get_jwt.py
+SecurePatrol_PRD_v2.0.docx
