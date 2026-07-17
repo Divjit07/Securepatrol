@@ -332,7 +332,7 @@ Deno.serve(async (req) => {
 
     const last = lastMessageByUser.get(user.id) || 0
     if (Date.now() - last < USER_COOLDOWN_MS) {
-      return json({ error: 'Slow down a little — one message every few seconds.' }, 429)
+      return json({ error: 'Slow down a little — one message every few seconds.' })
     }
     lastMessageByUser.set(user.id, Date.now())
 
@@ -355,15 +355,17 @@ Deno.serve(async (req) => {
 
     for (let i = 0; i < MAX_TOOL_ITERATIONS; i += 1) {
       if (!takeBudget()) {
-        return json({ error: 'Daily AI budget reached — try again tomorrow.' }, 429)
+        return json({ error: 'Daily AI budget reached — try again tomorrow.' })
       }
+      // Generous output cap: current Gemini models spend hidden "thinking"
+      // tokens from the same budget before any visible text.
       const { parts } = await callGeminiChat({
         model: GEMINI_FLASH,
         systemPrompt: SYSTEM_PROMPT,
         contents,
         tools: TOOLS,
         temperature: 0.2,
-        maxOutputTokens: 1024,
+        maxOutputTokens: 3072,
       })
 
       const calls = parts.filter((p) => p.functionCall) as Array<{
@@ -395,6 +397,9 @@ Deno.serve(async (req) => {
       tools_used: toolsUsed,
     })
   } catch (err) {
-    return json({ error: err instanceof Error ? err.message : 'Chat failed' }, 500)
+    // 200 on purpose: supabase-js invoke() swallows non-2xx bodies into a
+    // generic "non-2xx status code" — returning the message in a 200 lets the
+    // UI show the actual cause. Auth failures above still use real 401/403.
+    return json({ error: err instanceof Error ? err.message : 'Chat failed' })
   }
 })

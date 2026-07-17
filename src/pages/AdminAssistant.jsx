@@ -52,7 +52,18 @@ export default function AdminAssistant() {
       const { data, error: fnError } = await supabase.functions.invoke('ai-chat', {
         body: { messages: next.map(({ role, text: t }) => ({ role, text: t })) },
       })
-      if (fnError) throw new Error(fnError.message || 'Assistant unavailable')
+      if (fnError) {
+        // invoke() hides non-2xx bodies behind a generic message — dig the
+        // real cause out of the response when there is one.
+        let detail = fnError.message
+        try {
+          const body = await fnError.context?.json()
+          if (body?.error) detail = body.error
+        } catch {
+          /* keep generic message */
+        }
+        throw new Error(detail || 'Assistant unavailable')
+      }
       if (data?.error) throw new Error(data.error)
       setMessages((prev) => [...prev, { role: 'assistant', text: data.reply, tools: data.tools_used }])
     } catch (err) {
