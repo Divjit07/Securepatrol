@@ -48,7 +48,11 @@ Deno.serve(async (req) => {
       })
     }
 
-    const { name, email, password, site_id } = await req.json()
+    const body = await req.json()
+    const name = typeof body.name === 'string' ? body.name.trim() : ''
+    const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
+    const password = body.password
+    const site_id = body.site_id
 
     if (!name || !email || !password || !site_id) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
@@ -68,6 +72,22 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     })
 
+    const duplicateMsg = 'A guard with this email already exists'
+
+    const { data: existingGuard } = await adminClient
+      .from('guards')
+      .select('id')
+      .ilike('email', email)
+      .limit(1)
+      .maybeSingle()
+
+    if (existingGuard) {
+      return new Response(JSON.stringify({ error: duplicateMsg }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
       email,
       password,
@@ -76,7 +96,9 @@ Deno.serve(async (req) => {
     })
 
     if (createError) {
-      return new Response(JSON.stringify({ error: createError.message }), {
+      const raw = createError.message || ''
+      const error = /already|registered|exists|duplicate/i.test(raw) ? duplicateMsg : raw
+      return new Response(JSON.stringify({ error }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })

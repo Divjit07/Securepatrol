@@ -9,10 +9,26 @@ export default function GuardHistory() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!user) return
+    if (!user) {
+      setScans([])
+      setLoading(false)
+      return
+    }
+    let cancelled = false
+    setLoading(true)
     fetchTodayScansForGuard(user.id)
-      .then(setScans)
-      .finally(() => setLoading(false))
+      .then((rows) => {
+        if (!cancelled) setScans(rows)
+      })
+      .catch(() => {
+        if (!cancelled) setScans([])
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [user])
 
   return (

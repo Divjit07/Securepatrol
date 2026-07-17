@@ -166,13 +166,29 @@ export default function AdminDashboard() {
 
   const createSite = async (e) => {
     e.preventDefault()
+    const name = (newSite.name || '').trim()
+    const address = (newSite.address || '').trim()
+    if (!name) return
+    const dup = sites.some(
+      (s) =>
+        s.name.trim().toLowerCase() === name.toLowerCase() &&
+        (s.address || '').trim().toLowerCase() === address.toLowerCase(),
+    )
+    if (dup) {
+      alert('A site with this name and address already exists.')
+      return
+    }
     const { error } = await supabase.from('sites').insert({
-      name: newSite.name,
-      address: newSite.address,
+      name,
+      address,
       admin_id: user.id,
     })
     if (error) {
-      alert(`Could not create site: ${error.message}`)
+      const msg =
+        error.code === '23505' || /unique|duplicate/i.test(error.message)
+          ? 'A site with this name and address already exists.'
+          : error.message
+      alert(`Could not create site: ${msg}`)
       return
     }
     setNewSite({ name: '', address: '' })

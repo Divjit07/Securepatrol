@@ -18,6 +18,7 @@ import { getOptionalPosition } from '../lib/gps.js'
 
 const EARLY_WINDOW_MIN = 15 // clock-in opens this many minutes before the shift
 const LATE_GRACE_MIN = 10 // matches the roster-alerts "late" threshold
+const EARLY_OUT_GRACE_MIN = 5 // last N minutes of shift = normal clock-out, no note
 
 function fmtTime(d) {
   return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
@@ -160,9 +161,12 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
   const cardTone = clockedIn ? (punch.tone === 'red' ? 'red' : 'green') : punch.tone
   const card = TONE_CARD[cardTone]
 
-  // Clocking out before the shift's last 15 minutes = early → confirm + note.
+  // Early clock-out: anytime before the published shift end needs a reason.
+  // Last few minutes of the shift (and after end) = normal clock-out, no note.
   const earlyOut =
-    clockedIn && window_ && Date.now() < window_.end.getTime() - EARLY_WINDOW_MIN * 60_000
+    clockedIn &&
+    Boolean(window_) &&
+    Date.now() < window_.end.getTime() - EARLY_OUT_GRACE_MIN * 60_000
 
   // Off-duty note: once today's shift is over (or there's none), point at the
   // next scheduled shift instead of yelling "you're late".
@@ -175,6 +179,9 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
     } else if (next) {
       statusNote = next
     }
+  }
+  if (clockedIn && earlyOut && !confirmingOut) {
+    statusNote = `Leaving before ${fmtTime(window_.end)}? You’ll need to add a short note for the office.`
   }
 
   const handleEnroll = async () => {
@@ -202,10 +209,20 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
       setMessage(null)
       return
     }
+    if (type === 'out' && earlyOut && outNote.trim().length < 3) {
+      setMessage({ tone: 'error', text: 'Add a short reason before clocking out early.' })
+      setConfirmingOut(true)
+      return
+    }
     await doPunch(type, type === 'out' ? outNote : null)
   }
 
   const doPunch = async (type, note) => {
+    if (type === 'out' && earlyOut && (!note || note.trim().length < 3)) {
+      setConfirmingOut(true)
+      setMessage({ tone: 'error', text: 'Add a short reason before clocking out early.' })
+      return
+    }
     setBusy('punching')
     setMessage(null)
     try {
@@ -218,13 +235,25 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
         return
       }
       await verifyWithPasskey()
-      const scan = await clockPunch({ guardId, siteId, type, position: pos, note })
+      const scan = await clockPunch({
+        guardId,
+        siteId,
+        type,
+        position: pos,
+        note: type === 'out' ? note : null,
+      })
+      const wasEarly = type === 'out' && earlyOut
       if (scan.status === 'pass') {
         setConfirmingOut(false)
         setOutNote('')
         setMessage({
           tone: 'success',
-          text: type === 'out' ? 'Clocked out. Have a safe one!' : 'Clocked in — shift started. Stay safe out there.',
+          text:
+            type === 'out'
+              ? wasEarly
+                ? 'Clocked out early — your note was sent to the office.'
+                : 'Clocked out. Have a safe one!'
+              : 'Clocked in — shift started. Stay safe out there.',
         })
         onPunched?.()
       } else {
@@ -313,15 +342,19 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
       {enrolled && confirmingOut && (
         <div className="mt-4 rounded-xl border border-[#FACC15]/40 bg-[#FACC15]/10 p-4">
           <p className="text-sm font-semibold text-ink">
-            You’re still on shift — it runs until {fmtTime(window_.end)}. Sure you want to clock out
-            early?
+            Early clock-out — your shift is scheduled until {fmtTime(window_.end)}.
+          </p>
+          <p className="mt-1 text-xs text-ink-2">
+            Add a short note for the office, then confirm. Without a note you can’t leave early.
           </p>
           <textarea
             value={outNote}
             onChange={(e) => setOutNote(e.target.value)}
-            rows={2}
+            rows={3}
             maxLength={500}
-            placeholder="Why are you leaving early? (required — the office sees this)"
+            required
+            autoFocus
+            placeholder="Why are you leaving early? (required)"
             className="sp-input mt-3 w-full text-sm"
           />
           <div className="mt-3 flex gap-2">
@@ -331,13 +364,14 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
               disabled={busy === 'punching' || outNote.trim().length < 3}
               className="flex min-h-[2.75rem] flex-1 items-center justify-center gap-2 rounded-xl bg-[#EF4444] text-sm font-semibold text-white transition hover:brightness-105 disabled:opacity-50"
             >
-              {busy === 'punching' ? 'Verifying…' : 'Confirm clock out'}
+              {busy === 'punching' ? 'Verifying…' : 'Confirm early clock out'}
             </button>
             <button
               type="button"
               onClick={() => {
                 setConfirmingOut(false)
                 setOutNote('')
+                setMessage(null)
               }}
               disabled={busy === 'punching'}
               className="flex min-h-[2.75rem] flex-1 items-center justify-center rounded-xl bg-white/10 text-sm font-semibold text-ink transition hover:bg-white/15"
@@ -370,7 +404,9 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
               {clockedIn
                 ? punch.tone === 'red'
                   ? 'Clock out now — you’re over'
-                  : 'Clock out with Face ID'
+                  : earlyOut
+                    ? 'Leave early (note required)'
+                    : 'Clock out with Face ID'
                 : punch.tone === 'red'
                   ? 'Clock in now — you’re late'
                   : punch.tone === 'yellow'

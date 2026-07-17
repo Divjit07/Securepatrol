@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { Radio } from 'lucide-react'
+import { Radio, X } from 'lucide-react'
 import { supabase } from '../lib/supabase.js'
 
 async function fetchScanDetails(scanId) {
@@ -24,6 +24,7 @@ async function checkpointBelongsToSite(checkpointId, siteId) {
 export default function LiveFeed({ siteId, limit = 20, passesOnly = false }) {
   const [scans, setScans] = useState([])
   const [connected, setConnected] = useState(false)
+  const [selected, setSelected] = useState(null)
   const checkpointIdsRef = useRef(new Set())
 
   const loadRecent = useCallback(async () => {
@@ -107,25 +108,102 @@ export default function LiveFeed({ siteId, limit = 20, passesOnly = false }) {
         {scans.length === 0 ? (
           <p className="p-4 text-sm text-ink-2">No scans yet. Waiting for guard check-ins…</p>
         ) : (
-          scans.map((scan) => (
-            <div key={scan.id} className="flex items-center justify-between px-4 py-3">
-              <div>
-                <p className="font-medium text-sm">{scan.checkpoints?.name || 'Checkpoint'}</p>
-                <p className="text-xs text-ink-2">
-                  {scan.profiles?.name || 'Guard'} · {new Date(scan.scanned_at).toLocaleString()}
-                </p>
-              </div>
-              <span
-                className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                  scan.status === 'pass' ? 'bg-accent-green/15 text-accent-green' : 'bg-accent-red/15 text-accent-red'
-                }`}
+          scans.map((scan) => {
+            const label = scan.checkpoints?.name || 'Checkpoint'
+            const statusLabel = scan.status === 'pass' ? 'PASS' : 'FAIL'
+            return (
+              <button
+                key={scan.id}
+                type="button"
+                onClick={() => setSelected(scan)}
+                aria-label={`${statusLabel} — ${label} details`}
+                className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-white/5"
               >
-                {scan.status === 'pass' ? 'PASS' : 'FAIL'}
-              </span>
-            </div>
-          ))
+                <div>
+                  <p className="font-medium text-sm">{label}</p>
+                  <p className="text-xs text-ink-2">
+                    {scan.profiles?.name || 'Guard'} · {new Date(scan.scanned_at).toLocaleString()}
+                  </p>
+                </div>
+                <span
+                  className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                    scan.status === 'pass' ? 'bg-accent-green/15 text-accent-green' : 'bg-accent-red/15 text-accent-red'
+                  }`}
+                >
+                  {statusLabel}
+                </span>
+              </button>
+            )
+          })
         )}
       </div>
+
+      {selected && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Scan details"
+          onClick={() => setSelected(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-white/10 bg-surface p-5 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-ink-2">Checkpoint scan</p>
+                <h4 className="text-lg font-semibold text-ink">
+                  {selected.checkpoints?.name || 'Checkpoint'}
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelected(null)}
+                className="rounded-lg p-1.5 text-ink-2 hover:bg-white/5 hover:text-ink"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <dl className="space-y-3 text-sm">
+              <div className="flex justify-between gap-4">
+                <dt className="text-ink-2">Status</dt>
+                <dd>
+                  <span
+                    className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      selected.status === 'pass'
+                        ? 'bg-accent-green/15 text-accent-green'
+                        : 'bg-accent-red/15 text-accent-red'
+                    }`}
+                  >
+                    {selected.status === 'pass' ? 'PASS' : 'FAIL'}
+                  </span>
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-ink-2">Guard</dt>
+                <dd className="font-medium text-ink">{selected.profiles?.name || '—'}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-ink-2">Time</dt>
+                <dd className="font-medium text-ink">
+                  {new Date(selected.scanned_at).toLocaleString()}
+                </dd>
+              </div>
+              {selected.distance_metres != null && (
+                <div className="flex justify-between gap-4">
+                  <dt className="text-ink-2">Distance</dt>
+                  <dd className="font-medium text-ink">{Number(selected.distance_metres).toFixed(0)} m</dd>
+                </div>
+              )}
+            </dl>
+            <button type="button" onClick={() => setSelected(null)} className="dk-cta mt-5 w-full justify-center">
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

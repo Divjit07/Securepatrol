@@ -29,3 +29,9 @@ supabase/.temp/
 
 # Local tooling (bundled Node.js runtime)
 .tools/
+
+testsprite_tests/tmp/config.json
+testsprite_tests/tmp/qa_accounts.json
+testsprite_tests/tmp/create_qa_accounts.mjs
+testsprite_tests/tmp/mcp.log
+testsprite_tests/tmp/execution.lock

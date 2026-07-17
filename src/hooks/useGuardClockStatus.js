@@ -44,6 +44,8 @@ async function fetchStatus(guardId) {
   }
 }
 
+const FETCH_TIMEOUT_MS = 8000
+
 /** Refetch and broadcast to every mounted consumer (call after a punch). */
 export function refreshClockStatus(guardId = store.guardId) {
   if (!guardId) return Promise.resolve()
@@ -52,7 +54,16 @@ export function refreshClockStatus(guardId = store.guardId) {
     publish(EMPTY)
   }
   if (!store.inflight) {
-    store.inflight = fetchStatus(guardId)
+    const timed = Promise.race([
+      fetchStatus(guardId),
+      new Promise((resolve) =>
+        setTimeout(
+          () => resolve({ loading: false, clockedIn: false, lastEvent: null }),
+          FETCH_TIMEOUT_MS,
+        ),
+      ),
+    ])
+    store.inflight = timed
       .then((state) => publish(state))
       .finally(() => {
         store.inflight = null
