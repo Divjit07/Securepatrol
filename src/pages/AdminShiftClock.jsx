@@ -9,7 +9,7 @@ import { supabase } from '../lib/supabase.js'
 import { fetchSitesForAdmin } from '../lib/scans.js'
 import { fetchGuardsWithSites } from '../lib/guards.js'
 import { getScheduledShiftForDate, shiftScanBounds } from '../hooks/useClientShift.js'
-import { computeGuardShiftForDay, formatShiftDuration, formatShiftTime } from '../lib/clientStats.js'
+import { computeGuardSessionsForDay, formatDurationFromMinutes, formatShiftTime } from '../lib/clientStats.js'
 import {
   combineDateAndTime,
   fetchShiftAdjustmentsForDate,
@@ -183,7 +183,7 @@ export default function AdminShiftClock() {
     const guardScans = scans.filter((s) => s.guard_id === guard.id)
     const adjustment = adjustments[shiftAdjustmentKey(guard.id, date)]
     const publishedShift = dayShifts.find((s) => s.guard_id === guard.id)
-    const dayShift = computeGuardShiftForDay(guardScans, checkpoints, {
+    const day = computeGuardSessionsForDay(guardScans, checkpoints, {
       date,
       adjustment,
       operatingHours: selectedSiteHours,
@@ -193,21 +193,22 @@ export default function AdminShiftClock() {
 
     return {
       guard,
-      dayShift,
+      day,
       adjustment,
       clockInScan,
     }
   })
 
   const startEdit = (row) => {
-    const defaults = row.dayShift || {
-      clockInAt: combineDateAndTime(date, scheduled.start),
-      clockOutAt: combineDateAndTime(date, scheduled.end),
-    }
+    // Edit collapses the day to one manual correction: first clock-in → last
+    // clock-out across all of the guard's sessions.
+    const sessions = row.day?.sessions || []
+    const firstIn = sessions[0]?.clockInAt || combineDateAndTime(date, scheduled.start)
+    const lastOut = sessions[sessions.length - 1]?.clockOutAt || combineDateAndTime(date, scheduled.end)
     setEditing({
       guardId: row.guard.id,
-      clockIn: toTimeInputValue(defaults.clockInAt),
-      clockOut: toTimeInputValue(defaults.clockOutAt),
+      clockIn: toTimeInputValue(firstIn),
+      clockOut: toTimeInputValue(lastOut),
       note: row.adjustment?.note || '',
     })
     setMessage(null)
@@ -331,25 +332,32 @@ export default function AdminShiftClock() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
-                    {rows.map(({ guard, dayShift, adjustment, clockInScan }) => {
+                    {rows.map(({ guard, day, adjustment, clockInScan }) => {
                       const isEditing = editing?.guardId === guard.id
+                      const sessions = day?.sessions || []
+                      const multi = sessions.length > 1
 
                       return (
                         <tr key={guard.id}>
                           <td className="px-6 py-4">
                             <p className="font-medium text-ink">{guard.name}</p>
                             <div className="mt-1.5 flex flex-wrap gap-1.5">
-                              {dayShift?.isAdjusted && (
+                              {day?.isAdjusted && (
                                 <span className="rounded-full bg-black px-2.5 py-0.5 text-[10px] font-semibold text-white">
                                   Adjusted
                                 </span>
                               )}
-                              {dayShift?.onShift && (
+                              {multi && (
+                                <span className="rounded-full bg-[#FFFFFF] px-2.5 py-0.5 text-[10px] font-semibold text-black ring-1 ring-black/10">
+                                  {sessions.length} sessions
+                                </span>
+                              )}
+                              {day?.onShift && (
                                 <span className="rounded-full bg-[#FFFFFF] px-2.5 py-0.5 text-[10px] font-semibold text-black ring-1 ring-black/10">
                                   On shift
                                 </span>
                               )}
-                              {dayShift?.missingClockOut && (
+                              {day?.anyMissingClockOut && (
                                 <span className="rounded-full bg-[#EF4444] px-2.5 py-0.5 text-[10px] font-semibold text-white">
                                   No clock-out — hours assumed
                                 </span>
@@ -361,7 +369,7 @@ export default function AdminShiftClock() {
                               ? formatShiftTime(new Date(clockInScan.scanned_at))
                               : '—'}
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 align-top">
                             {isEditing ? (
                               <input
                                 type="time"
@@ -371,11 +379,22 @@ export default function AdminShiftClock() {
                                   setEditing((prev) => ({ ...prev, clockIn: e.target.value }))
                                 }
                               />
+                            ) : sessions.length ? (
+                              <div className="space-y-1.5">
+                                {sessions.map((s) => (
+                                  <div key={s.index} className="flex items-center gap-2">
+                                    {multi && (
+                                      <span className="text-[10px] font-semibold text-ink-3">#{s.index + 1}</span>
+                                    )}
+                                    <span>{formatShiftTime(s.clockInAt)}</span>
+                                  </div>
+                                ))}
+                              </div>
                             ) : (
-                              dayShift ? formatShiftTime(dayShift.clockInAt) : '—'
+                              '—'
                             )}
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 align-top">
                             {isEditing ? (
                               <input
                                 type="time"
@@ -385,26 +404,51 @@ export default function AdminShiftClock() {
                                   setEditing((prev) => ({ ...prev, clockOut: e.target.value }))
                                 }
                               />
-                            ) : dayShift ? (
-                              <>
-                                {formatShiftTime(dayShift.clockOutAt)}
-                                {dayShift.clockOutNote && (
-                                  <span
-                                    className="mt-0.5 block max-w-[14rem] truncate text-xs text-accent-orange"
-                                    title={dayShift.clockOutNote}
-                                  >
-                                    Early out: {dayShift.clockOutNote}
-                                  </span>
-                                )}
-                              </>
+                            ) : sessions.length ? (
+                              <div className="space-y-1.5">
+                                {sessions.map((s) => (
+                                  <div key={s.index}>
+                                    {s.onShift ? (
+                                      <span className="text-accent-green">On shift…</span>
+                                    ) : (
+                                      formatShiftTime(s.clockOutAt)
+                                    )}
+                                    {s.clockOutNote && (
+                                      <span
+                                        className="mt-0.5 block max-w-[14rem] truncate text-xs text-accent-orange"
+                                        title={s.clockOutNote}
+                                      >
+                                        Early out: {s.clockOutNote}
+                                      </span>
+                                    )}
+                                    {s.missingClockOut && (
+                                      <span className="mt-0.5 block text-xs text-accent-red">
+                                        No clock-out — assumed
+                                      </span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
                             ) : (
                               '—'
                             )}
                           </td>
-                          <td className="px-6 py-4 font-medium">
-                            {dayShift
-                              ? formatShiftDuration(dayShift.clockInAt, dayShift.clockOutAt)
-                              : '—'}
+                          <td className="px-6 py-4 align-top font-medium">
+                            {sessions.length ? (
+                              <div className="space-y-1.5">
+                                {multi &&
+                                  sessions.map((s) => (
+                                    <div key={s.index} className="text-ink-2">
+                                      {formatDurationFromMinutes(s.durationMinutes)}
+                                    </div>
+                                  ))}
+                                <div className="font-semibold">
+                                  {multi ? `Total ${formatDurationFromMinutes(day.totalMinutes)}` : formatDurationFromMinutes(day.totalMinutes)}
+                                </div>
+                              </div>
+                            ) : (
+                              '—'
+                            )}
                           </td>
                           <td className="px-6 py-4">
                             {isEditing ? (
@@ -441,11 +485,11 @@ export default function AdminShiftClock() {
                               <div className="flex flex-wrap gap-2">
                                 <button
                                   type="button"
-                                  onClick={() => startEdit({ guard, dayShift, adjustment })}
+                                  onClick={() => startEdit({ guard, day, adjustment })}
                                   className="inline-flex items-center gap-1.5 rounded-full bg-[#FFFFFF] px-3 py-1.5 text-xs font-semibold text-black ring-1 ring-black/10 transition hover:bg-zinc-100"
                                 >
                                   <Clock className="h-3.5 w-3.5" />
-                                  {dayShift ? 'Edit times' : 'Set times'}
+                                  {day ? 'Edit times' : 'Set times'}
                                 </button>
                                 {adjustment && (
                                   <button

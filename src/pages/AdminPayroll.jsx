@@ -183,6 +183,7 @@ export default function AdminPayroll() {
     adjustmentsByKey: hoursAdjustments,
     operatingHours: selectedSite?.operating_hours,
     publishedShifts,
+    bySessions: true,
   })
 
   const payRows = applyRounding(hoursReport.rows, rounding)
@@ -262,6 +263,7 @@ export default function AdminPayroll() {
       adjustmentsByKey: mapShiftAdjustments(adjRows),
       operatingHours: selectedSite?.operating_hours,
       publishedShifts: shiftRows || [],
+      bySessions: true,
     })
     const weekly = computeWeeklyPayroll(applyRounding(report.rows, rounding))
     ytdCacheRef.current = { key, weekly }
@@ -512,8 +514,13 @@ export default function AdminPayroll() {
               </thead>
               <tbody className="divide-y divide-white/5">
                 {payRows.map((row) => (
-                  <tr key={`${row.date}-${row.guardId}`}>
-                    <td className="px-4 py-3">{row.date}</td>
+                  <tr key={`${row.date}-${row.guardId}-${row.sessionIndex ?? 0}`}>
+                    <td className="px-4 py-3">
+                      {row.date}
+                      {row.sessionCount > 1 && (
+                        <span className="ml-1 text-ink-3">· #{row.sessionIndex + 1}</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 font-medium">{row.guardName}</td>
                     <td className="px-4 py-3">{formatShiftTime(row.payClockIn)}</td>
                     <td className="px-4 py-3">{formatShiftTime(row.payClockOut)}</td>

@@ -69,20 +69,23 @@ export function computeWeeklyPayroll(payRows) {
         weekStart,
         workedMinutes: 0,
         statMinutes: 0,
-        days: 0,
+        // Distinct calendar days — rows may be per-session, so two sessions on
+        // one date still count as a single day worked.
+        dates: new Set(),
       })
     }
     const w = weeks.get(key)
     if (row.isStatutoryHoliday) w.statMinutes += row.payMinutes
     else w.workedMinutes += row.payMinutes
-    w.days += 1
+    w.dates.add(row.date)
   }
 
   return [...weeks.values()]
     .map((w) => {
       const regular = Math.min(w.workedMinutes, OVERTIME_WEEKLY_MINUTES)
       const overtime = Math.max(0, w.workedMinutes - OVERTIME_WEEKLY_MINUTES)
-      return { ...w, regularMinutes: regular, overtimeMinutes: overtime, totalMinutes: w.workedMinutes + w.statMinutes }
+      const { dates, ...rest } = w
+      return { ...rest, days: dates.size, regularMinutes: regular, overtimeMinutes: overtime, totalMinutes: w.workedMinutes + w.statMinutes }
     })
     .sort((a, b) => a.guardName.localeCompare(b.guardName) || a.weekStart.localeCompare(b.weekStart))
 }

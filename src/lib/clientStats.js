@@ -219,6 +219,134 @@ export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustm
   }
 }
 
+/**
+ * Like computeGuardShiftForDay, but returns EVERY clock-in/out pair as a
+ * separate session instead of collapsing the day to the first in + first out.
+ * Used by the admin Shift Clock and Payroll so a guard who clocks in a second
+ * time in one day shows each attempt distinctly. Total hours = the SUM of every
+ * session (the gap between sessions is not paid). The client portal never calls
+ * this — it keeps the single-session view (no internal-attempt exposure).
+ *
+ * An admin adjustment ("Edit times") collapses the day to one adjusted session,
+ * matching the single-shift path so Edit/Reset stay one-per-guard-per-day.
+ */
+export function computeGuardSessionsForDay(guardScans, checkpoints, { date, adjustment, operatingHours, publishedShift }) {
+  const schedule = getScheduledShiftForDate(date, operatingHours)
+
+  let shiftStart = schedule.start
+  let shiftEnd = schedule.end
+  if (publishedShift?.starts_at && publishedShift?.ends_at) {
+    const ps = new Date(publishedShift.starts_at)
+    const pe = new Date(publishedShift.ends_at)
+    shiftStart = `${String(ps.getHours()).padStart(2, '0')}:${String(ps.getMinutes()).padStart(2, '0')}`
+    shiftEnd = `${String(pe.getHours()).padStart(2, '0')}:${String(pe.getMinutes()).padStart(2, '0')}`
+  } else if (schedule.isClosed) {
+    return null
+  }
+
+  const passScans = [...guardScans]
+    .filter((s) => s.status === 'pass')
+    .sort((a, b) => new Date(a.scanned_at) - new Date(b.scanned_at))
+
+  if (!passScans.length && !adjustment) return null
+
+  const clockInIds = new Set(
+    checkpoints.filter((cp) => cp.checkpoint_role === 'shift_clock_in').map((cp) => cp.id),
+  )
+  const clockOutIds = new Set(
+    checkpoints.filter((cp) => cp.checkpoint_role === 'shift_clock_out').map((cp) => cp.id),
+  )
+
+  const { start: scanStart, end: scheduledEnd } = shiftScanBounds(date, shiftStart, shiftEnd)
+  const [y, m, d] = date.split('-').map(Number)
+  const calendarDayEnd = new Date(y, m - 1, d, 23, 59, 59, 999)
+  const dayEnd = new Date(Math.max(calendarDayEnd.getTime(), scheduledEnd.getTime() + 6 * 3600000))
+
+  const defaultClockOut = scheduledClockOutAt(date, shiftEnd, shiftStart)
+  const scheduledShiftMinutes =
+    publishedShift?.starts_at && publishedShift?.ends_at
+      ? Math.max(0, Math.round((new Date(publishedShift.ends_at) - new Date(publishedShift.starts_at)) / 60000))
+      : Math.round(fixedShiftHours(date, operatingHours) * 60)
+
+  // Admin override wins: one adjusted session for the whole day.
+  if (adjustment) {
+    const clockInAt = new Date(adjustment.clock_in_at)
+    const clockOutAt = new Date(adjustment.clock_out_at)
+    const statHoliday = isStatutoryHolidayAdjustment(adjustment)
+    const durationMinutes = statHoliday
+      ? scheduledShiftMinutes
+      : durationFromShiftTimes(clockInAt, clockOutAt).totalMinutes
+    const hoursWorked = statHoliday ? scheduledShiftMinutes / 60 : hoursFromShiftTimes(clockInAt, clockOutAt)
+    return {
+      sessions: [
+        { index: 0, clockInAt, clockOutAt, signedInAt: clockInAt, durationMinutes, hoursWorked, clockOutNote: null, missingClockOut: false, onShift: false },
+      ],
+      totalMinutes: durationMinutes,
+      hoursWorked,
+      isAdjusted: true,
+      isStatutoryHoliday: statHoliday,
+      statutoryHolidayLabel: clientStatutoryHolidayLabel(adjustment.note),
+      anyMissingClockOut: false,
+      onShift: false,
+      clockInCheckpoint: 'Manual entry',
+      scheduledShiftMinutes,
+    }
+  }
+
+  // Pair each clock-in with the next clock-out after it; extra clock-ins while a
+  // session is already open (double-taps) are ignored.
+  const now = new Date()
+  const sessions = []
+  let openIn = null
+  for (const s of passScans) {
+    const t = new Date(s.scanned_at)
+    if (t < scanStart || t > dayEnd) continue
+    if (clockInIds.has(s.checkpoint_id)) {
+      if (!openIn) openIn = { at: t }
+    } else if (clockOutIds.has(s.checkpoint_id) && openIn && t > openIn.at) {
+      sessions.push({ clockInAt: openIn.at, clockOutAt: t, signedInAt: openIn.at, clockOutNote: s.approval_note || null, missingClockOut: false, onShift: false })
+      openIn = null
+    }
+  }
+
+  // Trailing clock-in with no clock-out: still on shift today, else hours are
+  // assumed to the scheduled end (payroll flags this).
+  if (openIn) {
+    const stillOnShift = date === localDateStr(now) && now < defaultClockOut
+    sessions.push({ clockInAt: openIn.at, clockOutAt: defaultClockOut, signedInAt: openIn.at, clockOutNote: null, missingClockOut: !stillOnShift, onShift: stillOnShift })
+  }
+
+  if (!sessions.length) return null
+
+  let totalMinutes = 0
+  sessions.forEach((sess, i) => {
+    sess.index = i
+    sess.durationMinutes = durationFromShiftTimes(sess.clockInAt, sess.clockOutAt).totalMinutes
+    sess.hoursWorked = hoursFromShiftTimes(sess.clockInAt, sess.clockOutAt)
+    totalMinutes += sess.durationMinutes
+  })
+
+  const firstClockInScan = passScans.find((s) => {
+    const t = new Date(s.scanned_at)
+    return t >= scanStart && t <= dayEnd && clockInIds.has(s.checkpoint_id)
+  })
+
+  return {
+    sessions,
+    totalMinutes,
+    hoursWorked: Math.round((totalMinutes / 60) * 100) / 100,
+    isAdjusted: false,
+    isStatutoryHoliday: false,
+    statutoryHolidayLabel: null,
+    anyMissingClockOut: sessions.some((s) => s.missingClockOut),
+    onShift: sessions.some((s) => s.onShift),
+    clockInCheckpoint: firstClockInScan
+      ? checkpoints.find((cp) => cp.id === firstClockInScan.checkpoint_id)?.name
+      : 'Manual entry',
+    scheduledShiftMinutes,
+  }
+}
+
 export function computeGuardHoursReport({
   scans = [],
   checkpoints = [],
@@ -227,6 +355,7 @@ export function computeGuardHoursReport({
   adjustmentsByKey = {},
   operatingHours = null,
   publishedShifts = [],
+  bySessions = false,
 }) {
   const rows = []
   const shiftByGuardDate = new Map()
@@ -243,6 +372,44 @@ export function computeGuardHoursReport({
       const guardScans = scans.filter((s) => s.guard_id === guard.id)
       const adjustment = adjustmentsByKey[`${guard.id}-${date}`]
       const publishedShift = shiftByGuardDate.get(`${guard.id}-${date}`)
+
+      // Admin surfaces (Shift Clock, Payroll) opt into one row per clock-in/out
+      // session; the client portal keeps the single collapsed row.
+      if (bySessions) {
+        const day = computeGuardSessionsForDay(guardScans, checkpoints, {
+          date,
+          adjustment,
+          operatingHours,
+          publishedShift,
+        })
+        if (!day) continue
+        const count = day.sessions.length
+        for (const sess of day.sessions) {
+          const durationMinutes = day.isStatutoryHoliday ? day.scheduledShiftMinutes : sess.durationMinutes
+          rows.push({
+            date,
+            guardId: guard.id,
+            guardName: guard.name,
+            clockIn: sess.clockInAt,
+            clockOut: sess.clockOutAt,
+            hoursWorked: day.isStatutoryHoliday ? day.hoursWorked : sess.hoursWorked,
+            durationMinutes,
+            hoursLabel: day.isStatutoryHoliday
+              ? formatDurationFromMinutes(durationMinutes)
+              : formatShiftDuration(sess.clockInAt, sess.clockOutAt),
+            clockInCheckpoint: day.clockInCheckpoint,
+            isAdjusted: day.isAdjusted,
+            isStatutoryHoliday: day.isStatutoryHoliday,
+            statutoryHolidayLabel: day.statutoryHolidayLabel,
+            clockOutNote: sess.clockOutNote,
+            missingClockOut: sess.missingClockOut,
+            sessionIndex: sess.index,
+            sessionCount: count,
+          })
+        }
+        continue
+      }
+
       const dayShift = computeGuardShiftForDay(guardScans, checkpoints, {
         date,
         adjustment,
@@ -278,11 +445,15 @@ export function computeGuardHoursReport({
     }
   }
 
+  // Count distinct calendar days per guard — a day with two sessions is still
+  // one day worked (rows may now be per-session).
+  const daysByGuard = {}
   const totalByGuard = rows.reduce((acc, row) => {
     acc[row.guardId] = acc[row.guardId] || { name: row.guardName, hours: 0, totalMinutes: 0, days: 0 }
     acc[row.guardId].hours += row.hoursWorked
     acc[row.guardId].totalMinutes += row.durationMinutes
-    acc[row.guardId].days += 1
+    ;(daysByGuard[row.guardId] = daysByGuard[row.guardId] || new Set()).add(row.date)
+    acc[row.guardId].days = daysByGuard[row.guardId].size
     return acc
   }, {})
 
