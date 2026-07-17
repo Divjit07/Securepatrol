@@ -175,6 +175,13 @@ function computeWindowStats({ checkpoints, shifts, scans, alerts, misses, incide
       guardId: shift.guard_id,
       guardName: guardName(shift.guard_id),
       clockedIn: Boolean(clockIn),
+      clockInAt: clockIn ? clockIn.scanned_at : null,
+      clockOutAt: clockOut ? clockOut.scanned_at : null,
+      clockInAccuracy: clockIn?.gps_accuracy ?? null,
+      durationMinutes:
+        clockIn && clockOut
+          ? Math.round((new Date(clockOut.scanned_at).getTime() - new Date(clockIn.scanned_at).getTime()) / 60000)
+          : null,
       lateMinutes,
       isLate: lateMinutes != null && lateMinutes >= LATE_MINUTES,
       noShow: !clockIn && ended,
@@ -185,6 +192,41 @@ function computeWindowStats({ checkpoints, shifts, scans, alerts, misses, incide
       missedCheckpointIds: ended && clockIn ? patrolCps.filter((c) => !visited.has(c.id)).map((c) => c.id) : [],
     }
   })
+
+  // ---- Clock in/out timeline (most recent shift first) --------------------
+  const clockTimeline = shiftRows
+    .slice()
+    .sort((a, b) => new Date(b.shift.starts_at) - new Date(a.shift.starts_at))
+    .map((r) => ({
+      guardId: r.guardId,
+      guardName: r.guardName,
+      shiftStart: r.shift.starts_at,
+      shiftEnd: r.shift.ends_at,
+      clockInAt: r.clockInAt,
+      clockOutAt: r.clockOutAt,
+      lateMinutes: r.lateMinutes,
+      isLate: r.isLate,
+      durationMinutes: r.durationMinutes,
+      clockInAccuracy: r.clockInAccuracy,
+      noShow: r.noShow,
+      missingClockOut: r.missingClockOut,
+      ended: r.ended,
+      onShift: r.clockedIn && !r.clockOutAt && !r.ended,
+    }))
+
+  // ---- "Outside the radius": punches the server rejected (too far / weak GPS).
+  // The closest real signal to a guard stepping out of the geofence — we only
+  // sample GPS at punch time, so this is discrete, not a continuous track.
+  const gpsRejectRows = scans
+    .filter((s) => s.status === 'fail')
+    .map((s) => ({
+      guardId: s.guard_id,
+      guardName: guardName(s.guard_id),
+      checkpointName: cpById.get(s.checkpoint_id)?.name || 'Checkpoint',
+      at: s.scanned_at,
+      accuracy: s.gps_accuracy,
+    }))
+    .sort((a, b) => new Date(b.at) - new Date(a.at))
 
   // ---- Misses: persisted rows (032) win; else the client-side reconciliation.
   const missRows = misses.length
@@ -296,6 +338,8 @@ function computeWindowStats({ checkpoints, shifts, scans, alerts, misses, incide
     },
     activityByHour,
     guardTable,
+    clockTimeline,
+    gpsRejectRows,
     scanCount: passScans.length,
   }
 }

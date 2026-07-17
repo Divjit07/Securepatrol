@@ -21,6 +21,41 @@ import { useAuth } from '../hooks/useAuth.jsx'
 import { fetchSitesForAdmin } from '../lib/scans.js'
 import { SUMMARY_PERIODS, fetchOpsSummary, buildNarrative } from '../lib/opsSummary.js'
 
+function fmtDateTime(iso) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+}
+
+function fmtShiftLabel(start, end) {
+  const t = (d) => new Date(d).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  return `${new Date(start).toLocaleDateString([], { month: 'short', day: 'numeric' })} · ${t(start)}–${t(end)}`
+}
+
+function fmtDuration(mins) {
+  if (mins == null) return '—'
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  if (h === 0) return `${m}m`
+  return m ? `${h}h ${m}m` : `${h}h`
+}
+
+/** Single status chip summarising one shift's clock state. */
+function ClockStatusChip({ row }) {
+  const base = 'rounded-full px-2 py-0.5 text-[10px] font-semibold'
+  if (row.noShow) return <span className={`${base} bg-accent-red/15 text-accent-red`}>No-show</span>
+  if (row.onShift)
+    return (
+      <span className={`${base} inline-flex items-center gap-1.5 bg-accent-green/15 text-accent-green`}>
+        <span className="h-1.5 w-1.5 rounded-full bg-accent-green" />
+        On shift
+      </span>
+    )
+  if (!row.clockInAt && !row.ended) return <span className={`${base} bg-white/10 text-ink-2`}>Scheduled</span>
+  if (row.missingClockOut) return <span className={`${base} bg-accent-orange/15 text-accent-orange`}>No clock-out</span>
+  if (row.isLate) return <span className={`${base} bg-accent-orange/15 text-accent-orange`}>Late</span>
+  return <span className={`${base} bg-accent-green/15 text-accent-green`}>Complete</span>
+}
+
 function TrendChip({ label, value, invert = false, unit = '%' }) {
   if (value == null || value === 0) return null
   const up = value > 0
@@ -255,6 +290,119 @@ export default function AdminSummary() {
                 )}
               </div>
             </div>
+          </div>
+
+          {/* Clock in / out timeline */}
+          <div className="dk-card mt-4 overflow-hidden">
+            <div className="flex items-center justify-between px-6 pt-6">
+              <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+                <Clock className="h-4 w-4 text-accent-cyan-line" /> Clock in / out — {periodLabel}
+              </p>
+              <span className="text-[11px] text-ink-3">
+                {summary.clockTimeline.length} shift{summary.clockTimeline.length === 1 ? '' : 's'}
+              </span>
+            </div>
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full min-w-[48rem] text-left text-sm">
+                <thead className="bg-white/5 text-ink-2">
+                  <tr>
+                    <th className="px-6 py-2.5 font-medium">Guard</th>
+                    <th className="px-6 py-2.5 font-medium">Shift</th>
+                    <th className="px-6 py-2.5 font-medium">Clocked in</th>
+                    <th className="px-6 py-2.5 font-medium">Clocked out</th>
+                    <th className="px-6 py-2.5 font-medium">On site</th>
+                    <th className="px-6 py-2.5 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {summary.clockTimeline.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-8 text-center text-ink-3">
+                        No shifts scheduled in this window.
+                      </td>
+                    </tr>
+                  ) : (
+                    summary.clockTimeline.map((r, i) => (
+                      <tr key={i}>
+                        <td className="px-6 py-3 font-medium text-ink">{r.guardName}</td>
+                        <td className="px-6 py-3 text-ink-2">{fmtShiftLabel(r.shiftStart, r.shiftEnd)}</td>
+                        <td className="px-6 py-3 tabular-nums">
+                          {r.clockInAt ? (
+                            <span className="text-ink">
+                              {fmtDateTime(r.clockInAt)}
+                              {r.lateMinutes > 0 && (
+                                <span className={`ml-1.5 text-xs ${r.isLate ? 'text-accent-red' : 'text-accent-orange'}`}>
+                                  +{r.lateMinutes}m
+                                </span>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="text-ink-3">—</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-3 tabular-nums">
+                          {r.onShift ? (
+                            <span className="inline-flex items-center gap-1.5 text-accent-green">
+                              <span className="h-1.5 w-1.5 rounded-full bg-accent-green" />
+                              On shift…
+                            </span>
+                          ) : r.clockOutAt ? (
+                            <span className="text-ink">{fmtDateTime(r.clockOutAt)}</span>
+                          ) : r.missingClockOut ? (
+                            <span className="text-accent-orange">No clock-out</span>
+                          ) : (
+                            <span className="text-ink-3">—</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-3 tabular-nums text-ink-2">{fmtDuration(r.durationMinutes)}</td>
+                        <td className="px-6 py-3">
+                          <ClockStatusChip row={r} />
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Outside the radius — GPS-rejected punches */}
+          <div className="dk-card mt-4 p-6">
+            <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+              <MapPin className="h-4 w-4 text-accent-red" /> Outside the radius
+              {summary.gpsRejectRows.length > 0 && (
+                <span className="rounded-full bg-accent-red/15 px-2 py-0.5 text-[11px] font-semibold text-accent-red">
+                  {summary.gpsRejectRows.length}
+                </span>
+              )}
+            </p>
+            <p className="mt-1 text-[11px] text-ink-3">
+              Punches the server rejected — the guard was too far from the checkpoint or GPS was too weak. We sample GPS
+              only at punch time, so this is the closest signal to someone stepping out of the zone (not a live track).
+            </p>
+            {summary.gpsRejectRows.length === 0 ? (
+              <p className="mt-3 flex items-center gap-2 text-sm text-ink-2">
+                <CheckCircle2 className="h-4 w-4 text-accent-green" /> Every punch this period landed inside the geofence.
+              </p>
+            ) : (
+              <ul className="mt-3 divide-y divide-white/5">
+                {summary.gpsRejectRows.slice(0, 12).map((r, i) => (
+                  <li key={i} className="flex items-center justify-between gap-3 py-2 text-sm">
+                    <span>
+                      <span className="font-medium text-ink">{r.guardName}</span>
+                      <span className="text-ink-3"> · {r.checkpointName}</span>
+                    </span>
+                    <span className="flex items-center gap-3 tabular-nums text-xs text-ink-2">
+                      {r.accuracy != null && <span className="text-ink-3">±{Math.round(r.accuracy)}m</span>}
+                      {fmtDateTime(r.at)}
+                    </span>
+                  </li>
+                ))}
+                {summary.gpsRejectRows.length > 12 && (
+                  <li className="py-2 text-[11px] text-ink-3">+{summary.gpsRejectRows.length - 12} more</li>
+                )}
+              </ul>
+            )}
           </div>
 
           {/* Activity by hour */}
