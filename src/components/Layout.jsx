@@ -118,7 +118,7 @@ function initialsOf(name) {
 }
 
 const sidebarItemClass = ({ isActive }) =>
-  `flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm transition ${
+  `flex items-center gap-3 rounded-lg px-3 py-[0.3rem] text-sm transition ${
     isActive
       ? 'sidebar-nav-active'
       : 'text-ink-2 hover:bg-white/5 hover:text-ink'
@@ -126,7 +126,7 @@ const sidebarItemClass = ({ isActive }) =>
 
 function SidebarNav({ groups, onNavigate }) {
   return (
-    <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-3">
+    <nav className="flex-1 space-y-3 overflow-y-auto px-3 py-2">
       {groups.map((group) => (
         <div key={group.label || 'home'}>
           {group.label && (
@@ -185,7 +185,7 @@ function SidebarLayout({ children, groups, roleLabel, homeTo }) {
 
   const sidebarInner = (
     <>
-      <div className="flex items-center gap-3 px-5 py-4">
+      <div className="flex items-center gap-3 px-5 py-2.5">
         <Logo size="sm" showText={false} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-base font-bold tracking-tight text-ink">{BRAND.name}</p>
@@ -206,14 +206,14 @@ function SidebarLayout({ children, groups, roleLabel, homeTo }) {
 
       <SidebarNav groups={groups} onNavigate={() => setMenuOpen(false)} />
 
-      <div className="border-t border-white/5 p-3">
-        <div className="mb-1">
+      <div className="border-t border-white/5 p-2">
+        <div className="mb-0.5">
           <ThemeSwitcher />
         </div>
-        <div className="mb-1 px-2">
+        <div className="mb-0.5 px-2">
           <SyncIndicator />
         </div>
-        <div className="flex items-center gap-3 rounded-lg px-2 py-1.5">
+        <div className="flex items-center gap-3 rounded-lg px-2 py-1">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-orange/15 text-xs font-bold text-accent-orange">
             {initialsOf(profile?.name)}
           </div>
