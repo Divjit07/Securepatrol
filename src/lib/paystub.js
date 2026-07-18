@@ -7,6 +7,26 @@ import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
 export const OVERTIME_MULTIPLIER = 1.5
+// Pay-period OT threshold (hours): worked time up to this is regular, the rest
+// is OT — e.g. 88h for a biweekly period (44h/wk). Editable in the UI.
+export const DEFAULT_PERIOD_OT_THRESHOLD_HOURS = 88
+
+/**
+ * Re-split a period's worked minutes against a whole-period OT threshold:
+ * regular = first `thresholdHours`, OT = everything past it. Stat minutes are
+ * untouched. No/invalid threshold → totals returned unchanged (weekly split).
+ */
+export function applyPeriodOtThreshold(totals, thresholdHours) {
+  const t = Number(thresholdHours)
+  if (!Number.isFinite(t) || t <= 0) return totals
+  const worked = totals.regularMinutes + totals.overtimeMinutes
+  const thresholdMinutes = Math.round(t * 60)
+  return {
+    ...totals,
+    regularMinutes: Math.min(worked, thresholdMinutes),
+    overtimeMinutes: Math.max(0, worked - thresholdMinutes),
+  }
+}
 
 export const EMPLOYER = {
   name: 'PRODUCTIVE SECURITY INC.',
@@ -55,11 +75,13 @@ export function periodTotalsForGuard(weeklyRows, guardId) {
   return totals
 }
 
-export function computePaystub({ totals, rate, rates = DEFAULT_DEDUCTION_RATES, otherFees = 0, periodDays = 14 }) {
+export function computePaystub({ totals, rate, rates = DEFAULT_DEDUCTION_RATES, otherFees = 0, periodDays = 14, otRate = null }) {
   const r = Number(rate) || 0
+  // OT pays at the typed $/h rate when given; otherwise the 1.5× default.
+  const ot = Number(otRate) > 0 ? Number(otRate) : r * OVERTIME_MULTIPLIER
   const lines = [
     { code: 'REG HRS', minutes: totals.regularMinutes, rate: r, amount: (totals.regularMinutes / 60) * r },
-    { code: `OT HRS (${OVERTIME_MULTIPLIER}x)`, minutes: totals.overtimeMinutes, rate: r * OVERTIME_MULTIPLIER, amount: (totals.overtimeMinutes / 60) * r * OVERTIME_MULTIPLIER },
+    { code: 'OT HRS', minutes: totals.overtimeMinutes, rate: ot, amount: (totals.overtimeMinutes / 60) * ot },
     { code: 'STAT $', minutes: totals.statMinutes, rate: r, amount: (totals.statMinutes / 60) * r },
   ].filter((l) => l.minutes > 0)
 
@@ -205,7 +227,7 @@ export function renderPaystubPage(doc, params) {
     { content: ytdStub ? money(ytdStub.gross) : dash, styles: { ...sectionStyle, halign: 'right' } },
   ])
   const earnCodes = new Set([...stub.lines.map((l) => l.code), ...(ytdStub?.lines.map((l) => l.code) || [])])
-  for (const code of ['REG HRS', `OT HRS (${OVERTIME_MULTIPLIER}x)`, 'STAT $']) {
+  for (const code of ['REG HRS', 'OT HRS', 'STAT $']) {
     if (!earnCodes.has(code)) continue
     const line = stub.lines.find((l) => l.code === code)
     body.push([

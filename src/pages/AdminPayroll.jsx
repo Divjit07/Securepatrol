@@ -38,6 +38,9 @@ import {
 } from '../lib/payroll.js'
 import {
   DEFAULT_DEDUCTION_RATES,
+  DEFAULT_PERIOD_OT_THRESHOLD_HOURS,
+  OVERTIME_MULTIPLIER,
+  applyPeriodOtThreshold,
   computePaystub,
   periodTotalsForGuard,
   downloadPaystubPdf,
@@ -80,6 +83,10 @@ export default function AdminPayroll() {
   // only "other fees" is a typed dollar amount, per guard.
   const [deductionRates, setDeductionRates] = useState(DEFAULT_DEDUCTION_RATES)
   const [otherFees, setOtherFees] = useState({}) // guardId -> $ amount
+  // Period OT: first N hours are regular, the rest is OT (default 88h biweekly);
+  // each guard can get a typed OT $/h rate — blank = 1.5× their base rate.
+  const [otThresholdHours, setOtThresholdHours] = useState(DEFAULT_PERIOD_OT_THRESHOLD_HOURS)
+  const [otRates, setOtRates] = useState({}) // guardId -> $/h for OT
   const [stubBusy, setStubBusy] = useState(null) // guardId | 'all' while YTD loads
   // YTD (Jan 1 → period end) weekly rows, cached per site/period/rounding.
   const ytdCacheRef = useRef({ key: null, weekly: null })
@@ -305,9 +312,18 @@ export default function AdminPayroll() {
   const periodDays = dateRangeDays(filters.fromDate, filters.toDate).length
 
   const paystubParamsFor = (guard) => {
-    const totals = periodTotalsForGuard(weeklyPayroll, guard.id)
+    // Re-split worked time against the period threshold (e.g. 88h biweekly):
+    // hours past it are OT regardless of which week they landed in.
+    const totals = applyPeriodOtThreshold(periodTotalsForGuard(weeklyPayroll, guard.id), otThresholdHours)
     const rate = rates[guard.id]
-    const stub = computePaystub({ totals, rate, rates: deductionRates, otherFees: otherFees[guard.id], periodDays })
+    const stub = computePaystub({
+      totals,
+      rate,
+      rates: deductionRates,
+      otherFees: otherFees[guard.id],
+      periodDays,
+      otRate: otRates[guard.id],
+    })
     return {
       guardName: guard.name,
       employeeNo: guard.id.slice(0, 8).toUpperCase(),
@@ -368,6 +384,8 @@ export default function AdminPayroll() {
   const paramsWithYtd = (guard, ytdWeekly) => {
     const params = paystubParamsFor(guard)
     if (ytdWeekly) {
+      // YTD keeps the weekly OT split (a period threshold doesn't scale to a
+      // year) but pays OT at the same typed rate for consistency.
       const totals = periodTotalsForGuard(ytdWeekly, guard.id)
       const stub = computePaystub({
         totals,
@@ -376,6 +394,7 @@ export default function AdminPayroll() {
         otherFees: otherFees[guard.id],
         // YTD column spans Jan 1 → period end; proration caps at the annual exemption.
         periodDays: dateRangeDays(`${filters.toDate.slice(0, 4)}-01-01`, filters.toDate).length,
+        otRate: otRates[guard.id],
       })
       params.ytd = { totals, stub }
     }
@@ -956,6 +975,21 @@ export default function AdminPayroll() {
                   />
                 </label>
               ))}
+              <label
+                className="text-[10px] font-semibold uppercase tracking-wider text-ink-3"
+                title="Worked hours up to this are regular; everything past it is OT. 88h = 44h/week on a biweekly period."
+              >
+                OT after (hours / period)
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={otThresholdHours}
+                  onChange={(e) => setOtThresholdHours(e.target.value)}
+                  className="mt-1 block w-36 rounded-lg border border-white/10 bg-inset px-2 py-1.5 text-sm font-normal normal-case tracking-normal text-ink"
+                  placeholder="88"
+                />
+              </label>
             </div>
             <button
               type="button"
@@ -1025,6 +1059,27 @@ export default function AdminPayroll() {
                     </div>
 
                     <div className="mt-3 flex items-end gap-3">
+                      <label
+                        className="w-40 text-[10px] font-semibold uppercase tracking-wider text-ink-3"
+                        title={`Hourly rate paid for OT hours. Blank = ${OVERTIME_MULTIPLIER}× the base rate.`}
+                      >
+                        OT rate ($/h)
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.25"
+                          value={otRates[guard.id] ?? ''}
+                          onChange={(e) =>
+                            setOtRates((prev) => ({ ...prev, [guard.id]: e.target.value }))
+                          }
+                          className="mt-1 w-full rounded-lg border border-white/10 bg-inset px-2 py-1.5 text-sm font-normal normal-case tracking-normal text-ink"
+                          placeholder={
+                            rates[guard.id]
+                              ? `auto ${(Number(rates[guard.id]) * OVERTIME_MULTIPLIER).toFixed(2)}`
+                              : `auto ${OVERTIME_MULTIPLIER}×`
+                          }
+                        />
+                      </label>
                       <label className="w-40 text-[10px] font-semibold uppercase tracking-wider text-ink-3">
                         Other fees ($)
                         <input
