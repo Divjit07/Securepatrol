@@ -17,7 +17,7 @@ export default function SidebarPreview() {
   return (
     <div className="app-shell">
       <aside className="app-sidebar fixed inset-y-0 left-0 z-40 flex w-[260px] flex-col">
-        <div className="flex items-center gap-3 px-5 py-1.5">
+        <div className="flex items-center gap-3 px-5 py-2.5">
           <Logo size="sm" showText={false} />
           <div className="min-w-0 flex-1">
             <p className="truncate text-base font-bold tracking-tight text-ink">{BRAND.name}</p>
@@ -32,15 +32,15 @@ export default function SidebarPreview() {
 
         <SidebarNav groups={groups} onNavigate={() => {}} />
 
-        <div className="border-t border-white/5 p-1.5">
+        <div className="border-t border-white/5 p-2">
           <ThemeSwitcher />
-          <div className="flex items-center gap-2.5 rounded-lg px-2 py-0.5">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-orange/15 text-[11px] font-bold text-accent-orange">
+          <div className="flex items-center gap-3 rounded-lg px-2 py-1">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-orange/15 text-xs font-bold text-accent-orange">
               DV
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-semibold leading-4 text-ink">Divjit</p>
-              <p className="text-[9px] font-semibold uppercase tracking-wider text-ink-3">Administrator</p>
+              <p className="truncate text-sm font-semibold text-ink">Divjit</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-3">Administrator</p>
             </div>
             <button type="button" className="rounded-lg p-2 text-ink-3" aria-label="Sign out">
               <LogOut className="h-4 w-4" />
