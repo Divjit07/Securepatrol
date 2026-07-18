@@ -27,6 +27,34 @@ export interface CallGeminiOptions {
   maxOutputTokens?: number
 }
 
+export const QUOTA_MESSAGE =
+  'AI daily quota is used up (free tier) — it resets overnight. Everything else keeps working.'
+
+/** POST one generateContent request; falls back to flash-lite when the primary
+ *  model's free-tier quota is exhausted (each model has its own daily quota). */
+async function geminiRequest(model: string, payload: Record<string, unknown>): Promise<Response> {
+  const apiKey = Deno.env.get('GEMINI_API_KEY')
+  if (!apiKey) throw new Error('GEMINI_API_KEY is not set (Supabase → Edge Functions → Secrets)')
+
+  const post = (m: string) =>
+    fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+
+  let res = await post(model)
+  if (res.status === 429 && model !== GEMINI_FLASH_LITE) {
+    res = await post(GEMINI_FLASH_LITE)
+  }
+  if (res.status === 429) throw new Error(QUOTA_MESSAGE)
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    throw new Error(`Gemini ${model} returned ${res.status}: ${body.slice(0, 200)}`)
+  }
+  return res
+}
+
 /** One-shot generateContent call. Returns the model's text or throws. */
 export async function callGemini({
   model = GEMINI_FLASH,
@@ -35,28 +63,13 @@ export async function callGemini({
   temperature = 0.4,
   maxOutputTokens = 1024,
 }: CallGeminiOptions): Promise<string> {
-  const apiKey = Deno.env.get('GEMINI_API_KEY')
-  if (!apiKey) throw new Error('GEMINI_API_KEY is not set (Supabase → Edge Functions → Secrets)')
-
   const parts = userParts.map((p) => (typeof p === 'string' ? { text: p } : p))
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ role: 'user', parts }],
-        generationConfig: { temperature, maxOutputTokens },
-      }),
-    },
-  )
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => '')
-    throw new Error(`Gemini ${model} returned ${res.status}: ${body.slice(0, 300)}`)
-  }
+  const res = await geminiRequest(model, {
+    systemInstruction: { parts: [{ text: systemPrompt }] },
+    contents: [{ role: 'user', parts }],
+    generationConfig: { temperature, maxOutputTokens },
+  })
 
   const json = await res.json()
   const text = json?.candidates?.[0]?.content?.parts
@@ -102,27 +115,12 @@ export async function callGeminiChat({
   temperature?: number
   maxOutputTokens?: number
 }): Promise<{ parts: Array<Record<string, unknown>>; finishReason: string }> {
-  const apiKey = Deno.env.get('GEMINI_API_KEY')
-  if (!apiKey) throw new Error('GEMINI_API_KEY is not set (Supabase → Edge Functions → Secrets)')
-
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents,
-        ...(tools?.length ? { tools: [{ functionDeclarations: tools }] } : {}),
-        generationConfig: { temperature, maxOutputTokens },
-      }),
-    },
-  )
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => '')
-    throw new Error(`Gemini ${model} returned ${res.status}: ${body.slice(0, 300)}`)
-  }
+  const res = await geminiRequest(model, {
+    systemInstruction: { parts: [{ text: systemPrompt }] },
+    contents,
+    ...(tools?.length ? { tools: [{ functionDeclarations: tools }] } : {}),
+    generationConfig: { temperature, maxOutputTokens },
+  })
 
   const json = await res.json()
   const candidate = json?.candidates?.[0]
