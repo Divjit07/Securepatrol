@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Download, FileText, Save, Wallet, Plus, Trash2, Receipt } from 'lucide-react'
+import { Download, FileText, Save, Wallet, Plus, Trash2, Receipt, Pencil, Ban, RotateCcw, X } from 'lucide-react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import Layout from '../components/Layout.jsx'
@@ -15,7 +15,15 @@ import {
   defaultPayPeriodStart,
   formatShiftTime,
 } from '../lib/clientStats.js'
-import { fetchShiftAdjustmentsForSite, mapShiftAdjustments } from '../lib/shiftAdjustments.js'
+import {
+  fetchShiftAdjustmentsForSite,
+  mapShiftAdjustments,
+  saveShiftAdjustment,
+  removeShiftAdjustment,
+  excludedNote,
+  combineDateAndTime,
+  toTimeInputValue,
+} from '../lib/shiftAdjustments.js'
 import {
   ROUNDING_MODES,
   applyRounding,
@@ -75,6 +83,12 @@ export default function AdminPayroll() {
   const [stubBusy, setStubBusy] = useState(null) // guardId | 'all' while YTD loads
   // YTD (Jan 1 → period end) weekly rows, cached per site/period/rounding.
   const ytdCacheRef = useRef({ key: null, weekly: null })
+  // Inline day cleanup: edit collapses the day to one corrected in/out;
+  // exclude drops the day from payroll. Both are adjustments — raw punches
+  // stay immutable, and Reset restores punch-derived hours.
+  const [editingDay, setEditingDay] = useState(null) // {guardId, date, clockIn, clockOut}
+  const [dayBusy, setDayBusy] = useState(null) // `${guardId}-${date}` while saving
+  const [dayError, setDayError] = useState(null)
   const [invoice, setInvoice] = useState(() => ({
     number: `INV-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-1`,
     date: new Date().toISOString().slice(0, 10),
@@ -191,6 +205,87 @@ export default function AdminPayroll() {
   const otByGuard = overtimeByGuard(weeklyPayroll)
 
   const guardsWithHours = guards.filter((g) => hoursReport.totalByGuard[g.id])
+
+  const dayKey = (row) => `${row.guardId}-${row.date}`
+
+  const startDayEdit = (row) => {
+    setDayError(null)
+    setEditingDay({
+      guardId: row.guardId,
+      date: row.date,
+      guardName: row.guardName,
+      clockIn: toTimeInputValue(new Date(row.clockIn)),
+      clockOut: toTimeInputValue(new Date(row.clockOut)),
+    })
+  }
+
+  const saveDayEdit = async () => {
+    if (!editingDay) return
+    const clockInAt = combineDateAndTime(editingDay.date, editingDay.clockIn)
+    const clockOutAt = combineDateAndTime(editingDay.date, editingDay.clockOut)
+    if (clockOutAt <= clockInAt) {
+      setDayError('Clock-out must be after clock-in')
+      return
+    }
+    setDayBusy(`${editingDay.guardId}-${editingDay.date}`)
+    setDayError(null)
+    try {
+      await saveShiftAdjustment({
+        siteId: filters.siteId,
+        guardId: editingDay.guardId,
+        shiftDate: editingDay.date,
+        clockInAt: clockInAt.toISOString(),
+        clockOutAt: clockOutAt.toISOString(),
+        note: 'Corrected on Payroll',
+      })
+      setEditingDay(null)
+      await loadHoursData()
+    } catch (err) {
+      setDayError(err.message || 'Failed to save times')
+    } finally {
+      setDayBusy(null)
+    }
+  }
+
+  const excludeDay = async (row) => {
+    if (
+      !window.confirm(
+        `Remove ${row.guardName}'s ${row.date} from payroll?\n\nRaw punches are kept — Reset (here or on Shift Clock) brings the day back.`,
+      )
+    )
+      return
+    setDayBusy(dayKey(row))
+    setDayError(null)
+    try {
+      await saveShiftAdjustment({
+        siteId: filters.siteId,
+        guardId: row.guardId,
+        shiftDate: row.date,
+        clockInAt: new Date(row.clockIn).toISOString(),
+        clockOutAt: new Date(row.clockOut).toISOString(),
+        note: excludedNote(),
+      })
+      await loadHoursData()
+    } catch (err) {
+      setDayError(err.message || 'Failed to exclude day')
+    } finally {
+      setDayBusy(null)
+    }
+  }
+
+  const resetDay = async (row) => {
+    if (!window.confirm('Remove the manual override and revert to punch-derived times?')) return
+    setDayBusy(dayKey(row))
+    setDayError(null)
+    try {
+      await removeShiftAdjustment(row.guardId, row.date)
+      await loadHoursData()
+    } catch (err) {
+      setDayError(err.message || 'Failed to reset')
+    } finally {
+      setDayBusy(null)
+    }
+  }
 
   const handleSaveRate = async (guardId) => {
     setSavingRate(guardId)
@@ -500,8 +595,10 @@ export default function AdminPayroll() {
             ))}
           </div>
 
+          {dayError && <p className="mb-3 text-sm text-accent-red">{dayError}</p>}
+
           <div className="overflow-x-auto rounded-xl border border-white/10 bg-surface">
-            <table className="w-full min-w-[44rem] text-sm">
+            <table className="w-full min-w-[52rem] text-sm">
               <thead className="bg-white/5 text-left text-ink-2">
                 <tr>
                   <th className="px-4 py-3 font-medium">Date</th>
@@ -510,41 +607,141 @@ export default function AdminPayroll() {
                   <th className="px-4 py-3 font-medium">Clock out</th>
                   <th className="px-4 py-3 font-medium">Hours</th>
                   <th className="px-4 py-3 font-medium">Day type</th>
+                  <th className="px-4 py-3 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {payRows.map((row) => (
-                  <tr key={`${row.date}-${row.guardId}-${row.sessionIndex ?? 0}`}>
-                    <td className="px-4 py-3">
-                      {row.date}
-                      {row.sessionCount > 1 && (
-                        <span className="ml-1 text-ink-3">· #{row.sessionIndex + 1}</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 font-medium">{row.guardName}</td>
-                    <td className="px-4 py-3">{formatShiftTime(row.payClockIn)}</td>
-                    <td className="px-4 py-3">{formatShiftTime(row.payClockOut)}</td>
-                    <td className="px-4 py-3 font-semibold">{formatMinutes(row.payMinutes)}</td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
-                          row.missingClockOut
-                            ? 'bg-[#EF4444] text-white'
-                            : row.statutoryHolidayLabel
-                              ? 'bg-black text-white'
-                              : 'bg-[#FFFFFF] text-black ring-1 ring-black/10'
-                        }`}
-                        title={
-                          row.missingClockOut
-                            ? 'No clock-out punch — clock-out defaulted to the scheduled end. Verify before paying.'
-                            : undefined
-                        }
-                      >
-                        {row.missingClockOut ? 'No clock-out' : row.statutoryHolidayLabel || 'Regular shift'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {payRows.map((row) => {
+                  const isEditing =
+                    editingDay &&
+                    editingDay.guardId === row.guardId &&
+                    editingDay.date === row.date &&
+                    (row.sessionIndex ?? 0) === 0
+                  const busy = dayBusy === dayKey(row)
+
+                  return (
+                    <tr key={`${row.date}-${row.guardId}-${row.sessionIndex ?? 0}`}>
+                      <td className="px-4 py-3">
+                        {row.date}
+                        {row.sessionCount > 1 && (
+                          <span className="ml-1 text-ink-3">· #{row.sessionIndex + 1}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 font-medium">{row.guardName}</td>
+                      <td className="px-4 py-3">
+                        {isEditing ? (
+                          <input
+                            type="time"
+                            className="sp-input"
+                            value={editingDay.clockIn}
+                            onChange={(e) => setEditingDay((p) => ({ ...p, clockIn: e.target.value }))}
+                          />
+                        ) : (
+                          formatShiftTime(row.payClockIn)
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {isEditing ? (
+                          <input
+                            type="time"
+                            className="sp-input"
+                            value={editingDay.clockOut}
+                            onChange={(e) => setEditingDay((p) => ({ ...p, clockOut: e.target.value }))}
+                          />
+                        ) : (
+                          formatShiftTime(row.payClockOut)
+                        )}
+                      </td>
+                      <td className="px-4 py-3 font-semibold">{formatMinutes(row.payMinutes)}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                            row.missingClockOut
+                              ? 'bg-[#EF4444] text-white'
+                              : row.statutoryHolidayLabel
+                                ? 'bg-black text-white'
+                                : row.isAdjusted
+                                  ? 'bg-black text-white'
+                                  : 'bg-[#FFFFFF] text-black ring-1 ring-black/10'
+                          }`}
+                          title={
+                            row.missingClockOut
+                              ? 'No clock-out punch — clock-out defaulted to the scheduled end. Verify before paying.'
+                              : undefined
+                          }
+                        >
+                          {row.missingClockOut
+                            ? 'No clock-out'
+                            : row.statutoryHolidayLabel || (row.isAdjusted ? 'Adjusted' : 'Regular shift')}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {isEditing ? (
+                          <div className="flex gap-1.5">
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={saveDayEdit}
+                              className="inline-flex items-center gap-1 rounded-full bg-black px-2.5 py-1 text-[11px] font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-50"
+                            >
+                              <Save className="h-3 w-3" />
+                              {busy ? 'Saving…' : 'Save'}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => setEditingDay(null)}
+                              className="inline-flex items-center rounded-full bg-[#FFFFFF] px-2.5 py-1 text-[11px] font-semibold text-black ring-1 ring-black/10 transition hover:bg-zinc-100"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ) : (row.sessionIndex ?? 0) === 0 ? (
+                          <div className="flex gap-1.5">
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => startDayEdit(row)}
+                              title={
+                                row.sessionCount > 1
+                                  ? 'Edit collapses this day to one corrected clock in/out'
+                                  : 'Correct this day’s clock in/out'
+                              }
+                              className="inline-flex items-center gap-1 rounded-full bg-[#FFFFFF] px-2.5 py-1 text-[11px] font-semibold text-black ring-1 ring-black/10 transition hover:bg-zinc-100 disabled:opacity-50"
+                            >
+                              <Pencil className="h-3 w-3" />
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => excludeDay(row)}
+                              title="Exclude the whole day from payroll (punches are kept)"
+                              className="inline-flex items-center gap-1 rounded-full bg-[#FFFFFF] px-2.5 py-1 text-[11px] font-semibold text-[#EF4444] ring-1 ring-black/10 transition hover:bg-zinc-100 disabled:opacity-50"
+                            >
+                              <Ban className="h-3 w-3" />
+                              Exclude
+                            </button>
+                            {row.isAdjusted && (
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => resetDay(row)}
+                                title="Remove the manual override — revert to punch-derived times"
+                                className="inline-flex items-center gap-1 rounded-full bg-[#FFFFFF] px-2.5 py-1 text-[11px] font-semibold text-black ring-1 ring-black/10 transition hover:bg-zinc-100 disabled:opacity-50"
+                              >
+                                <RotateCcw className="h-3 w-3" />
+                                Reset
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-ink-3">see #1</span>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
             {hoursReport.rows.length === 0 && (

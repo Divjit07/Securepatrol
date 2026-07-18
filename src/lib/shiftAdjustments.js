@@ -1,6 +1,18 @@
 import { supabase } from './supabase.js'
 
 export const STATUTORY_HOLIDAY_NOTE_PREFIX = 'Statutory holiday'
+// A day an admin removed from payroll (junk/test punches). Raw scans stay
+// immutable — the adjustment just tells every hours computation to skip the day.
+export const EXCLUDED_NOTE_PREFIX = 'Excluded from payroll'
+
+export function excludedNote(reason) {
+  const trimmed = reason?.trim()
+  return trimmed ? `${EXCLUDED_NOTE_PREFIX} — ${trimmed}` : EXCLUDED_NOTE_PREFIX
+}
+
+export function isExcludedAdjustment(adjustment) {
+  return Boolean(adjustment?.note?.startsWith(EXCLUDED_NOTE_PREFIX))
+}
 
 export function shiftAdjustmentKey(guardId, dateStr) {
   return `${guardId}-${dateStr}`

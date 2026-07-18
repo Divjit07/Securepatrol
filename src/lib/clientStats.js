@@ -1,5 +1,5 @@
 import { getScheduledShiftForDate, shiftBounds, shiftScanBounds } from '../hooks/useClientShift.js'
-import { isStatutoryHolidayAdjustment, clientStatutoryHolidayLabel } from './shiftAdjustments.js'
+import { isStatutoryHolidayAdjustment, isExcludedAdjustment, clientStatutoryHolidayLabel } from './shiftAdjustments.js'
 
 export function getPatrolCheckpoints(checkpoints = []) {
   return checkpoints.filter((cp) => (cp.checkpoint_role || 'patrol') !== 'shift_clock_out')
@@ -104,6 +104,8 @@ function localDateStr(d = new Date()) {
  * Admin adjustments always win.
  */
 export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustment, operatingHours, publishedShift }) {
+  // Admin excluded this day from payroll — skip it entirely (punches stay).
+  if (isExcludedAdjustment(adjustment)) return null
   const schedule = getScheduledShiftForDate(date, operatingHours)
 
   let shiftStart = schedule.start
@@ -231,6 +233,8 @@ export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustm
  * matching the single-shift path so Edit/Reset stay one-per-guard-per-day.
  */
 export function computeGuardSessionsForDay(guardScans, checkpoints, { date, adjustment, operatingHours, publishedShift }) {
+  // Admin excluded this day from payroll — skip it entirely (punches stay).
+  if (isExcludedAdjustment(adjustment)) return null
   const schedule = getScheduledShiftForDate(date, operatingHours)
 
   let shiftStart = schedule.start

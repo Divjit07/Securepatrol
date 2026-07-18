@@ -13,6 +13,7 @@ import { computeGuardSessionsForDay, formatDurationFromMinutes, formatShiftTime 
 import {
   combineDateAndTime,
   fetchShiftAdjustmentsForDate,
+  isExcludedAdjustment,
   mapShiftAdjustments,
   removeShiftAdjustment,
   saveShiftAdjustment,
@@ -346,6 +347,14 @@ export default function AdminShiftClock() {
                           <td className="px-6 py-4 align-top">
                             <p className="font-medium text-ink">{guard.name}</p>
                             <div className="mt-1.5 flex flex-wrap gap-1.5">
+                              {!day && adjustment && isExcludedAdjustment(adjustment) && (
+                                <span
+                                  className="rounded-full bg-[#EF4444]/10 px-2.5 py-0.5 text-[10px] font-semibold text-[#EF4444]"
+                                  title="An admin removed this day from payroll — punches are kept. Reset restores it."
+                                >
+                                  Excluded from payroll
+                                </span>
+                              )}
                               {day?.isAdjusted && (
                                 <span className="rounded-full bg-black px-2.5 py-0.5 text-[10px] font-semibold text-white">
                                   Adjusted
