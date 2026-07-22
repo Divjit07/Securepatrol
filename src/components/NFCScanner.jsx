@@ -73,7 +73,7 @@ export default function NFCScanner({ onScan, disabled }) {
         <Nfc className="mx-auto h-10 w-10 text-ink-3" />
         <p className="mt-2 text-sm text-ink-2">
           Web NFC is not available on this device — checkpoint scans need Chrome on an Android
-          phone. Clock in/out still works from your dashboard with Face ID.
+          phone. Clock in/out still works from your dashboard.
         </p>
       </div>
     )

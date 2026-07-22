@@ -1,11 +1,10 @@
-// AI Phase 2+3 (docs/AI_FEATURES_ROADMAP.md): daily emailed digests.
-//  - Admin digest: full-detail narrative from get_admin_summary_data (039).
-//  - Client digest: reassurance narrative from get_client_summary_data — the
-//    SQL never returns names/pay, so the model cannot leak them.
-// Runs daily via pg_cron (039) or manually by an authenticated admin.
-// The model only rephrases the SQL JSON — it never computes a number.
+// Daily emailed operations digest — fully templated, no LLM.
+//  - Admin digest: full detail from get_admin_summary_data (039).
+//  - Client digest: reassurance summary from get_client_summary_data — the SQL
+//    never returns names/pay, so nothing sensitive can leak.
+// Runs daily via pg_cron (039) or manually by an authenticated admin. Every
+// number is computed by the database; this function only formats it into email.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { callGemini, GEMINI_FLASH } from '../_shared/gemini.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,14 +17,69 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
 
-// Spam/quota guard: one digest run per hour per warm isolate, no matter who
-// calls. (The cron fires once a day; this blunts anon-key abuse.)
+// One digest run per hour per warm isolate (cron fires daily; this blunts abuse).
 const RUN_COOLDOWN_MS = 60 * 60_000
 let lastRunAt = 0
 
 const ADMIN_TO = Deno.env.get('ROSTER_ALERTS_TO') || Deno.env.get('INCIDENT_REPORT_TO') || 'admin@prodsec.ca'
 const CLIENT_TO = Deno.env.get('CLIENT_DIGEST_TO') || ADMIN_TO // sandbox: owner only
 const FROM_EMAIL = Deno.env.get('SCHEDULE_FROM') || Deno.env.get('INCIDENT_REPORT_FROM') || 'SecurePatrol <onboarding@resend.dev>'
+
+const esc = (s: unknown) =>
+  String(s ?? '').replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c] as string))
+
+const fmtT = (iso: string | null) =>
+  iso ? new Date(iso).toLocaleTimeString('en-CA', { timeZone: 'America/Toronto', hour: 'numeric', minute: '2-digit' }) : '—'
+
+// deno-lint-ignore no-explicit-any
+function renderAdminNarrative(d: any): string {
+  const lines: string[] = []
+  const shifts = d?.shifts || []
+  if (shifts.length) {
+    const worked = shifts.filter((s: any) => s.clock_in_at).length
+    const late = shifts.filter((s: any) => (s.late_minutes || 0) > 0).length
+    const noShow = shifts.filter((s: any) => s.no_show).length
+    lines.push(`<strong>Coverage:</strong> ${shifts.length} shift${shifts.length === 1 ? '' : 's'} — ${worked} worked, ${late} late, ${noShow} no-show${noShow === 1 ? '' : 's'}.`)
+    for (const s of shifts) {
+      const who = esc(s.guard || 'Unassigned')
+      if (s.no_show) { lines.push(`• ${who}: no-show.`); continue }
+      const lateTxt = (s.late_minutes || 0) > 0 ? ` (late ${s.late_minutes}m)` : ''
+      const out = s.clock_out_at ? fmtT(s.clock_out_at) : (s.missing_clock_out ? 'no clock-out' : 'on shift')
+      lines.push(`• ${who}: ${fmtT(s.clock_in_at)} → ${out}${lateTxt}.`)
+    }
+  }
+  const cp = d?.checkpoints || {}
+  lines.push(`<strong>Patrols:</strong> ${cp.pass_scans || 0} scan${(cp.pass_scans || 0) === 1 ? '' : 's'}, ${cp.gps_rejects || 0} GPS reject${(cp.gps_rejects || 0) === 1 ? '' : 's'}.`)
+
+  const misses = d?.misses || []
+  if (misses.length) {
+    lines.push(`<strong>Missed checkpoints:</strong> ${misses.length}.`)
+    for (const m of misses.slice(0, 8)) lines.push(`• ${esc(m.guard)} missed ${esc(m.checkpoint)} at ${fmtT(m.window_start)}.`)
+    const repeats = Object.entries(d?.repeat_miss_counts || {}).filter(([, n]) => (n as number) > 1)
+    if (repeats.length) lines.push(`Repeat offenders: ${repeats.map(([n, c]) => `${esc(n)} (${c})`).join(', ')}.`)
+  }
+
+  const a = d?.alerts || {}
+  if ((a.total || 0) > 0) {
+    const byType = Object.entries(a.by_type || {}).map(([t, c]) => `${c} ${esc(String(t).replace(/_/g, ' '))}`).join(', ')
+    lines.push(`<strong>Alerts:</strong> ${a.total} (${a.unacknowledged || 0} unacknowledged)${byType ? ` — ${byType}` : ''}.`)
+  }
+  const inc = d?.incidents || {}
+  if ((inc.total || 0) > 0) lines.push(`<strong>Incidents:</strong> ${inc.total} report${inc.total === 1 ? '' : 's'}.`)
+
+  return lines.join('<br>')
+}
+
+// deno-lint-ignore no-explicit-any
+function renderClientNarrative(d: any): string {
+  const cov = d?.coverage || {}
+  const cp = d?.checkpoints || {}
+  const lines: string[] = []
+  lines.push(`Coverage: ${cov.shifts_covered || 0} of ${cov.shifts_scheduled || 0} scheduled shift${(cov.shifts_scheduled || 0) === 1 ? '' : 's'} staffed.`)
+  lines.push(`Checkpoints: ${cp.confirmed_visits || 0} of ${cp.total || 0} confirmed visit${(cp.total || 0) === 1 ? '' : 's'}.`)
+  if ((d?.reviewed_delays || 0) > 0) lines.push(`${d.reviewed_delays} delay${d.reviewed_delays === 1 ? '' : 's'} noted — all reviewed by management.`)
+  return lines.join('<br>')
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -44,11 +98,7 @@ Deno.serve(async (req) => {
     })
     const { data: { user } } = await userClient.auth.getUser()
     if (user) {
-      const { data: profile } = await userClient
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
+      const { data: profile } = await userClient.from('profiles').select('role').eq('id', user.id).single()
       if (!profile || !['admin', 'super_admin'].includes(profile.role)) {
         return json({ error: 'Admins only' }, 403)
       }
@@ -76,58 +126,23 @@ Deno.serve(async (req) => {
         db.rpc('get_client_summary_data', { p_site_id: site.id, p_start: start.toISOString(), p_end: end.toISOString() }),
       ])
       if (aErr || cErr) {
-        adminSections.push(`<h3>${site.name}</h3><p>Data fetch failed: ${(aErr || cErr)!.message}</p>`)
+        adminSections.push(`<h3>${esc(site.name)}</h3><p>Data fetch failed: ${esc((aErr || cErr)!.message)}</p>`)
         continue
       }
 
-      // Quiet site (no shifts, no scans, no alerts) → one line, zero AI calls.
       const quiet =
         (adminData?.shifts?.length ?? 0) === 0 &&
         (adminData?.checkpoints?.pass_scans ?? 0) === 0 &&
         (adminData?.alerts?.total ?? 0) === 0
       if (quiet) {
-        adminSections.push(`<h3>${site.name}</h3><p>No shifts, scans, or alerts in the last 24 hours.</p>`)
+        adminSections.push(`<h3>${esc(site.name)}</h3><p>No shifts, scans, or alerts in the last 24 hours.</p>`)
         continue
       }
 
-      const [adminNarrative, clientNarrative] = await Promise.all([
-        callGemini({
-          model: GEMINI_FLASH,
-          systemPrompt: [
-            'You write the daily operations digest for a security company manager.',
-            'You get one JSON blob of already-computed facts for one site. Rules:',
-            '- ONLY restate facts from the JSON. Never invent, estimate, or extrapolate.',
-            '- Cover: shift coverage (who worked, clock in/out, late minutes), checkpoint',
-            '  completion, misses (name the guard and checkpoint), repeat offenders,',
-            '  GPS rejects, alerts, incidents.',
-            '- Use exact names and times from the JSON (times are ISO; write them as local-style times).',
-            '- 4-8 short sentences. Plain, factual, most important first. No markdown, no advice.',
-          ].join('\n'),
-          userParts: [JSON.stringify(adminData)],
-          temperature: 0.2,
-          maxOutputTokens: 512,
-        }).catch((e) => `Narrative unavailable (${e.message}). Raw facts: ${JSON.stringify(adminData)}`),
-        callGemini({
-          model: GEMINI_FLASH,
-          systemPrompt: [
-            'You write a brief daily security-coverage update for a property owner (the client).',
-            'You get one JSON blob of already-computed facts. Rules:',
-            '- ONLY restate facts from the JSON. Never invent numbers.',
-            '- The JSON deliberately contains no guard names, pay, or internal detail — do not',
-            '  speculate about any of that.',
-            '- Reassuring, professional tone: confirm coverage, checkpoint visits, and that any',
-            '  delays were reviewed by management.',
-            '- 2-4 short sentences. No markdown.',
-          ].join('\n'),
-          userParts: [JSON.stringify(clientData)],
-          temperature: 0.3,
-          maxOutputTokens: 256,
-        }).catch(() => null),
-      ])
-
-      adminSections.push(`<h3 style="margin-bottom:4px">${site.name}</h3><p style="margin-top:0">${adminNarrative}</p>`)
+      adminSections.push(`<h3 style="margin-bottom:4px">${esc(site.name)}</h3><p style="margin-top:0">${renderAdminNarrative(adminData)}</p>`)
+      const clientNarrative = renderClientNarrative(clientData)
       if (clientNarrative) {
-        clientSections.push(`<h3 style="margin-bottom:4px">${site.name}</h3><p style="margin-top:0">${clientNarrative}</p>`)
+        clientSections.push(`<h3 style="margin-bottom:4px">${esc(site.name)}</h3><p style="margin-top:0">${clientNarrative}</p>`)
       }
     }
 
@@ -153,8 +168,7 @@ Deno.serve(async (req) => {
     const adminRes = await send(
       ADMIN_TO,
       `SecurePatrol ops digest — ${dateLabel}`,
-      wrap('Daily ops digest', adminSections,
-        'Every number is computed by the database; AI only phrases it. SecurePatrol automated digest.'),
+      wrap('Daily ops digest', adminSections, 'Every figure is computed directly from your patrol records. SecurePatrol automated digest.'),
     )
     results.admin = adminRes.ok
 
@@ -162,8 +176,7 @@ Deno.serve(async (req) => {
       const clientRes = await send(
         CLIENT_TO,
         `Your security coverage update — ${dateLabel}`,
-        wrap('Coverage update', clientSections,
-          'Prepared automatically from verified patrol records. Productive Security Inc.'),
+        wrap('Coverage update', clientSections, 'Prepared automatically from verified patrol records. Productive Security Inc.'),
       )
       results.client = clientRes.ok
     }

@@ -50,7 +50,7 @@ function shiftSiteLine(siteName, publishedShift, guardShift) {
 
 /**
  * Guard dashboard: identity + shift status.
- * Grey while clocked out; lime green only after Face ID / clock-in.
+ * Grey while clocked out; lime green only after clock-in.
  * Shift times come from the published roster only.
  */
 export default function GuardClockedInPanel({
@@ -100,7 +100,7 @@ export default function GuardClockedInPanel({
             <p className={`mt-2 text-sm ${bodyClass}`}>{formatClockInStamp(signedInAt)}</p>
           ) : (
             <p className={`mt-2 text-sm ${bodyClass}`}>
-              Not clocked in yet — use Face ID clock-in below.
+              Not clocked in yet — use the shift clock below.
             </p>
           )}
         </div>

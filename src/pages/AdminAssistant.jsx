@@ -2,22 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import { Send, Sparkles, Trash2 } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
-import { useAuth } from '../hooks/useAuth.jsx'
-import { supabase } from '../lib/supabase.js'
+import { ask, SUGGESTIONS } from '../lib/assistant/index.js'
 
 const HISTORY_KEY = 'sp-assistant-history'
 
-const SUGGESTIONS = [
-  'Who worked yesterday and what were their hours?',
-  "What's on the schedule for this week?",
-  'Any missed checkpoints or GPS rejects in the last 7 days?',
-  'Show clock events for a guard today',
-]
-
-/** Admin ops assistant — the model picks RLS-scoped tools server-side and
- *  phrases the results. It cannot compute or write anything. */
+/** Admin ops assistant — a deterministic intent bot. It matches the question to
+ *  one of a fixed set of live-data lookups and templates the answer. No LLM: it
+ *  cannot invent a number, and it never leaves your browser except for the same
+ *  RLS-scoped queries the app already makes. */
 export default function AdminAssistant() {
-  const { user } = useAuth()
   const [messages, setMessages] = useState(() => {
     try {
       const raw = sessionStorage.getItem(HISTORY_KEY)
@@ -28,7 +21,7 @@ export default function AdminAssistant() {
   })
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState(null)
+  const [pending, setPending] = useState(null) // a { intentId, slots, need } follow-up
   const scrollRef = useRef(null)
 
   useEffect(() => {
@@ -43,32 +36,23 @@ export default function AdminAssistant() {
   const send = async (text) => {
     const trimmed = (text || '').trim()
     if (!trimmed || busy) return
-    setError(null)
-    const next = [...messages, { role: 'user', text: trimmed }]
-    setMessages(next)
+    setMessages((prev) => [...prev, { role: 'user', text: trimmed }])
     setInput('')
     setBusy(true)
+    const activePending = pending
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('ai-chat', {
-        body: { messages: next.map(({ role, text: t }) => ({ role, text: t })) },
-      })
-      if (fnError) {
-        // invoke() hides non-2xx bodies behind a generic message — dig the
-        // real cause out of the response when there is one.
-        let detail = fnError.message
-        try {
-          const body = await fnError.context?.json()
-          if (body?.error) detail = body.error
-        } catch {
-          /* keep generic message */
-        }
-        throw new Error(detail || 'Assistant unavailable')
-      }
-      if (data?.error) throw new Error(data.error)
-      setMessages((prev) => [...prev, { role: 'assistant', text: data.reply, tools: data.tools_used }])
+      const result = await ask(trimmed, activePending)
+      setPending(result.needs ? result.pending : null)
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', text: result.reply, options: result.options || [] },
+      ])
     } catch (err) {
-      setError(err.message || 'Assistant unavailable')
-      // Keep the user's message in the thread so they can retry.
+      setPending(null)
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', text: `Something went wrong: ${err.message}` },
+      ])
     } finally {
       setBusy(false)
     }
@@ -76,15 +60,13 @@ export default function AdminAssistant() {
 
   const clear = () => {
     setMessages([])
-    setError(null)
+    setPending(null)
     try {
       sessionStorage.removeItem(HISTORY_KEY)
     } catch {
       /* ignore */
     }
   }
-
-  if (!user) return null
 
   return (
     <Layout variant="admin">
@@ -94,7 +76,6 @@ export default function AdminAssistant() {
       />
 
       <div className="dk-card flex h-[calc(100vh-16rem)] min-h-[24rem] flex-col overflow-hidden">
-        {/* Thread */}
         <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto p-5">
           {messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
@@ -126,16 +107,23 @@ export default function AdminAssistant() {
               <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
                   className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                    m.role === 'user'
-                      ? 'bg-white text-black'
-                      : 'bg-white/5 text-ink'
+                    m.role === 'user' ? 'bg-white text-black' : 'bg-white/5 text-ink'
                   }`}
                 >
                   <p className="whitespace-pre-wrap">{m.text}</p>
-                  {m.role === 'assistant' && m.tools?.length > 0 && (
-                    <p className="mt-1.5 text-[10px] text-ink-3">
-                      looked up: {[...new Set(m.tools)].join(', ')}
-                    </p>
+                  {m.role === 'assistant' && m.options?.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {m.options.map((opt) => (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => send(opt)}
+                          className="rounded-full border border-white/15 px-2.5 py-1 text-xs text-ink-2 transition hover:bg-white/10 hover:text-ink"
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>
@@ -152,11 +140,6 @@ export default function AdminAssistant() {
           )}
         </div>
 
-        {error && (
-          <p className="border-t border-white/5 px-5 py-2 text-xs text-accent-red">{error}</p>
-        )}
-
-        {/* Composer */}
         <form
           onSubmit={(e) => {
             e.preventDefault()
@@ -178,7 +161,7 @@ export default function AdminAssistant() {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about hours, schedules, patrols…"
+            placeholder={pending ? 'Type your answer…' : 'Ask about hours, schedules, patrols…'}
             maxLength={2000}
             className="min-w-0 flex-1 rounded-xl border-0 bg-white/5 px-4 py-3 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-1 focus:ring-white/20"
           />
@@ -194,8 +177,8 @@ export default function AdminAssistant() {
       </div>
 
       <p className="mt-3 text-[11px] text-ink-3">
-        Answers are phrased by AI from live database lookups scoped to your sites — the model never
-        computes or stores your data. Free-tier quota applies; heavy use may pause until tomorrow.
+        Answers are looked up live from your data and scoped to your sites. Fully deterministic —
+        no AI, no guessing, and nothing leaves your browser beyond the usual queries.
       </p>
     </Layout>
   )

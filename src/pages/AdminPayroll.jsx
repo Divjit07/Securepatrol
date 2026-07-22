@@ -464,7 +464,7 @@ export default function AdminPayroll() {
     doc.setFontSize(11)
     doc.text(`Site: ${selectedSite?.name || ''}`, 14, 33)
     doc.text(`Pay period: ${filters.fromDate} to ${filters.toDate}`, 14, 40)
-    doc.text('Hours from Face ID / clock punches (and shift-clock edits)', 14, 47)
+    doc.text('Hours from GPS / clock punches (and shift-clock edits)', 14, 47)
 
     autoTable(doc, {
       startY: 54,
@@ -559,7 +559,7 @@ export default function AdminPayroll() {
 
       {tab !== 'invoices' && (
         <div className="mb-4 rounded-xl border border-ink/10 bg-ink/5 p-4 text-sm text-ink">
-          Payroll hours for <strong>{selectedSite?.name || 'selected site'}</strong> come from Face ID /
+          Payroll hours for <strong>{selectedSite?.name || 'selected site'}</strong> come from GPS /
           clock punches (and shift-clock edits) — not a fixed site schedule.
         </div>
       )}

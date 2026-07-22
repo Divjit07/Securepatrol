@@ -1,14 +1,16 @@
-// Geofenced Face ID clock-in/out. A punch is a scan on the site's
+// Geofenced GPS clock-in/out. A punch is a scan on the site's
 // shift_clock_in / shift_clock_out checkpoint with scan_input_method 'face_gps'
-// — so payroll, the admin shift clock, and late/no-show alerts all read it with
-// zero changes. The DB trigger re-validates the geofence server-side.
+// (a legacy token that now just means "geofenced GPS punch" — Face ID was
+// removed in migration 042) — so payroll, the admin shift clock, and late/
+// no-show alerts all read it with zero changes. The DB trigger re-validates the
+// geofence server-side.
 import { supabase } from './supabase.js'
 import { haversineDistance } from './gps.js'
 
 export const CLOCK_ACCURACY_BONUS_CAP = 40
 // Server trigger (migration 031) hard-fails any punch with gps_accuracy > 100,
 // independent of distance — the UI must mirror it or guards get a confusing
-// "On site ✓" button that server-rejects after Face ID.
+// "On site ✓" button that server-rejects after the punch.
 export const CLOCK_MAX_GPS_ACCURACY_M = 100
 
 export async function fetchSiteGeofence(siteId) {
@@ -49,8 +51,8 @@ export function geofenceStatus(position, site) {
 }
 
 /**
- * Records the punch. Face ID must already be verified by the caller —
- * this inserts the scan; the DB trigger sets pass/fail from the site geofence.
+ * Records the punch: inserts the scan; the DB trigger sets pass/fail from the
+ * site geofence.
  */
 export async function clockPunch({ guardId, siteId, type, position, note = null }) {
   const role = type === 'out' ? 'shift_clock_out' : 'shift_clock_in'

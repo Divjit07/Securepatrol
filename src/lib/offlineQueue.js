@@ -80,14 +80,14 @@ export async function submitScan({
     throw err
   }
 
-  // Clock punches are never accepted by QR — Face ID (dashboard) or a physical
+  // Clock punches are never accepted by QR here — clock in on the dashboard (GPS) or a physical
   // NFC tap only. A photographed QR code must not start a shift.
   if (
     scanInputMethod === 'qr' &&
     ['shift_clock_in', 'shift_clock_out'].includes(checkpoint.checkpoint_role)
   ) {
     throw new Error(
-      'QR can’t be used to clock in or out. Use Face ID on your dashboard, or tap the NFC tag.',
+      'QR can’t be used to clock in or out here. Use the shift clock on your dashboard, or tap the NFC tag.',
     )
   }
 

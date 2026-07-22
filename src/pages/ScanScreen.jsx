@@ -1,15 +1,16 @@
 import { useState } from 'react'
 import { isIOS, supportsWebNfc } from '../lib/device.js'
 import { useNavigate } from 'react-router-dom'
-import { Loader2, MapPin, ScanFace } from 'lucide-react'
+import { Loader2, MapPin, Clock } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import Layout from '../components/Layout.jsx'
 import NFCScanner from '../components/NFCScanner.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { submitScanWithGps } from '../lib/offlineQueue.js'
 
-// Checkpoints are physical NFC tags — QR scanning was retired (labels took up
-// wall space and QR was already blocked for clock punches). NFC tap only.
+// Checkpoints are physical NFC tags. Clock punches happen on the dashboard
+// (geofenced GPS) or via an NFC tap here; QR is a server-side last-resort
+// fallback (migration 041) but the in-app QR *scanner* isn't wired yet.
 export default function ScanScreen() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -61,9 +62,9 @@ export default function ScanScreen() {
               scanning in web apps yet — checkpoint taps need an Android phone until the native app
               ships. You can still{' '}
               <Link to="/guard" className="font-semibold text-accent-cyan-line underline underline-offset-2">
-                clock in with Face ID
-              </Link>{' '}
-              from the dashboard.
+                clock in from your dashboard
+              </Link>
+              .
             </>
           ) : (
             <>This browser can’t read NFC tags. Use Chrome on Android to scan checkpoints.</>
@@ -85,8 +86,8 @@ export default function ScanScreen() {
       )}
 
       <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs text-ink-3">
-        <ScanFace className="h-3.5 w-3.5" />
-        Clock in/out lives on your dashboard — Face ID, or tap the clock NFC tag here.
+        <Clock className="h-3.5 w-3.5" />
+        Clock in/out lives on your dashboard — GPS, or tap the clock NFC tag here.
       </p>
     </Layout>
   )

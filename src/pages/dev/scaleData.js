@@ -87,7 +87,7 @@ export function generateScaleData(seed = 42, { days = 14, guardCount = 40, siteC
     const count = int(5, 10)
     checkpointsBySite[site.id] = Array.from({ length: count }, (_, j) => ({
       id: `${site.id}-cp-${j + 1}`,
-      name: j === 0 ? 'Clock In (Face ID)' : j === 1 ? 'Clock Out (Face ID)' : `Checkpoint ${j - 1}`,
+      name: j === 0 ? 'Clock In' : j === 1 ? 'Clock Out' : `Checkpoint ${j - 1}`,
       checkpoint_role: j === 0 ? 'shift_clock_in' : j === 1 ? 'shift_clock_out' : 'patrol',
     }))
   }

@@ -1,5 +1,11 @@
 # SecurePatrol — AI Features Build Roadmap
 
+> ⚠️ **SUPERSEDED (2026-07-22).** The LLM/Gemini integration was removed entirely. The chat
+> assistant is now a **deterministic, client-side intent bot** (`src/lib/assistant/`) — no model,
+> no API key, no quota, and it cannot invent a number. The daily and alert digests were converted
+> to **templated** rendering (still `ai-*-digest` edge functions, but no Gemini). This document is
+> kept for historical context only; it no longer describes the running system.
+
 > A build plan written to be handed to **Claude Code** (or any coding agent) working
 > inside this repo. It turns the "Kronus AI Feature Capsule" into concrete, ordered work
 > mapped onto SecurePatrol's real Supabase schema, edge functions, and `src/lib` code.

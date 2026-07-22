@@ -8,7 +8,6 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import {
   MapPin,
-  ScanFace,
   QrCode,
   Nfc,
   Clock,
@@ -51,7 +50,7 @@ function relativeTime(iso) {
 }
 
 function methodBadge(method) {
-  if (method === 'face_gps') return { label: 'Face ID', Icon: ScanFace }
+  if (method === 'face_gps') return { label: 'GPS', Icon: LocateFixed }
   if (method === 'nfc') return { label: 'NFC', Icon: Nfc }
   return { label: 'QR', Icon: QrCode }
 }
@@ -198,7 +197,7 @@ export default function AdminLiveMap() {
     }
     if (
       !window.confirm(
-        'Remove GPS from this site? Face ID clock-in will stop until you set a new location. Clock NFC tags are unchanged.',
+        'Remove GPS from this site? GPS clock-in will stop until you set a new location. Clock NFC tags are unchanged.',
       )
     ) {
       return
@@ -252,7 +251,7 @@ export default function AdminLiveMap() {
         if (error) throw error
         await syncClockCheckpoints(form.siteId)
         await maybeCreateOnCallShift(form.siteId)
-        setAddOk('Geofence updated. Guards can Face ID clock in inside this radius.')
+        setAddOk('Geofence updated. Guards can clock in inside this radius.')
       } else {
         if (!form.name.trim()) throw new Error('Site name is required.')
         const { data, error } = await supabase
@@ -273,7 +272,7 @@ export default function AdminLiveMap() {
         setAddOk(
           form.createOnCall
             ? 'Site geofenced and open on-call shift published for today.'
-            : 'Site created with geofence. Guards can Face ID clock in inside this radius.',
+            : 'Site created with geofence. Guards can clock in inside this radius.',
         )
       }
       setForm(emptyForm)

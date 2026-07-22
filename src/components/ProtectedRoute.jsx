@@ -1,15 +1,16 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.jsx'
 
-function homePath({ isAdmin, isClient, isGuard }) {
+function homePath({ isAdmin, isClient, isGuard, isOffice }) {
   if (isAdmin) return '/admin'
   if (isClient) return '/client'
+  if (isOffice) return '/office'
   if (isGuard) return '/guard'
   return '/login'
 }
 
-export default function ProtectedRoute({ children, requireAdmin, requireGuard, requireClient }) {
-  const { user, profile, loading, isAdmin, isGuard, isClient } = useAuth()
+export default function ProtectedRoute({ children, requireAdmin, requireGuard, requireClient, requireOffice }) {
+  const { user, profile, loading, isAdmin, isGuard, isClient, isOffice } = useAuth()
   const location = useLocation()
 
   if (loading) {
@@ -36,7 +37,7 @@ export default function ProtectedRoute({ children, requireAdmin, requireGuard, r
     )
   }
 
-  const fallback = homePath({ isAdmin, isClient, isGuard })
+  const fallback = homePath({ isAdmin, isClient, isGuard, isOffice })
 
   if (requireAdmin && !isAdmin) {
     return <Navigate to={fallback} replace />
@@ -47,6 +48,10 @@ export default function ProtectedRoute({ children, requireAdmin, requireGuard, r
   }
 
   if (requireClient && !isClient) {
+    return <Navigate to={fallback} replace />
+  }
+
+  if (requireOffice && !isOffice) {
     return <Navigate to={fallback} replace />
   }
 

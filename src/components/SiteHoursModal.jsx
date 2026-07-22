@@ -18,7 +18,7 @@ const WEEK = [
 ]
 
 /** Edit a site's per-day operating hours + GPS geofence (drives dashboards,
- *  payroll windows, and Face ID clock-in). */
+ *  payroll windows, and GPS clock-in). */
 export default function SiteHoursModal({ site, onSaved, onClose }) {
   const [hours, setHours] = useState(() => normalizeOperatingHours(site.operating_hours))
   const [lat, setLat] = useState(site.latitude != null ? String(site.latitude) : '')
@@ -65,7 +65,7 @@ export default function SiteHoursModal({ site, onSaved, onClose }) {
     }
     if (
       !window.confirm(
-        'Remove GPS from this site? Face ID clock-in will stop until you set a new location.',
+        'Remove GPS from this site? GPS clock-in will stop until you set a new location.',
       )
     ) {
       return
@@ -207,7 +207,7 @@ export default function SiteHoursModal({ site, onSaved, onClose }) {
             <MapPin className="h-4 w-4 text-accent-orange" /> Location &amp; clock-in geofence
           </h3>
           <p className="mt-1 text-xs text-ink-2">
-            Guards can clock in with Face ID once they’re within this distance of the site.
+            Guards can clock in once they’re within this distance of the site.
             Paste coordinates from Google Maps or use your location while standing on site.
           </p>
 

@@ -97,7 +97,7 @@ function localDateStr(d = new Date()) {
 }
 
 /**
- * Derive one day's pay window from Face ID / NFC clock punches.
+ * Derive one day's pay window from GPS / NFC clock punches.
  * Clock-in and clock-out punches are the source of truth. Site operating
  * hours (or an optional published roster shift) only define the search
  * window and the legacy auto-end when someone clocks in but never out.

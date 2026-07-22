@@ -103,7 +103,7 @@ export default function GuardDashboard() {
             Contact your administrator to assign you to a patrol site.
           </p>
         </div>
-        {/* New hires can register Face ID right away — no site or schedule needed. */}
+        {/* Shift clock shows right away — no site or schedule needed. */}
         <ClockInCard
           guardId={user?.id}
           siteId={null}
