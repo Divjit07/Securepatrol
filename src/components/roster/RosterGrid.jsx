@@ -5,7 +5,6 @@ import {
   shiftHours,
   formatTimeRange,
   CONFLICT_LABELS,
-  OVERTIME_WEEK_HOURS,
 } from '../../lib/schedule.js'
 import { SHIFT_CHIP_STYLES } from '../../lib/brandPalette.js'
 
@@ -167,11 +166,7 @@ export default function RosterGrid({
                 {showSite && guard.site_name && (
                   <span className="truncate text-[10px] font-medium text-ink-2">{guard.site_name}</span>
                 )}
-                <span
-                  className={`text-[11px] ${
-                    hours > OVERTIME_WEEK_HOURS ? 'font-semibold text-accent-red' : 'text-ink-3'
-                  }`}
-                >
+                <span className="text-[11px] text-ink-3">
                   {hours.toFixed(1).replace(/\.0$/, '')}h scheduled
                 </span>
               </div>

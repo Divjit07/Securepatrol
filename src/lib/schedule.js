@@ -3,7 +3,6 @@ import { supabase } from './supabase.js'
 export const SHIFT_COLORS = ['blue', 'violet', 'teal', 'amber', 'rose']
 
 export const MIN_REST_HOURS = 8
-export const OVERTIME_WEEK_HOURS = 40
 
 // ---------------------------------------------------------------------------
 // Date helpers (all local-time; shifts stored as timestamptz)
@@ -363,7 +362,6 @@ function overlaps(a, b) {
  * Returns conflicts for each shift keyed by shift id:
  *   overlap  – same guard double-booked
  *   rest     – less than MIN_REST_HOURS between this guard's shifts
- *   overtime – guard's total hours this range exceed OVERTIME_WEEK_HOURS
  */
 export function detectConflicts(shifts) {
   const byGuard = new Map()
@@ -381,9 +379,7 @@ export function detectConflicts(shifts) {
 
   for (const list of byGuard.values()) {
     list.sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at))
-    let totalHours = 0
     for (let i = 0; i < list.length; i++) {
-      totalHours += shiftHours(list[i])
       for (let j = i + 1; j < list.length; j++) {
         if (overlaps(list[i], list[j])) {
           add(list[i].id, 'overlap')
@@ -398,9 +394,6 @@ export function detectConflicts(shifts) {
         }
       }
     }
-    if (totalHours > OVERTIME_WEEK_HOURS) {
-      for (const s of list) add(s.id, 'overtime')
-    }
   }
 
   return conflicts
@@ -409,7 +402,6 @@ export function detectConflicts(shifts) {
 export const CONFLICT_LABELS = {
   overlap: 'Double-booked',
   rest: `Less than ${MIN_REST_HOURS}h rest`,
-  overtime: `Over ${OVERTIME_WEEK_HOURS}h this week`,
 }
 
 // ---------------------------------------------------------------------------
