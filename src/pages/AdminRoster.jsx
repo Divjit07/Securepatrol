@@ -93,7 +93,12 @@ export default function AdminRoster() {
           : fetchTemplates(siteId).catch(() => []),
       ])
       const siteIds = new Set(sites.map((s) => s.id))
-      const activeGuards = guardRows.filter((g) => g.active && g.site_id && siteIds.has(g.site_id))
+      // Guards are a shared pool — ANY active guard can be rostered at ANY site
+      // (multiple shifts/day across locations). Home site is just a default now,
+      // not a constraint. Guards with no home site are included too.
+      const activeGuards = guardRows.filter(
+        (g) => g.active && (!g.site_id || siteIds.has(g.site_id)),
+      )
       setShifts(
         siteId === ALL_SITES
           ? shiftRows.filter((s) => siteIds.has(s.site_id))
@@ -106,7 +111,7 @@ export default function AdminRoster() {
                 (a.site_name || '').localeCompare(b.site_name || '') ||
                 a.name.localeCompare(b.name),
             )
-          : activeGuards.filter((g) => g.site_id === siteId),
+          : [...activeGuards].sort((a, b) => a.name.localeCompare(b.name)),
       )
       setTemplates(templateRows.length ? templateRows : DEFAULT_TEMPLATES)
     } catch (err) {
