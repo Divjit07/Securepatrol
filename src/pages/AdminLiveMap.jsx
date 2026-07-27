@@ -8,7 +8,6 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import {
   MapPin,
-  QrCode,
   Nfc,
   Clock,
   Plus,
@@ -50,9 +49,9 @@ function relativeTime(iso) {
 }
 
 function methodBadge(method) {
-  if (method === 'face_gps') return { label: 'GPS', Icon: LocateFixed }
   if (method === 'nfc') return { label: 'NFC', Icon: Nfc }
-  return { label: 'QR', Icon: QrCode }
+  if (method === 'admin') return { label: 'Admin', Icon: Clock }
+  return { label: 'GPS', Icon: LocateFixed }
 }
 
 function todayDateInput() {

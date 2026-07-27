@@ -107,7 +107,7 @@ export function shiftBounds(dateStr, startTime, endTime) {
   return { start, end }
 }
 
-/** Load scans from start of day through shift end (includes early Main Entrance sign-in). */
+/** Load scans from start of day through shift end (includes early clock-in). */
 export function shiftScanBounds(dateStr, startTime, endTime) {
   const { end } = shiftBounds(dateStr, startTime, endTime)
   const [y, m, d] = dateStr.split('-').map(Number)

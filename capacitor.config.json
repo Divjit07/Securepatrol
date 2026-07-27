@@ -1,0 +1,17 @@
+{
+  "appId": "space.kronus.app",
+  "appName": "Kratos",
+  "webDir": "dist",
+  "backgroundColor": "#0d110c",
+  "ios": {
+    "contentInset": "always"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 600,
+      "backgroundColor": "#0d110c",
+      "showSpinner": false,
+      "launchAutoHide": true
+    }
+  }
+}

@@ -1,15 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Plus, QrCode, Trash2, Copy, Check, Printer, Pencil, X } from 'lucide-react'
+import { Plus, Trash2, Copy, Check, Pencil, X } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
-import QrPrintModal from '../components/QrPrintModal.jsx'
 import {
   floorElevationMetres,
   defaultRadiusForFloor,
   minDistanceToCheckpoints,
-  parseCoordinatePaste,
   MIN_FLOOR_COORD_SEPARATION,
-  getBestPosition,
 } from '../lib/gps.js'
 import { supabase } from '../lib/supabase.js'
 import { useAuth } from '../hooks/useAuth.jsx'
@@ -34,15 +31,9 @@ export default function CheckpointManager() {
     checkpoint_role: 'patrol',
   })
   const [floorForm, setFloorForm] = useState({ floor_name: '', floor_number: 1 })
-  const [generateQrAfterSave, setGenerateQrAfterSave] = useState(true)
-  const [qrModal, setQrModal] = useState(null)
   const [copiedId, setCopiedId] = useState(null)
-  const [gpsLoading, setGpsLoading] = useState(false)
-  const [gpsMessage, setGpsMessage] = useState(null)
   const [editingId, setEditingId] = useState(null)
   const [editName, setEditName] = useState('')
-
-  const selectedSiteName = sites.find((s) => s.id === selectedSite)?.name || ''
 
   const copyCheckpointId = async (id) => {
     await navigator.clipboard.writeText(id)
@@ -92,12 +83,6 @@ export default function CheckpointManager() {
     loadCheckpoints(floors)
   }, [floors])
 
-  const openQrModal = (items, title) => {
-    setQrModal({
-      checkpoints: Array.isArray(items) ? items : [items],
-      title,
-    })
-  }
 
   const createFloor = async (e) => {
     e.preventDefault()
@@ -157,8 +142,8 @@ export default function CheckpointManager() {
       .insert({
         name: form.name,
         floor_id: form.floor_id,
-        latitude: parseFloat(form.latitude),
-        longitude: parseFloat(form.longitude),
+        latitude: Number.isNaN(lat) ? null : lat,
+        longitude: Number.isNaN(lng) ? null : lng,
         altitude_metres: altitudeValue,
         radius_metres: parseInt(form.radius_metres, 10) || defaultRadiusForFloor(),
         checkpoint_role: form.checkpoint_role,
@@ -174,10 +159,6 @@ export default function CheckpointManager() {
     setForm({ name: '', floor_id: '', latitude: '', longitude: '', altitude_metres: '', radius_metres: 20, coordPaste: '', checkpoint_role: 'patrol' })
     setShowForm(false)
     await loadCheckpoints(floors)
-
-    if (generateQrAfterSave) {
-      openQrModal(data, `${data.name} — QR label`)
-    }
   }
 
   const deleteCheckpoint = async (id) => {
@@ -253,84 +234,11 @@ export default function CheckpointManager() {
     setCheckpoints((prev) => prev.filter((cp) => cp.floor_id !== floor.id))
   }
 
-  const printFloorLabels = (floor) => {
-    const floorCheckpoints = checkpoints.filter((cp) => cp.floor_id === floor.id)
-    if (!floorCheckpoints.length) {
-      alert(`No checkpoints on ${floor.floor_name} yet. Add a checkpoint first, then print its QR label.`)
-      return
-    }
-    openQrModal(floorCheckpoints, `${floor.floor_name} — all checkpoint labels`)
-  }
-
-  const useCurrentLocation = async () => {
-    if (!navigator.geolocation) {
-      setGpsMessage({ type: 'error', text: 'This browser does not support GPS. Paste coordinates instead.' })
-      return
-    }
-
-    setGpsLoading(true)
-    setGpsMessage({ type: 'info', text: 'Getting location… allow access if your browser asks.' })
-
-    try {
-      const pos = await getBestPosition(2)
-      setForm((f) => ({
-        ...f,
-        latitude: pos.latitude.toFixed(6),
-        longitude: pos.longitude.toFixed(6),
-        altitude_metres:
-          pos.altitude != null ? pos.altitude.toFixed(1) : f.altitude_metres,
-      }))
-      setGpsMessage({
-        type: 'success',
-        text: `Location captured (±${Math.round(pos.accuracy ?? 0)}m accuracy).`,
-      })
-    } catch (err) {
-      const code = err?.code
-      let text = 'Could not get GPS. Paste coordinates manually instead.'
-
-      if (code === 1 || err.message?.includes('denied')) {
-        text =
-          'Location blocked. Click the lock icon in your browser address bar → allow Location for this site, then try again.'
-      } else if (code === 3 || err.message?.includes('Timeout')) {
-        text =
-          'GPS timed out. On a laptop, Wi‑Fi location is weak — paste coordinates from Maps or try on your phone.'
-      } else if (code === 2 || err.message?.includes('unavailable')) {
-        text = 'GPS unavailable on this device. Paste coordinates instead.'
-      }
-
-      setGpsMessage({ type: 'error', text })
-    } finally {
-      setGpsLoading(false)
-    }
-  }
-
-  const applyCoordPaste = () => {
-    const parsed = parseCoordinatePaste(form.coordPaste)
-    if (!parsed) {
-      alert('Paste coordinates like: 43.6532, -79.3832')
-      return
-    }
-    setForm((f) => ({
-      ...f,
-      latitude: parsed.lat.toFixed(6),
-      longitude: parsed.lng.toFixed(6),
-    }))
-  }
-
-  const applyFloorAltitude = (floorId) => {
-    const floor = floors.find((f) => f.id === floorId)
-    if (!floor) return
-    setForm((f) => ({
-      ...f,
-      altitude_metres: String(floorElevationMetres(floor.floor_number)),
-    }))
-  }
-
   return (
     <Layout variant="admin">
       <PageHeader
         title="Checkpoints"
-        description="Add floors and checkpoints, then print QR labels to stick on site."
+        description="Add floors and checkpoints, then write each checkpoint's UUID to an NFC tag."
         action={
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => setShowFloorForm(true)} className="sp-btn-secondary">
@@ -359,7 +267,7 @@ export default function CheckpointManager() {
         <form onSubmit={createFloor} className="sp-card mb-6 p-6">
           <h3 className="font-display text-lg font-semibold">New floor</h3>
           <p className="mt-1 text-sm text-ink-2">
-            Floors group checkpoints. QR labels are generated per checkpoint after you add them.
+            Floors group checkpoints. Each checkpoint gets a UUID you write to its NFC tag.
           </p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
@@ -396,8 +304,8 @@ export default function CheckpointManager() {
         <form onSubmit={createCheckpoint} className="sp-card mb-6 p-6">
           <h3 className="font-display text-lg font-semibold">New checkpoint</h3>
           <p className="mb-4 text-sm text-ink-2">
-            Stand at the tag location, tap <strong>Use my GPS</strong>, or paste coordinates from any maps app.
-            Upper floors: use a spot away from the lobby.
+            Give it a name and save — the NFC tag verifies the visit. After saving, copy the
+            checkpoint's UUID and write it to the tag.
           </p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
@@ -433,116 +341,24 @@ export default function CheckpointManager() {
               </select>
             </div>
             <div>
-              <label className="sp-label">GPS radius (metres)</label>
-              <input
-                type="number"
-                value={form.radius_metres}
-                onChange={(e) => setForm({ ...form, radius_metres: e.target.value })}
-                className="sp-input"
-              />
-          <p className="mt-1 text-xs text-ink-2">Default 20m + indoor GPS tolerance.</p>
-            </div>
-            <div>
               <label className="sp-label">Checkpoint type</label>
               <select
                 value={form.checkpoint_role}
                 onChange={(e) => setForm({ ...form, checkpoint_role: e.target.value })}
                 className="sp-input"
               >
-                <option value="patrol">Patrol checkpoint</option>
-                <option value="shift_clock_in">Shift clock-in (Main Entrance · 11am)</option>
-                <option value="shift_clock_out">Shift clock-out tag (optional — without it, hours auto-end at the scheduled / site closing time)</option>
+                <option value="patrol">Patrol checkpoint (patrol verification only)</option>
+                <option value="shift_clock_in">Dedicated clock-in tag (separate from patrol — for the clock in/out NFC fallback)</option>
+                <option value="shift_clock_out">Dedicated clock-out tag (optional — without it, hours auto-end at the scheduled / site closing time)</option>
               </select>
               <p className="mt-1 text-xs text-ink-2">
-                Guards only need to scan Main Entrance to clock in. Clock-out is automatic at shift end.
+                Guards clock in/out with GPS by default; a dedicated clock tag is only the NFC fallback.
+                Patrol checkpoints (e.g. Main Entrance) are for patrol verification and never clock anyone in.
               </p>
             </div>
-            <div className="sm:col-span-2">
-              <label className="sp-label">Paste coordinates (optional)</label>
-              <div className="flex gap-2">
-                <input
-                  value={form.coordPaste}
-                  onChange={(e) => setForm({ ...form, coordPaste: e.target.value })}
-                  placeholder="43.653226, -79.383184"
-                  className="sp-input flex-1"
-                />
-                <button type="button" onClick={applyCoordPaste} className="sp-btn-secondary shrink-0">
-                  Apply
-                </button>
-              </div>
-            </div>
-            <div>
-              <label className="sp-label">Latitude</label>
-              <input
-                value={form.latitude}
-                onChange={(e) => setForm({ ...form, latitude: e.target.value })}
-                required
-                className="sp-input"
-              />
-            </div>
-            <div>
-              <label className="sp-label">Longitude</label>
-              <input
-                value={form.longitude}
-                onChange={(e) => setForm({ ...form, longitude: e.target.value })}
-                required
-                className="sp-input"
-              />
-            </div>
-            <div>
-              <label className="sp-label">Altitude (metres)</label>
-              <div className="flex gap-2">
-                <input
-                  value={form.altitude_metres}
-                  onChange={(e) => setForm({ ...form, altitude_metres: e.target.value })}
-                  placeholder="Auto from floor number"
-                  className="sp-input flex-1"
-                />
-                {form.floor_id && (
-                  <button
-                    type="button"
-                    onClick={() => applyFloorAltitude(form.floor_id)}
-                    className="sp-btn-secondary shrink-0 text-xs"
-                  >
-                    Floor default
-                  </button>
-                )}
-              </div>
-              <p className="mt-1 text-xs text-ink-2">Floor 1 = 0m, floor 2 = 3.5m, floor 5 = 14m, etc.</p>
-            </div>
           </div>
-          <button
-            type="button"
-            onClick={useCurrentLocation}
-            disabled={gpsLoading}
-            className="mt-3 rounded-lg border border-accent-cyan-line/20 bg-accent-cyan/10 px-4 py-2 text-sm font-medium text-brand-800 hover:bg-accent-cyan/15 disabled:opacity-60"
-          >
-            {gpsLoading ? 'Getting GPS…' : 'Use my current GPS location'}
-          </button>
-          {gpsMessage && (
-            <p
-              className={`mt-2 text-sm ${
-                gpsMessage.type === 'error'
-                  ? 'text-accent-red'
-                  : gpsMessage.type === 'success'
-                    ? 'text-accent-green'
-                    : 'text-ink-2'
-              }`}
-            >
-              {gpsMessage.text}
-            </p>
-          )}
-          <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm text-ink-2">
-            <input
-              type="checkbox"
-              checked={generateQrAfterSave}
-              onChange={(e) => setGenerateQrAfterSave(e.target.checked)}
-              className="h-4 w-4 rounded border-white/10 text-accent-cyan-line"
-            />
-            Generate printable QR label after saving
-          </label>
-          <p className="mt-2 text-xs text-ink-2">
-            Also copy the checkpoint UUID to write NFC tags with NFC Tools.
+          <p className="mt-4 text-xs text-ink-2">
+            After saving, copy the checkpoint's UUID and write it to its NFC tag (e.g. with NFC Tools).
           </p>
           <div className="mt-5 flex gap-3">
             <button type="submit" className="sp-btn-primary">Create checkpoint</button>
@@ -558,7 +374,7 @@ export default function CheckpointManager() {
           <div>
             <h2 className="font-display font-semibold">Floors</h2>
             <p className="text-sm text-ink-2">
-              Manage floors, print QR labels, or remove a floor added by mistake.
+              Manage floors, or remove a floor added by mistake.
             </p>
           </div>
           <button type="button" onClick={() => setShowFloorForm(true)} className="sp-btn-secondary py-2 text-xs">
@@ -595,14 +411,6 @@ export default function CheckpointManager() {
                       <div className="flex justify-end gap-2">
                         <button
                           type="button"
-                          onClick={() => printFloorLabels(floor)}
-                          className="sp-btn-secondary py-2 text-xs"
-                        >
-                          <Printer className="h-3.5 w-3.5" />
-                          Print QRs
-                        </button>
-                        <button
-                          type="button"
                           onClick={() => deleteFloor(floor)}
                           className="inline-flex items-center gap-1.5 rounded-xl border border-red-300 bg-accent-red/15 px-3 py-2 text-xs font-semibold text-accent-red transition hover:bg-accent-red/15"
                         >
@@ -628,8 +436,6 @@ export default function CheckpointManager() {
             <tr>
               <th className="px-4 py-3 font-medium">Name</th>
               <th className="px-4 py-3 font-medium">Floor</th>
-              <th className="px-4 py-3 font-medium">GPS</th>
-              <th className="px-4 py-3 font-medium">Radius</th>
               <th className="px-4 py-3 font-medium">Type</th>
               <th className="px-4 py-3 font-medium">ID (NFC)</th>
               <th className="px-4 py-3 font-medium">Actions</th>
@@ -683,8 +489,6 @@ export default function CheckpointManager() {
                   )}
                 </td>
                 <td className="px-4 py-3">{cp.floors?.floor_name}</td>
-                <td className="px-4 py-3 text-xs">{cp.latitude?.toFixed(4)}, {cp.longitude?.toFixed(4)}</td>
-                <td className="px-4 py-3">{cp.radius_metres}m</td>
                 <td className="px-4 py-3 text-xs text-ink-2">
                   {cp.checkpoint_role === 'shift_clock_in'
                     ? 'Clock in'
@@ -706,15 +510,7 @@ export default function CheckpointManager() {
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => openQrModal(cp, `${cp.name} — QR label`)}
-                      className="rounded-lg p-1.5 text-accent-cyan-line hover:bg-accent-cyan/10"
-                      title="Generate & print QR label"
-                    >
-                      <QrCode className="h-4 w-4" />
-                    </button>
+                  <div className="flex justify-end gap-2">
                     <button
                       type="button"
                       onClick={() => deleteCheckpoint(cp.id)}
@@ -733,14 +529,6 @@ export default function CheckpointManager() {
         )}
       </div>
 
-      {qrModal && (
-        <QrPrintModal
-          checkpoints={qrModal.checkpoints}
-          siteName={selectedSiteName}
-          title={qrModal.title}
-          onClose={() => setQrModal(null)}
-        />
-      )}
     </Layout>
   )
 }

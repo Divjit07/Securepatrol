@@ -102,7 +102,7 @@ const clientNavGroups = [
 ]
 
 // Report + History unlock only while clocked in (Scan stays open — it's the
-// NFC/QR clock-in fallback).
+// NFC clock-in fallback).
 const guardLinks = [
   { to: '/guard', label: 'Dashboard', end: true },
   { to: '/guard/scan', label: 'Scan' },

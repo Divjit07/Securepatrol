@@ -415,8 +415,7 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
         Backup:{' '}
         <Link to="/guard/scan" className="font-semibold text-ink-2 underline underline-offset-2 hover:text-ink">
           tap the clock NFC tag
-        </Link>{' '}
-        — QR is the last-resort fallback
+        </Link>
       </p>
     </div>
   )

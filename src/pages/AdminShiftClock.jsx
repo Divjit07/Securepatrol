@@ -329,7 +329,7 @@ export default function AdminShiftClock() {
                   <thead className="bg-white/5 text-ink-2">
                     <tr>
                       <th className="px-6 py-3 font-medium">Guard</th>
-                      <th className="px-6 py-3 font-medium">Main Entrance scan</th>
+                      <th className="px-6 py-3 font-medium">Clock-in scan</th>
                       <th className="px-6 py-3 font-medium">Clock in</th>
                       <th className="px-6 py-3 font-medium">Clock out</th>
                       <th className="px-6 py-3 font-medium">Hours</th>

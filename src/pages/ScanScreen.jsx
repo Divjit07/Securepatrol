@@ -8,9 +8,9 @@ import NFCScanner from '../components/NFCScanner.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { submitScanWithGps } from '../lib/offlineQueue.js'
 
-// Checkpoints are physical NFC tags. Clock punches happen on the dashboard
-// (geofenced GPS) or via an NFC tap here; QR is a server-side last-resort
-// fallback (migration 041) but the in-app QR *scanner* isn't wired yet.
+// Checkpoints are physical NFC tags — tap to verify a patrol visit. Clock punches
+// happen on the dashboard (geofenced GPS) or via a clock NFC tap here. QR was
+// removed entirely (migration 045); NFC is the only scan method.
 export default function ScanScreen() {
   const { user } = useAuth()
   const navigate = useNavigate()

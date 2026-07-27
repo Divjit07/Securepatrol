@@ -4,7 +4,7 @@ import { useGuardClockStatus } from '../hooks/useGuardClockStatus.js'
 
 /**
  * Guard routes behind the time clock: incident reports, history, etc. open
- * only while clocked in. (The scanner stays open — it IS the NFC/QR clock-in
+ * only while clocked in. (The scanner stays open — it IS the NFC clock-in
  * fallback.) Not clocked in → back to the dashboard to punch in first.
  */
 export default function ClockGate({ children }) {

@@ -17,13 +17,13 @@ export default function ClientShiftClock({ guardShifts, scheduled, loading }) {
       <div className="border-b border-white/5 px-5 py-4">
         <h2 className="font-display text-lg font-semibold text-ink">Shift clock</h2>
         <p className="mt-1 text-sm text-ink-2">
-          Guard sign-in at Main Entrance · Shift ends {scheduled?.endLabel || '8:00 PM'}
+          Guard clock-in (GPS / NFC) · Shift ends {scheduled?.endLabel || '8:00 PM'}
         </p>
       </div>
 
       {guardShifts.length === 0 ? (
         <p className="p-8 text-center text-sm text-ink-2">
-          No guard has signed in at Main Entrance for this date yet.
+          No guard has clocked in for this date yet.
         </p>
       ) : (
         <div className="divide-y divide-white/5">
@@ -39,7 +39,7 @@ export default function ClientShiftClock({ guardShifts, scheduled, loading }) {
               <div className="mt-2 space-y-1 text-sm text-ink-2">
                 <p className="flex items-center gap-2">
                   <LogIn className="h-4 w-4 text-accent-green" />
-                  {row.isStatutoryHoliday ? 'Clock in' : 'Signed in'} {formatShiftTime(row.clockInAt)}
+                  {row.isStatutoryHoliday ? 'Clock in' : 'Clocked in'} {formatShiftTime(row.clockInAt)}
                   {!row.isStatutoryHoliday && row.clockInCheckpoint ? ` · ${row.clockInCheckpoint}` : ''}
                 </p>
                 <p className="flex items-center gap-2">
