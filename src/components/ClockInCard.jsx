@@ -128,14 +128,24 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
   const [outNote, setOutNote] = useState('')
   const watchIdRef = useRef(null)
 
+  // Roster-only: a shift window exists only when a shift is published. GPS is
+  // watched and shown ONLY while there's a shift to clock into (or the guard is
+  // on the clock) — never idle. No shift = no location tracking, no "on site".
+  const window_ = shiftWindow(publishedShift, scheduled, date)
+  const shiftActive = Boolean(window_ && !window_.closed)
+  const needsLocation = shiftActive || clockedIn
+
   useEffect(() => {
     if (!siteId) return
     fetchSiteGeofence(siteId).then(setSite).catch(() => setSite(null))
   }, [siteId])
 
-  // Live location while the card is on screen.
+  // Live location — only while a shift is active or the guard is on the clock.
   useEffect(() => {
-    if (!navigator.geolocation) return undefined
+    if (!navigator.geolocation || !needsLocation) {
+      setPosition(null)
+      return undefined
+    }
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
         setGpsError(null)
@@ -152,7 +162,7 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
     return () => {
       if (watchIdRef.current != null) navigator.geolocation.clearWatch(watchIdRef.current)
     }
-  }, [])
+  }, [needsLocation])
 
   const fence = position && site ? geofenceStatus(position, site) : null
   const siteLocated = site && site.latitude != null && site.longitude != null
@@ -163,7 +173,6 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
     const id = setInterval(() => forceTick((n) => n + 1), 30_000)
     return () => clearInterval(id)
   }, [])
-  const window_ = shiftWindow(publishedShift, scheduled, date)
   const punch = punchState(clockedIn ? 'out' : 'in', window_)
   // Card color: green whenever clocked in (red only when overdue to leave);
   // when clocked out it follows the clock-in traffic light.
@@ -275,7 +284,7 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
           </span>
         </p>
 
-        {siteLocated && !clockedIn && (
+        {siteLocated && !clockedIn && shiftActive && (
           <span
             className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
               fence?.located
@@ -297,7 +306,7 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
         )}
       </div>
 
-      {!siteLocated && site !== null && !clockedIn && (
+      {!siteLocated && site !== null && !clockedIn && shiftActive && (
         <p className="mt-3 rounded-xl border border-accent-orange/30 bg-accent-orange/10 px-3 py-2 text-xs text-accent-orange">
           This site has no GPS location yet — ask your admin to set it (Overview → site card → clock icon).
         </p>

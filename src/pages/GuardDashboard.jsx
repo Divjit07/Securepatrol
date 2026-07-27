@@ -37,12 +37,16 @@ function shiftFromPublished(publishedShift) {
 
 export default function GuardDashboard() {
   const { profile, user } = useAuth()
-  const siteId = profile?.site_id
-  const operatingHours = useSiteHours(siteId)
+  const assignedSiteId = profile?.site_id
+  const operatingHours = useSiteHours(assignedSiteId)
   const { date, setDate } = useClientShift(operatingHours)
   // Roster-only: a guard can clock in ONLY when the admin has published a shift
   // for them today. Site operating hours no longer create a standing shift.
   const { shift: publishedShift } = useGuardPublishedShift(user?.id, date)
+  // The guard works the SHIFT's site — which may differ from their default
+  // assignment. Everything (checkpoints, geofence, clock) follows the published
+  // shift's site; only when there's no shift do we fall back to the assignment.
+  const siteId = publishedShift?.site_id || assignedSiteId
   // Punch-based clock state (latest clock scan) — the single source of truth
   // for locking the portal. The whole dashboard collapses to the clock card
   // until the guard is on the clock.
