@@ -1,4 +1,4 @@
-import { getScheduledShiftForDate, shiftBounds, shiftScanBounds } from '../hooks/useClientShift.js'
+import { shiftBounds, shiftScanBounds } from '../hooks/useClientShift.js'
 import { isStatutoryHolidayAdjustment, isExcludedAdjustment, clientStatutoryHolidayLabel } from './shiftAdjustments.js'
 
 export function getPatrolCheckpoints(checkpoints = []) {
@@ -40,16 +40,6 @@ function scheduledClockOutAt(dateStr, shiftEnd, shiftStart = null) {
   // Overnight shift: the scheduled end lands on the next day.
   if (shiftStart && shiftEnd <= shiftStart) out.setDate(out.getDate() + 1)
   return out
-}
-
-export function fixedShiftHours(dateStr, operatingHours) {
-  const schedule = getScheduledShiftForDate(dateStr, operatingHours)
-  if (schedule.isClosed) return 0
-  const [startH, startM] = schedule.start.split(':').map(Number)
-  const [endH, endM] = schedule.end.split(':').map(Number)
-  // +1440 % 1440 keeps overnight shifts (end before start) positive.
-  const minutes = (endH * 60 + endM - startH * 60 - startM + 1440) % 1440
-  return Math.round((minutes / 60) * 100) / 100
 }
 
 export function formatShiftTime(date) {
@@ -98,25 +88,24 @@ function localDateStr(d = new Date()) {
 
 /**
  * Derive one day's pay window from GPS / NFC clock punches.
- * Clock-in and clock-out punches are the source of truth. Site operating
- * hours (or an optional published roster shift) only define the search
- * window and the legacy auto-end when someone clocks in but never out.
- * Admin adjustments always win.
+ * ROSTER-ONLY: a payroll day exists only when there's a published roster shift
+ * (guards can only clock in inside one) OR a manual admin adjustment. Hours are
+ * the actual clocked time within the shift; admin adjustments always win. Site
+ * operating hours no longer create phantom shifts.
  */
-export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustment, operatingHours, publishedShift }) {
+export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustment, publishedShift }) {
   // Admin excluded this day from payroll — skip it entirely (punches stay).
   if (isExcludedAdjustment(adjustment)) return null
-  const schedule = getScheduledShiftForDate(date, operatingHours)
+  const hasShift = Boolean(publishedShift?.starts_at && publishedShift?.ends_at)
+  if (!hasShift && !adjustment) return null
 
-  let shiftStart = schedule.start
-  let shiftEnd = schedule.end
-  if (publishedShift?.starts_at && publishedShift?.ends_at) {
+  let shiftStart = '00:00'
+  let shiftEnd = '23:59'
+  if (hasShift) {
     const ps = new Date(publishedShift.starts_at)
     const pe = new Date(publishedShift.ends_at)
     shiftStart = `${String(ps.getHours()).padStart(2, '0')}:${String(ps.getMinutes()).padStart(2, '0')}`
     shiftEnd = `${String(pe.getHours()).padStart(2, '0')}:${String(pe.getMinutes()).padStart(2, '0')}`
-  } else if (schedule.isClosed) {
-    return null
   }
 
   const passScans = [...guardScans]
@@ -171,13 +160,14 @@ export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustm
     return t >= shiftStartBound && t <= scheduledEnd
   })
 
-  // Scheduled shift length for THIS site/day: the published roster shift when
-  // one exists (12–6 = 6h), otherwise the site's own operating hours. Statutory
-  // holidays credit this — never a shared company-default template.
-  const scheduledShiftMinutes =
-    publishedShift?.starts_at && publishedShift?.ends_at
-      ? Math.max(0, Math.round((new Date(publishedShift.ends_at) - new Date(publishedShift.starts_at)) / 60000))
-      : Math.round(fixedShiftHours(date, operatingHours) * 60)
+  // Scheduled shift length for THIS day: the published roster shift when one
+  // exists (12–6 = 6h), otherwise the admin adjustment's own span. Statutory
+  // holidays credit this.
+  const scheduledShiftMinutes = hasShift
+    ? Math.max(0, Math.round((new Date(publishedShift.ends_at) - new Date(publishedShift.starts_at)) / 60000))
+    : adjustment?.clock_in_at && adjustment?.clock_out_at
+      ? Math.max(0, Math.round((new Date(adjustment.clock_out_at) - new Date(adjustment.clock_in_at)) / 60000))
+      : 0
 
   if (adjustment) {
     clockInAt = new Date(adjustment.clock_in_at)
@@ -232,20 +222,19 @@ export function computeGuardShiftForDay(guardScans, checkpoints, { date, adjustm
  * An admin adjustment ("Edit times") collapses the day to one adjusted session,
  * matching the single-shift path so Edit/Reset stay one-per-guard-per-day.
  */
-export function computeGuardSessionsForDay(guardScans, checkpoints, { date, adjustment, operatingHours, publishedShift }) {
+export function computeGuardSessionsForDay(guardScans, checkpoints, { date, adjustment, publishedShift }) {
   // Admin excluded this day from payroll — skip it entirely (punches stay).
   if (isExcludedAdjustment(adjustment)) return null
-  const schedule = getScheduledShiftForDate(date, operatingHours)
+  const hasShift = Boolean(publishedShift?.starts_at && publishedShift?.ends_at)
+  if (!hasShift && !adjustment) return null
 
-  let shiftStart = schedule.start
-  let shiftEnd = schedule.end
-  if (publishedShift?.starts_at && publishedShift?.ends_at) {
+  let shiftStart = '00:00'
+  let shiftEnd = '23:59'
+  if (hasShift) {
     const ps = new Date(publishedShift.starts_at)
     const pe = new Date(publishedShift.ends_at)
     shiftStart = `${String(ps.getHours()).padStart(2, '0')}:${String(ps.getMinutes()).padStart(2, '0')}`
     shiftEnd = `${String(pe.getHours()).padStart(2, '0')}:${String(pe.getMinutes()).padStart(2, '0')}`
-  } else if (schedule.isClosed) {
-    return null
   }
 
   const passScans = [...guardScans]
@@ -267,10 +256,11 @@ export function computeGuardSessionsForDay(guardScans, checkpoints, { date, adju
   const dayEnd = new Date(Math.max(calendarDayEnd.getTime(), scheduledEnd.getTime() + 6 * 3600000))
 
   const defaultClockOut = scheduledClockOutAt(date, shiftEnd, shiftStart)
-  const scheduledShiftMinutes =
-    publishedShift?.starts_at && publishedShift?.ends_at
-      ? Math.max(0, Math.round((new Date(publishedShift.ends_at) - new Date(publishedShift.starts_at)) / 60000))
-      : Math.round(fixedShiftHours(date, operatingHours) * 60)
+  const scheduledShiftMinutes = hasShift
+    ? Math.max(0, Math.round((new Date(publishedShift.ends_at) - new Date(publishedShift.starts_at)) / 60000))
+    : adjustment?.clock_in_at && adjustment?.clock_out_at
+      ? Math.max(0, Math.round((new Date(adjustment.clock_out_at) - new Date(adjustment.clock_in_at)) / 60000))
+      : 0
 
   // Admin override wins: one adjusted session for the whole day.
   if (adjustment) {

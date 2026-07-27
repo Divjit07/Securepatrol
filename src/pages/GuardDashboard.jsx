@@ -9,7 +9,7 @@ import GuardClockedInPanel from '../components/GuardClockedInPanel.jsx'
 import NextShiftCard from '../components/NextShiftCard.jsx'
 import CheckpointCard from '../components/CheckpointCard.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
-import { useClientShift, getScheduledShiftForDate } from '../hooks/useClientShift.js'
+import { useClientShift } from '../hooks/useClientShift.js'
 import { useSiteHours } from '../hooks/useSiteHours.js'
 import { useClientSiteData } from '../hooks/useClientSiteData.js'
 import { useGuardClockStatus } from '../hooks/useGuardClockStatus.js'
@@ -40,9 +40,8 @@ export default function GuardDashboard() {
   const siteId = profile?.site_id
   const operatingHours = useSiteHours(siteId)
   const { date, setDate } = useClientShift(operatingHours)
-  // Site operating hours gate the clock when no roster shift is published
-  // (a "Closed" day blocks clock-in) — see shiftWindow in ClockInCard.
-  const hoursSchedule = getScheduledShiftForDate(date, operatingHours)
+  // Roster-only: a guard can clock in ONLY when the admin has published a shift
+  // for them today. Site operating hours no longer create a standing shift.
   const { shift: publishedShift } = useGuardPublishedShift(user?.id, date)
   // Punch-based clock state (latest clock scan) — the single source of truth
   // for locking the portal. The whole dashboard collapses to the clock card
@@ -143,7 +142,7 @@ export default function GuardDashboard() {
           clockedIn={false}
           onPunched={handlePunched}
           publishedShift={publishedShift}
-          scheduled={hoursSchedule}
+          scheduled={null}
           date={date}
           nextShift={nextShift}
         />
@@ -185,7 +184,7 @@ export default function GuardDashboard() {
         clockedIn={clockedIn}
         onPunched={handlePunched}
         publishedShift={publishedShift}
-        scheduled={hoursSchedule}
+        scheduled={null}
         date={date}
         nextShift={nextShift}
       />

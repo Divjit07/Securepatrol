@@ -231,8 +231,8 @@ export default function ClientReports() {
     doc.setFontSize(11)
     doc.text(`Site: ${site?.name || ''}`, 14, 33)
     doc.text(`Pay period: ${hoursFilters.fromDate} to ${hoursFilters.toDate}`, 14, 40)
-    doc.text('Schedule: Mon–Fri 11:00 AM–8:00 PM (9 hrs) · Sat 10:00 AM–5:00 PM (7 hrs) · Sun closed', 14, 47)
-    doc.text('Clock-in: GPS clock-in (NFC fallback) · Fixed shift times shown below', 14, 54)
+    doc.text('Hours: actual clocked time within each published shift (GPS clock-in, NFC fallback)', 14, 47)
+    doc.text('Only published roster shifts are billed — see the per-day breakdown below', 14, 54)
 
     autoTable(doc, {
       startY: 62,
@@ -368,7 +368,7 @@ export default function ClientReports() {
       ) : (
         <>
           <div className="mb-4 rounded-xl border border-accent-cyan-line/20 bg-accent-cyan/10 p-4 text-sm text-accent-cyan">
-            Guards <strong>clock in with GPS</strong> (NFC tag as fallback) when they arrive. Each work day is recorded as <strong>9 hours</strong> (Mon–Fri, 11:00 AM–8:00 PM) or <strong>7 hours</strong> (Saturday, 10:00 AM–5:00 PM). Sundays are closed.
+            Guards <strong>clock in with GPS</strong> (NFC tag as fallback) at the start of a <strong>published shift</strong>. Hours shown are the <strong>actual clocked time</strong> within each scheduled shift — only rostered shifts are billed.
           </div>
 
           <div className="mb-4 flex flex-wrap items-end justify-between gap-4">

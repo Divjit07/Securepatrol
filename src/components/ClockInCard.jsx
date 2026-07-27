@@ -38,7 +38,15 @@ export function shiftWindow(publishedShift, scheduled, date) {
 /** Traffic-light state for the punch button vs. the schedule.
  *  (Exported for the /dev/scale logic tests.) */
 export function punchState(type, window, now = new Date()) {
-  if (!window) return { tone: type === 'out' ? 'green' : 'grey', allowed: true, note: null }
+  // Roster-only: no published shift → no window. Clock-IN is blocked (the admin
+  // must post a shift first); clock-OUT stays allowed so anyone already on the
+  // clock can still end their shift.
+  if (!window) {
+    if (type === 'in') {
+      return { tone: 'grey', allowed: false, note: 'No shift scheduled today — ask your admin to post one in the roster.' }
+    }
+    return { tone: 'green', allowed: true, note: null }
+  }
   // Site closed today (operating hours, no published shift): clock-in is
   // blocked; clock-out stays allowed for overnight shifts running past midnight.
   if (window.closed) {
