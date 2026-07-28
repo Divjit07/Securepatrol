@@ -6,6 +6,9 @@
   --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Instrument Sans", "DM Sans", sans-serif;
   --font-serif: "Instrument Serif", Georgia, serif;
+  /* Ops numerics — SF Mono ships on every Apple device (zero network cost),
+     JetBrains/Menlo elsewhere. The "Command Deck" data voice. */
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "DM Mono", Menlo, monospace;
 
   /* Apple palette (widget-board experiment) */
   --color-apple-blue: #0066cc;
@@ -249,11 +252,18 @@
     background: var(--fill-hover);
   }
 
-  /* ---- Dark Ops primitives ---- */
+  /* ---- Dark Ops primitives (bento-upgraded 2026 remaster) ----
+     Seam is inset (left/right) so it never needs overflow-hidden — keeps
+     dropdowns/popovers inside existing .dk-card consumers from being clipped. */
   .dk-card {
-    @apply rounded-2xl bg-surface transition-all duration-300;
+    @apply relative rounded-[24px] bg-surface transition-all duration-300;
     border: 1px solid var(--hairline);
     box-shadow: var(--card-shine);
+  }
+  .dk-card::before {
+    content: "";
+    @apply pointer-events-none absolute left-4 right-4 top-0 h-px;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, white 20%, transparent), transparent);
   }
 
   .dk-card:hover {
@@ -318,13 +328,18 @@
 
   /* ---- sp-* classes (guard app + modals) ---- */
   .sp-card {
-    @apply rounded-2xl bg-surface;
+    @apply relative rounded-[24px] bg-surface;
     border: 1px solid var(--hairline);
     box-shadow: var(--card-shine);
   }
+  .sp-card::before {
+    content: "";
+    @apply pointer-events-none absolute left-4 right-4 top-0 h-px;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, white 18%, transparent), transparent);
+  }
 
   .sp-card-elevated {
-    @apply rounded-2xl bg-surface;
+    @apply relative rounded-[24px] bg-surface;
     border: 1px solid var(--hairline-strong);
     box-shadow: var(--card-shine);
   }
@@ -380,9 +395,18 @@
   }
 
   .sp-stat-card {
-    @apply rounded-2xl bg-surface p-5;
+    @apply relative rounded-[24px] bg-surface p-5 transition-all duration-300;
     border: 1px solid var(--hairline);
     box-shadow: var(--card-shine);
+  }
+  .sp-stat-card::before {
+    content: "";
+    @apply pointer-events-none absolute left-4 right-4 top-0 h-px;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, white 18%, transparent), transparent);
+  }
+  .sp-stat-card:hover {
+    border-color: var(--hairline-strong);
+    box-shadow: var(--card-shine), var(--elev-shadow);
   }
 
   .sp-nav-link {
@@ -677,5 +701,109 @@
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+/* ============================================================================
+   REMASTER 2026 · "Apple Bento × Command Deck"
+   Bento = warm rounded tiles (great on iPhone). Command Deck = crisp hairline
+   data with mono ops numerics. Lime stays reserved for live / positive status.
+   Additive primitives — safe to adopt page-by-page; nothing here is required.
+   ========================================================================== */
+@layer components {
+  /* Premium dark bento tile: big radius, quiet hairline, top light-seam, lift. */
+  .bento {
+    @apply relative overflow-hidden rounded-[28px] bg-surface p-5 transition-all duration-300;
+    border: 1px solid var(--hairline);
+    box-shadow: var(--card-shine);
+  }
+  .bento::before {
+    content: "";
+    @apply pointer-events-none absolute inset-x-0 top-0 h-px;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, white 22%, transparent), transparent);
+  }
+  .bento-interactive {
+    cursor: pointer;
+  }
+  .bento-interactive:hover {
+    border-color: var(--hairline-strong);
+    transform: translateY(-3px);
+    box-shadow: var(--card-shine), 0 22px 50px -22px rgba(0, 0, 0, 0.55);
+  }
+  .bento-interactive:active {
+    transform: translateY(-1px) scale(0.992);
+  }
+
+  /* Colorful KPI bento (light gradient face) — brighter seam reads on light. */
+  .bento-face {
+    @apply relative overflow-hidden rounded-[28px] p-5 transition-all duration-300;
+    box-shadow: var(--card-shine);
+  }
+  .bento-face::before {
+    content: "";
+    @apply pointer-events-none absolute inset-x-0 top-0 h-px;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, white 60%, transparent), transparent);
+  }
+  .bento-face.bento-interactive:hover {
+    transform: translateY(-3px);
+    filter: brightness(1.03) saturate(1.05);
+    box-shadow: var(--card-shine), 0 24px 48px -20px color-mix(in srgb, black 45%, transparent);
+  }
+  .bento-face.bento-interactive:active {
+    transform: translateY(-1px) scale(0.992);
+  }
+
+  /* Command-Deck data numerics — the mono ops voice. */
+  .num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  /* Section eyebrow. */
+  .deck-eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-3;
+  }
+
+  /* Live status dot with a soft outward pulse. */
+  .live-dot {
+    @apply relative inline-flex h-2 w-2 shrink-0 rounded-full;
+    background: var(--color-accent-green);
+  }
+  .live-dot::after {
+    content: "";
+    @apply absolute inset-0 rounded-full;
+    background: var(--color-accent-green);
+    animation: live-pulse 2.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  }
+
+  /* Command-Deck table row — hairline-separated, quiet hover. */
+  .deck-row {
+    @apply flex items-center gap-3 px-4 py-3 transition-colors;
+    border-top: 1px solid var(--hairline);
+  }
+  .deck-row:first-child {
+    border-top: 0;
+  }
+  .deck-row:hover {
+    background: var(--fill-subtle);
+  }
+}
+
+@keyframes live-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  70%,
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-dot::after {
+    animation: none;
   }
 }

@@ -300,7 +300,7 @@ export default function AdminShiftClock() {
       </div>
 
       {scheduled.isClosed ? (
-        <div className="rounded-xl border border-white/10 bg-surface p-8 text-center text-ink-2">
+        <div className="dk-card p-8 text-center text-ink-2">
           {scheduled.scheduleLabel}
         </div>
       ) : (

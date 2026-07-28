@@ -599,7 +599,7 @@ export default function AdminPayroll() {
 
           <div className="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {Object.entries(hoursReport.totalByGuard).map(([guardId, g]) => (
-              <div key={guardId} className="rounded-xl border border-white/10 bg-surface p-4">
+              <div key={guardId} className="dk-card p-4">
                 <p className="text-sm text-ink-2">{g.name}</p>
                 <p className="text-2xl font-bold">{g.hoursLabel}</p>
                 <p className="text-xs text-ink-3">
@@ -616,7 +616,7 @@ export default function AdminPayroll() {
 
           {dayError && <p className="mb-3 text-sm text-accent-red">{dayError}</p>}
 
-          <div className="overflow-x-auto rounded-xl border border-white/10 bg-surface">
+          <div className="overflow-x-auto dk-card">
             <table className="w-full min-w-[52rem] text-sm">
               <thead className="bg-white/5 text-left text-ink-2">
                 <tr>
@@ -769,7 +769,7 @@ export default function AdminPayroll() {
           </div>
         </>
       ) : tab === 'invoices' ? (
-        <div className="max-w-3xl rounded-xl border border-white/10 bg-surface p-5">
+        <div className="max-w-3xl dk-card p-5">
           <p className="flex items-center gap-2 text-sm font-semibold text-ink">
             <Receipt className="h-4 w-4 text-accent-orange" /> Invoice for extra services
           </p>
@@ -951,7 +951,7 @@ export default function AdminPayroll() {
             </div>
           )}
 
-          <div className="mb-4 flex flex-wrap items-end justify-between gap-3 rounded-xl border border-white/10 bg-surface p-4">
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-3 dk-card p-4">
             <div className="flex flex-wrap items-end gap-3">
               <p className="w-full text-xs font-semibold uppercase tracking-wider text-ink-3">
                 Deduction formula · Net = Gross − (Gross × EI%) − ((Gross − exemption) × CPP%) − other fees
@@ -1002,7 +1002,7 @@ export default function AdminPayroll() {
           </div>
 
           {guardsWithHours.length === 0 ? (
-            <div className="rounded-xl border border-white/10 bg-surface p-8 text-center text-ink-2">
+            <div className="dk-card p-8 text-center text-ink-2">
               No guard hours in this pay period — paystubs generate from worked hours.
             </div>
           ) : (
@@ -1012,7 +1012,7 @@ export default function AdminPayroll() {
                 const { stub, totals } = params
                 const money = (n) => `$${n.toFixed(2)}`
                 return (
-                  <div key={guard.id} className="rounded-xl border border-white/10 bg-surface p-5">
+                  <div key={guard.id} className="dk-card p-5">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-display text-lg font-semibold text-ink">{guard.name}</p>

@@ -151,7 +151,7 @@ export default function Reports() {
         description="Patrol scan history with CSV/PDF export. Guard hours and paystubs live in Payroll."
       />
 
-      <div className="mb-6 flex flex-wrap gap-4 rounded-xl border border-white/10 bg-surface p-4">
+      <div className="mb-6 flex flex-wrap gap-4 dk-card p-4">
         <select
           value={scanFilters.siteId}
           onChange={(e) => setScanFilters({ ...scanFilters, siteId: e.target.value })}
@@ -207,15 +207,15 @@ export default function Reports() {
       </div>
 
       <div className="mb-4 grid gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-white/10 bg-surface p-4">
+        <div className="dk-card p-4">
           <p className="text-sm text-ink-2">Total scans</p>
           <p className="text-2xl font-bold">{scans.length}</p>
         </div>
-        <div className="rounded-xl border border-white/10 bg-surface p-4">
+        <div className="dk-card p-4">
           <p className="text-sm text-ink-2">Passed</p>
           <p className="text-2xl font-bold text-accent-green">{passed}</p>
         </div>
-        <div className="rounded-xl border border-white/10 bg-surface p-4">
+        <div className="dk-card p-4">
           <p className="text-sm text-ink-2">Failed</p>
           <p className="text-2xl font-bold text-accent-red">{scans.length - passed}</p>
         </div>
@@ -226,7 +226,7 @@ export default function Reports() {
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent-orange border-t-transparent" />
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-white/10 bg-surface">
+        <div className="overflow-x-auto dk-card">
           <table className="w-full min-w-[44rem] text-sm">
             <thead className="bg-white/5 text-left text-ink-2">
               <tr>

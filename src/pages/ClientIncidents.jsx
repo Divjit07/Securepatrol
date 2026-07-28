@@ -222,8 +222,8 @@ export default function ClientIncidents() {
 
           <ModalBody>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-ink-2">Report</p>
-              <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ink">
+              <p className="deck-eyebrow">Report</p>
+              <p className="mt-2 whitespace-pre-wrap text-[15px] leading-[1.7] text-ink">
                 {selected.description}
               </p>
             </div>

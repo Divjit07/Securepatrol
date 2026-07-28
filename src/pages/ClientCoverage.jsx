@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, ShieldCheck, CalendarDays } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
+import { useReveal } from '../lib/motion.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import {
   fetchShiftsInRange,
@@ -38,6 +39,8 @@ export default function ClientCoverage() {
 
   const weekLabel = `${weekStart.toLocaleDateString([], { month: 'short', day: 'numeric' })} – ${addDays(weekStart, 6).toLocaleDateString([], { month: 'short', day: 'numeric' })}`
 
+  const gridRef = useReveal({ deps: [loading, shifts.length, weekStart] })
+
   return (
     <Layout variant="client">
       <PageHeader
@@ -62,7 +65,7 @@ export default function ClientCoverage() {
             <ShieldCheck className="h-6 w-6" />
           </div>
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-accent-green">On duty now</p>
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-accent-green"><span className="live-dot" /> On duty now</p>
             <p className="font-display text-lg font-semibold text-ink">
               {onDutyNow.map((s) => s.profiles?.name || 'Guard').join(', ')}
             </p>
@@ -82,12 +85,12 @@ export default function ClientCoverage() {
           <p className="mt-1 text-sm text-ink-3">Published guard schedules appear here automatically.</p>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+        <div ref={gridRef} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
           {days.map((day) => {
             const dayShifts = shifts.filter((s) => sameDay(new Date(s.starts_at), day))
             const isToday = sameDay(day, now)
             return (
-              <div key={day.toISOString()} className={`sp-card overflow-hidden ${isToday ? 'ring-2 ring-accent-cyan-line/30' : ''}`}>
+              <div key={day.toISOString()} data-reveal className={`sp-card overflow-hidden ${isToday ? 'ring-2 ring-accent-cyan-line/30' : ''}`}>
                 <div className={`border-b border-white/5 px-5 py-2.5 ${isToday ? 'bg-accent-cyan/10' : 'bg-white/5'}`}>
                   <h2 className={`text-xs font-semibold uppercase tracking-wider ${isToday ? 'text-accent-cyan-line' : 'text-ink-2'}`}>
                     {formatDayLabel(day)} {isToday && '· Today'}

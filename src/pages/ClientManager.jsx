@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
-import { Plus, UserX, UserCheck, Trash2 } from 'lucide-react'
+import { Plus, UserX, UserCheck, Trash2, MapPin } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import { supabase } from '../lib/supabase.js'
+import { useReveal } from '../lib/motion.js'
 import { useAuth } from '../hooks/useAuth.jsx'
+
+const initials = (name) =>
+  (name || '?').split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase()
 import { fetchSitesForAdmin } from '../lib/scans.js'
 import { readFnError } from '../lib/fnError.js'
 import {
@@ -110,6 +114,8 @@ export default function ClientManager() {
     }
   }
 
+  const gridRef = useReveal({ deps: [clients.length] })
+
   return (
     <Layout variant="admin">
       <PageHeader
@@ -191,54 +197,50 @@ export default function ClientManager() {
         </form>
       )}
 
-      {/* Responsive card list — actions (incl. Remove) always visible on mobile. */}
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      {/* Bento client cards — read-only site logins. */}
+      <div ref={gridRef} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {clients.map((client) => (
           <div
             key={client.id}
-            className={`rounded-xl border bg-surface p-4 ${
-              client.unassigned ? 'border-accent-orange/40' : 'border-white/10'
-            }`}
+            data-reveal
+            className={`bento bento-interactive ${client.unassigned ? 'ring-1 ring-accent-orange/40' : ''}`}
           >
             <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="truncate font-semibold text-ink">{client.name}</p>
-                <p className="truncate text-xs text-ink-2">{client.email}</p>
+              <div className="flex min-w-0 items-center gap-3">
+                <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-bold ${client.active ? 'bg-accent-cyan/20 text-accent-cyan-line' : 'bg-white/[0.06] text-ink-3'}`}>
+                  {initials(client.name)}
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-[15px] font-semibold text-ink">{client.name}</p>
+                  <p className="truncate text-xs text-ink-3">{client.email}</p>
+                </div>
               </div>
-              <span
-                className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
-                  client.active ? 'bg-accent-green/15 text-accent-green' : 'bg-accent-red/15 text-accent-red'
-                }`}
-              >
+              <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${client.active ? 'bg-accent-green/15 text-accent-green' : 'bg-accent-red/15 text-accent-red'}`}>
                 {client.active ? 'Active' : 'Inactive'}
               </span>
             </div>
 
-            <label className="mt-3 block text-[10px] font-semibold uppercase tracking-wider text-ink-3">
-              Assigned site
+            <label className="mt-4 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-ink-3">
+              <MapPin className="h-3 w-3" /> Site access
             </label>
             <select
-              className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm ${
-                client.unassigned ? 'border-accent-orange/40 bg-accent-orange/10' : 'border-white/10 bg-inset'
-              }`}
+              className={`sp-input mt-1.5 ${client.unassigned ? 'border-accent-orange/40' : ''}`}
               value={client.site_id || ''}
               disabled={assigningId === client.id}
               onChange={(e) => handleAssignSite(client.id, e.target.value)}
             >
               <option value="">— Not assigned —</option>
               {sites.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}{s.address ? ` — ${s.address}` : ''}
-                </option>
+                <option key={s.id} value={s.id}>{s.name}{s.address ? ` — ${s.address}` : ''}</option>
               ))}
             </select>
 
-            <div className="mt-3 flex gap-2">
+            <div className="mt-4 flex gap-2">
               <button
                 type="button"
                 onClick={() => toggleActive(client)}
                 disabled={removingId === client.id}
-                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-ink-2 hover:bg-white/5 disabled:opacity-40"
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-semibold text-ink-2 transition hover:bg-white/[0.08] hover:text-ink disabled:opacity-40"
               >
                 {client.active ? <UserX className="h-3.5 w-3.5" /> : <UserCheck className="h-3.5 w-3.5" />}
                 {client.active ? 'Deactivate' : 'Activate'}
@@ -247,7 +249,7 @@ export default function ClientManager() {
                 type="button"
                 onClick={() => handleRemoveClient(client)}
                 disabled={removingId === client.id}
-                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-accent-red/30 px-3 py-2 text-xs font-semibold text-accent-red hover:bg-accent-red/10 disabled:opacity-40"
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-accent-red/30 px-3 py-2 text-xs font-semibold text-accent-red transition hover:bg-accent-red/10 disabled:opacity-40"
               >
                 <Trash2 className="h-3.5 w-3.5" /> Remove
               </button>
@@ -255,9 +257,9 @@ export default function ClientManager() {
           </div>
         ))}
         {clients.length === 0 && (
-          <p className="rounded-xl border border-white/10 bg-surface p-8 text-center text-ink-2 sm:col-span-2 xl:col-span-3">
+          <div className="hatch-empty flex items-center justify-center rounded-[28px] border border-white/5 p-12 text-center text-sm text-ink-3 sm:col-span-2 xl:col-span-3">
             No client accounts yet. Click Add Client to create one.
-          </p>
+          </div>
         )}
       </div>
     </Layout>

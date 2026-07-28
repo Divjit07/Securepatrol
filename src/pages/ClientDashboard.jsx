@@ -32,9 +32,9 @@ export default function ClientDashboard() {
   return (
     <Layout variant="client">
       <div className="mb-6">
-        <p className="text-sm font-medium uppercase tracking-wide text-accent-cyan-line">Client Portal</p>
-        <h1 className="mt-1 font-display text-2xl font-bold">{site?.name || 'Patrol Overview'}</h1>
-        <p className="text-ink-2">{site?.address || 'Live scan activity for your site'}</p>
+        <p className="deck-eyebrow text-accent-cyan-line">Client Portal</p>
+        <h1 className="mt-1.5 font-display text-2xl font-bold tracking-tight sm:text-3xl">{site?.name || 'Patrol Overview'}</h1>
+        <p className="mt-1 text-ink-2">{site?.address || 'Live scan activity for your site'}</p>
       </div>
 
       <ClientShiftBar
@@ -80,10 +80,10 @@ export default function ClientDashboard() {
       </div>
 
       {guards.length > 0 && (
-        <div className="mb-6 flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-surface px-4 py-3 shadow-sm">
-          <p className="text-sm font-medium text-ink-2">On duty:</p>
+        <div className="dk-card mb-6 flex flex-wrap items-center gap-2 px-4 py-3">
+          <span className="flex items-center gap-1.5 text-sm font-medium text-ink-2"><span className="live-dot" /> On duty:</span>
           {guards.map((g) => (
-            <span key={g.id} className="rounded-full bg-white/10 px-3 py-1 text-sm font-medium text-ink-2">
+            <span key={g.id} className="rounded-full bg-white/10 px-3 py-1 text-sm font-medium text-ink">
               {g.name}
             </span>
           ))}
@@ -97,56 +97,50 @@ export default function ClientDashboard() {
       ) : (
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <div className="overflow-hidden rounded-xl border border-white/10 bg-surface shadow-sm">
-              <div className="border-b border-white/5 px-5 py-4">
-                <h2 className="font-display text-lg font-semibold">Scan history</h2>
-                <p className="mt-0.5 text-sm text-ink-2">
-                  Successful check-ins for {date} · {shift.start}–{shift.end}
-                </p>
+            <div className="dk-card overflow-hidden p-0">
+              <div className="flex items-center justify-between px-5 pb-3 pt-5">
+                <div>
+                  <h2 className="font-display text-base font-bold text-ink">Scan history</h2>
+                  <p className="mt-0.5 text-xs text-ink-3">
+                    Successful check-ins for {date} · {shift.start}–{shift.end}
+                  </p>
+                </div>
+                {scans.length > 0 && (
+                  <span className="rounded-full bg-accent-green/15 px-2.5 py-1 text-[11px] font-bold tabular-nums text-accent-green">
+                    {scans.length} pass{scans.length === 1 ? '' : 'es'}
+                  </span>
+                )}
               </div>
 
               {scans.length === 0 ? (
-                <p className="p-10 text-center text-sm text-ink-2">
-                  No successful scans during this shift yet.
-                </p>
+                <div className="hatch-empty m-3 flex items-center justify-center rounded-2xl border border-white/5 py-14 text-center">
+                  <p className="px-6 text-sm text-ink-3">No successful scans during this shift yet.</p>
+                </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[32rem] text-sm">
-                    <thead className="bg-white/5 text-left text-ink-2">
-                      <tr>
-                        <th className="px-5 py-3 font-medium">Time</th>
-                        <th className="px-5 py-3 font-medium">Checkpoint</th>
-                        <th className="px-5 py-3 font-medium">Guard</th>
-                        <th className="px-5 py-3 font-medium">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/5">
-                      {scans.map((scan) => {
-                        const cp = checkpoints.find((c) => c.id === scan.checkpoint_id)
-                        return (
-                          <tr key={scan.id} className="hover:bg-white/5">
-                            <td className="whitespace-nowrap px-5 py-3.5 text-ink-2">
-                              {new Date(scan.scanned_at).toLocaleString()}
-                            </td>
-                            <td className="px-5 py-3.5">
-                              <p className="font-medium text-ink">{cp?.name || 'Checkpoint'}</p>
-                              {cp?.floor?.floor_name && (
-                                <p className="text-xs text-ink-2">{cp.floor.floor_name}</p>
-                              )}
-                            </td>
-                            <td className="px-5 py-3.5 text-ink-2">
-                              {scan.profiles?.name || 'Guard'}
-                            </td>
-                            <td className="px-5 py-3.5">
-                              <span className="inline-flex items-center gap-1.5 rounded-full bg-accent-green/15 px-2.5 py-1 text-xs font-semibold text-accent-green ring-1 ring-accent-green/30">
-                                <CheckCircle2 className="h-3.5 w-3.5" /> Pass
-                              </span>
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
+                <div className="max-h-[32rem] space-y-1 overflow-y-auto px-2 pb-2">
+                  {scans.map((scan) => {
+                    const cp = checkpoints.find((c) => c.id === scan.checkpoint_id)
+                    return (
+                      <div
+                        key={scan.id}
+                        className="group flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-all duration-200 hover:bg-white/[0.05]"
+                      >
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-green/15 text-accent-green transition group-hover:scale-105">
+                          <CheckCircle2 className="h-5 w-5" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-ink">{cp?.name || 'Checkpoint'}</p>
+                          <p className="truncate text-xs text-ink-3">
+                            {cp?.floor?.floor_name ? `${cp.floor.floor_name} · ` : ''}{scan.profiles?.name || 'Guard'}
+                          </p>
+                        </div>
+                        <span className="shrink-0 text-right text-xs tabular-nums text-ink-3">
+                          {new Date(scan.scanned_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                        </span>
+                        <span className="shrink-0 rounded-full bg-accent-green/15 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-accent-green">PASS</span>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </div>

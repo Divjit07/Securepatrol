@@ -41,13 +41,13 @@ export default function SiteDashboard() {
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-sm font-medium uppercase tracking-wide text-accent-cyan-line">Site Dashboard</p>
-          <h1 className="mt-1 font-display text-2xl font-bold">{site?.name || 'Patrol Overview'}</h1>
-          <p className="text-ink-2">{site?.address || 'Live scan activity for this site'}</p>
+          <p className="deck-eyebrow text-accent-cyan-line">Site Dashboard</p>
+          <h1 className="mt-1.5 font-display text-2xl font-bold tracking-tight sm:text-3xl">{site?.name || 'Patrol Overview'}</h1>
+          <p className="mt-1 text-ink-2">{site?.address || 'Live scan activity for this site'}</p>
         </div>
         <Link
           to={`/admin/site/${id}/live`}
-          className="flex items-center gap-1 rounded-lg border border-white/10 bg-surface px-4 py-2 text-sm font-medium hover:bg-white/5"
+          className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-semibold text-ink-2 transition hover:bg-white/10 hover:text-ink"
         >
           <Radio className="h-4 w-4" /> Live Feed
         </Link>
@@ -67,10 +67,10 @@ export default function SiteDashboard() {
       />
 
       {guards.length > 0 && (
-        <div className="mb-6 flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-surface px-4 py-3 shadow-sm">
-          <p className="text-sm font-medium text-ink-2">On duty:</p>
+        <div className="dk-card mb-6 flex flex-wrap items-center gap-2 px-4 py-3">
+          <span className="flex items-center gap-1.5 text-sm font-medium text-ink-2"><span className="live-dot" /> On duty:</span>
           {guards.map((g) => (
-            <span key={g.id} className="rounded-full bg-white/10 px-3 py-1 text-sm font-medium text-ink-2">
+            <span key={g.id} className="rounded-full bg-white/10 px-3 py-1 text-sm font-medium text-ink">
               {g.name}
             </span>
           ))}
@@ -84,7 +84,7 @@ export default function SiteDashboard() {
       ) : (
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <div className="overflow-hidden rounded-xl border border-white/10 bg-surface shadow-sm">
+            <div className="dk-card overflow-hidden p-0">
               <div className="border-b border-white/5 px-5 py-4">
                 <h2 className="font-display text-lg font-semibold">Scan history</h2>
                 <p className="mt-0.5 text-sm text-ink-2">

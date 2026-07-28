@@ -6,15 +6,15 @@ export default function KpiCard({ icon: Icon, label, value, tone }) {
   const t = KPI_TONES[tone]
   if (t) {
     return (
-      <div className={`relative overflow-hidden rounded-2xl p-5 transition-all duration-300 hover:-translate-y-px kpi-tone-card ${t.bg}`}>
+      <div className={`bento-face bento-interactive kpi-tone-card ${t.bg}`}>
         <div className="absolute -right-4 bottom-0 h-24 w-24 rounded-full bg-white/40 blur-xl" />
-        <div className="flex items-start justify-between">
-          <p className={`kpi-tone-value text-4xl font-semibold tracking-tight tabular-nums ${t.ink}`}>
+        <div className="relative flex items-start justify-between">
+          <p className={`kpi-tone-value font-display text-[40px] font-bold leading-none tracking-tight tabular-nums ${t.ink}`}>
             <AnimatedNumber value={value} />
           </p>
           <Icon className={`kpi-tone-icon h-4 w-4 ${t.icon}`} />
         </div>
-        <p className={`kpi-tone-label mt-2 text-xs ${t.sub}`}>{label}</p>
+        <p className={`kpi-tone-label relative mt-3 text-xs font-medium ${t.sub}`}>{label}</p>
       </div>
     )
   }

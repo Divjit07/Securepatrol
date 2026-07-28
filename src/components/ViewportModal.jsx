@@ -8,9 +8,9 @@ export default function ViewportModal({ children, onClose, labelledBy }) {
   if (typeof document === 'undefined') return null
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6">
       <div
-        className="absolute inset-0 bg-slate-900/55"
+        className="absolute inset-0 bg-black/70 backdrop-blur-md"
         onClick={onClose}
         aria-hidden
       />
@@ -18,8 +18,8 @@ export default function ViewportModal({ children, onClose, labelledBy }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
-        className="relative z-10 flex w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-ink/10 bg-surface shadow-xl"
-        style={{ maxHeight: 'calc(100dvh - 2rem)' }}
+        className="animate-rise relative z-10 flex w-full max-w-2xl flex-col overflow-hidden rounded-[28px] border border-white/10 bg-surface shadow-2xl shadow-black/60"
+        style={{ maxHeight: 'calc(100dvh - 1.5rem)' }}
         onClick={(e) => e.stopPropagation()}
       >
         {children}
@@ -31,7 +31,7 @@ export default function ViewportModal({ children, onClose, labelledBy }) {
 
 export function ModalHeader({ children }) {
   return (
-    <div className="flex shrink-0 items-start justify-between gap-3 border-b border-ink/10 px-5 py-4">
+    <div className="flex shrink-0 items-start justify-between gap-3 border-b border-white/8 px-6 py-4">
       {children}
     </div>
   )
@@ -39,7 +39,7 @@ export function ModalHeader({ children }) {
 
 export function ModalBody({ children }) {
   return (
-    <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 py-4">
+    <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-6 py-5">
       {children}
     </div>
   )

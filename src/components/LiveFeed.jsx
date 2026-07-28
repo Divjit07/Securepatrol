@@ -1,6 +1,16 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { Radio, X } from 'lucide-react'
+import { Radio, X, CheckCircle2, XCircle, ChevronRight, MapPin, Clock } from 'lucide-react'
 import { supabase } from '../lib/supabase.js'
+
+function timeAgo(d) {
+  const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000)
+  if (s < 60) return 'just now'
+  const m = Math.floor(s / 60)
+  if (m < 60) return `${m}m ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ago`
+  return new Date(d).toLocaleDateString([], { month: 'short', day: 'numeric' })
+}
 
 async function fetchScanDetails(scanId) {
   const { data } = await supabase
@@ -95,43 +105,46 @@ export default function LiveFeed({ siteId, limit = 20, passesOnly = false }) {
   }, [siteId, limit, passesOnly, loadRecent])
 
   return (
-    <div className="rounded-xl border border-white/10 bg-surface">
-      <div className="flex items-center justify-between border-b border-white/5 px-4 py-3">
-        <h3 className="font-semibold">Live Feed</h3>
-        <span className={`flex items-center gap-1.5 text-xs ${connected ? 'text-accent-green' : 'text-ink-3'}`}>
-          <Radio className={`h-3.5 w-3.5 ${connected ? 'animate-pulse' : ''}`} />
+    <div className="dk-card overflow-hidden p-0">
+      <div className="flex items-center justify-between px-5 pb-3 pt-5">
+        <h3 className="font-display text-base font-bold text-ink">Live Feed</h3>
+        <span className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${connected ? 'bg-accent-green/15 text-accent-green' : 'bg-white/5 text-ink-3'}`}>
+          {connected ? <span className="live-dot" /> : <Radio className="h-3 w-3" />}
           {connected ? 'Live' : 'Connecting…'}
         </span>
       </div>
 
-      <div className="max-h-96 overflow-y-auto divide-y divide-white/5">
+      <div className="max-h-[26rem] space-y-1 overflow-y-auto px-2 pb-2">
         {scans.length === 0 ? (
-          <p className="p-4 text-sm text-ink-2">No scans yet. Waiting for guard check-ins…</p>
+          <div className="hatch-empty m-2 flex items-center justify-center rounded-2xl border border-white/5 py-12 text-center">
+            <p className="px-6 text-sm text-ink-3">No scans yet. Waiting for guard check-ins…</p>
+          </div>
         ) : (
-          scans.map((scan) => {
+          scans.map((scan, i) => {
             const label = scan.checkpoints?.name || 'Checkpoint'
-            const statusLabel = scan.status === 'pass' ? 'PASS' : 'FAIL'
+            const pass = scan.status === 'pass'
+            const isNewest = i === 0
             return (
               <button
                 key={scan.id}
                 type="button"
                 onClick={() => setSelected(scan)}
-                aria-label={`${statusLabel} — ${label} details`}
-                className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-white/5"
+                aria-label={`${pass ? 'PASS' : 'FAIL'} — ${label} details`}
+                className={`group flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-all duration-200 hover:bg-white/[0.06] ${isNewest ? 'bg-accent-green/[0.06] ring-1 ring-accent-green/20' : ''}`}
               >
-                <div>
-                  <p className="font-medium text-sm">{label}</p>
-                  <p className="text-xs text-ink-2">
-                    {scan.profiles?.name || 'Guard'} · {new Date(scan.scanned_at).toLocaleString()}
+                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${pass ? 'bg-accent-green/15 text-accent-green' : 'bg-accent-red/15 text-accent-red'}`}>
+                  {pass ? <CheckCircle2 className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-ink">{label}</p>
+                  <p className="truncate text-xs text-ink-3">
+                    {scan.profiles?.name || 'Guard'} · {timeAgo(scan.scanned_at)}
                   </p>
                 </div>
-                <span
-                  className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    scan.status === 'pass' ? 'bg-accent-green/15 text-accent-green' : 'bg-accent-red/15 text-accent-red'
-                  }`}
-                >
-                  {statusLabel}
+                <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wide ${pass ? 'bg-accent-green/15 text-accent-green' : 'bg-accent-red/15 text-accent-red'}`}>
+                  {pass ? 'PASS' : 'FAIL'}
                 </span>
+                <ChevronRight className="h-4 w-4 shrink-0 -translate-x-1 text-ink-3 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
               </button>
             )
           })
@@ -147,60 +160,48 @@ export default function LiveFeed({ siteId, limit = 20, passesOnly = false }) {
           onClick={() => setSelected(null)}
         >
           <div
-            className="w-full max-w-md rounded-2xl border border-white/10 bg-surface p-5 shadow-xl"
+            className="animate-rise w-full max-w-md overflow-hidden rounded-[28px] border border-white/10 bg-surface shadow-2xl shadow-black/50"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-ink-2">Checkpoint scan</p>
-                <h4 className="text-lg font-semibold text-ink">
-                  {selected.checkpoints?.name || 'Checkpoint'}
-                </h4>
-              </div>
+            {/* Hero status band */}
+            <div className={`relative px-6 pb-5 pt-6 ${selected.status === 'pass' ? 'bg-accent-green/10' : 'bg-accent-red/10'}`}>
               <button
                 type="button"
                 onClick={() => setSelected(null)}
-                className="rounded-lg p-1.5 text-ink-2 hover:bg-white/5 hover:text-ink"
+                className="absolute right-4 top-4 rounded-lg p-1.5 text-ink-2 transition hover:bg-white/10 hover:text-ink"
                 aria-label="Close"
               >
                 <X className="h-4 w-4" />
               </button>
-            </div>
-            <dl className="space-y-3 text-sm">
-              <div className="flex justify-between gap-4">
-                <dt className="text-ink-2">Status</dt>
-                <dd>
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                      selected.status === 'pass'
-                        ? 'bg-accent-green/15 text-accent-green'
-                        : 'bg-accent-red/15 text-accent-red'
-                    }`}
-                  >
-                    {selected.status === 'pass' ? 'PASS' : 'FAIL'}
-                  </span>
-                </dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-ink-2">Guard</dt>
-                <dd className="font-medium text-ink">{selected.profiles?.name || '—'}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-ink-2">Time</dt>
-                <dd className="font-medium text-ink">
-                  {new Date(selected.scanned_at).toLocaleString()}
-                </dd>
-              </div>
-              {selected.distance_metres != null && (
-                <div className="flex justify-between gap-4">
-                  <dt className="text-ink-2">Distance</dt>
-                  <dd className="font-medium text-ink">{Number(selected.distance_metres).toFixed(0)} m</dd>
+              <div className="flex items-center gap-3">
+                <span className={`flex h-12 w-12 items-center justify-center rounded-2xl ${selected.status === 'pass' ? 'bg-accent-green/20 text-accent-green' : 'bg-accent-red/20 text-accent-red'}`}>
+                  {selected.status === 'pass' ? <CheckCircle2 className="h-6 w-6" /> : <XCircle className="h-6 w-6" />}
+                </span>
+                <div>
+                  <p className="deck-eyebrow">Checkpoint scan</p>
+                  <h4 className="font-display text-xl font-bold text-ink">{selected.checkpoints?.name || 'Checkpoint'}</h4>
                 </div>
-              )}
-            </dl>
-            <button type="button" onClick={() => setSelected(null)} className="dk-cta mt-5 w-full justify-center">
-              Close
-            </button>
+              </div>
+            </div>
+
+            <div className="space-y-2 p-4">
+              {[
+                { icon: MapPin, label: 'Guard', value: selected.profiles?.name || '—' },
+                { icon: Clock, label: 'Time', value: new Date(selected.scanned_at).toLocaleString() },
+                ...(selected.distance_metres != null
+                  ? [{ icon: MapPin, label: 'Distance', value: `${Number(selected.distance_metres).toFixed(0)} m` }]
+                  : []),
+              ].map((row) => (
+                <div key={row.label} className="flex items-center gap-3 rounded-2xl bg-white/[0.04] px-4 py-3">
+                  <row.icon className="h-4 w-4 shrink-0 text-ink-3" />
+                  <span className="text-sm text-ink-3">{row.label}</span>
+                  <span className="ml-auto text-sm font-semibold text-ink">{row.value}</span>
+                </div>
+              ))}
+              <button type="button" onClick={() => setSelected(null)} className="dk-cta mt-2 w-full justify-center">
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

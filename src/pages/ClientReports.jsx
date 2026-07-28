@@ -340,7 +340,7 @@ export default function ClientReports() {
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent-orange border-t-transparent" />
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-white/10 bg-surface">
+            <div className="overflow-x-auto dk-card">
               <table className="w-full min-w-[44rem] text-sm">
                 <thead className="bg-white/5 text-left text-ink-2">
                   <tr>
@@ -404,7 +404,7 @@ export default function ClientReports() {
             <>
               <div className="mb-4 grid gap-4 sm:grid-cols-2">
                 {Object.values(hoursReport.totalByGuard).map((g) => (
-                  <div key={g.name} className="rounded-xl border border-white/10 bg-surface p-4 shadow-sm">
+                  <div key={g.name} className="dk-card p-4 shadow-sm">
                     <p className="text-sm text-ink-2">{g.name}</p>
                     <p className="text-2xl font-bold">{g.hoursLabel}</p>
                     <p className="text-xs text-ink-3">{g.days} days worked</p>
@@ -412,7 +412,7 @@ export default function ClientReports() {
                 ))}
               </div>
 
-              <div className="overflow-x-auto rounded-xl border border-white/10 bg-surface">
+              <div className="overflow-x-auto dk-card">
                 <table className="w-full min-w-[44rem] text-sm">
                   <thead className="bg-white/5 text-left text-ink-2">
                     <tr>

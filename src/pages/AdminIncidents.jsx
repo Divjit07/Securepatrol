@@ -356,7 +356,7 @@ export default function AdminIncidents() {
                   </div>
                 </>
               ) : (
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ink">
+                <p className="mt-2 whitespace-pre-wrap text-[15px] leading-[1.7] text-ink">
                   {selected.description}
                 </p>
               )}

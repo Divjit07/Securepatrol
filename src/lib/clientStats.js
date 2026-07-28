@@ -1,8 +1,12 @@
 import { shiftBounds, shiftScanBounds } from '../hooks/useClientShift.js'
 import { isStatutoryHolidayAdjustment, isExcludedAdjustment, clientStatutoryHolidayLabel } from './shiftAdjustments.js'
 
+// Patrol coverage counts ONLY patrol-role checkpoints. The dedicated clock-in /
+// clock-out NFC tags (shift_clock_in / shift_clock_out) are a GPS-clock fallback,
+// never part of a patrol round — so a site with 9 patrol tags + a clock-in + a
+// clock-out tag has 9 checkpoints per round, not 10 or 11.
 export function getPatrolCheckpoints(checkpoints = []) {
-  return checkpoints.filter((cp) => (cp.checkpoint_role || 'patrol') !== 'shift_clock_out')
+  return checkpoints.filter((cp) => (cp.checkpoint_role || 'patrol') === 'patrol')
 }
 
 export function countPatrolRounds(scans = [], checkpoints = [], { date, shiftStart, shiftEnd } = {}) {

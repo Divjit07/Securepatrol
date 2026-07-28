@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Building2, ChevronRight, MapPin, Plus, Search, ShieldCheck, X } from 'lucide-react'
+import { Building2, ArrowUpRight, MapPin, Plus, Search, ShieldCheck, X } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
+import { useReveal } from '../lib/motion.js'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { fetchSitesForAdmin } from '../lib/scans.js'
 import { fetchGuardsWithSites } from '../lib/guards.js'
@@ -99,6 +100,8 @@ export default function AdminSites() {
     : sites
   const missingGpsSites = sites.filter((s) => s.latitude == null || s.longitude == null)
   const missingGps = missingGpsSites.length
+
+  const gridRef = useReveal({ deps: [loading, matches.length] })
 
   return (
     <Layout variant="admin">
@@ -217,52 +220,56 @@ export default function AdminSites() {
           )}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-white/10 bg-surface">
-          <div className="divide-y divide-white/5">
-            {matches.map((site) => {
-              const geofenced = site.latitude != null && site.longitude != null
-              const guardCount = guardCountBySite[site.id] || 0
-              return (
-                <div key={site.id} className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-3">
-                  <Link
-                    to={`/admin/map?geofence=${site.id}`}
-                    className="flex min-w-0 flex-1 items-center gap-4 rounded-xl px-2 py-2 transition hover:bg-white/5"
-                    title="Set or update geofence on Live Map"
-                  >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/5">
+        <div ref={gridRef} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {matches.map((site) => {
+            const geofenced = site.latitude != null && site.longitude != null
+            const guardCount = guardCountBySite[site.id] || 0
+            return (
+              <div key={site.id} data-reveal className="group relative bento bento-interactive">
+                {/* Full-card primary action → geofence on Live Map. */}
+                <Link
+                  to={`/admin/map?geofence=${site.id}`}
+                  className="absolute inset-0 rounded-[28px]"
+                  title="Set or update geofence on Live Map"
+                  aria-label={`Set geofence for ${site.name}`}
+                />
+                <div className="pointer-events-none flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/[0.06]">
                       <Building2 className="h-5 w-5 text-ink-2" />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-ink">{site.name}</p>
-                      <p className="truncate text-xs text-ink-2">{site.address || 'No address — tap to geofence'}</p>
+                    <div className="min-w-0">
+                      <p className="truncate text-[15px] font-semibold text-ink">{site.name}</p>
+                      <p className="truncate text-xs text-ink-3">{site.address || 'No address — tap to geofence'}</p>
                     </div>
-                    <span className="hidden shrink-0 items-center gap-1.5 text-xs text-ink-2 sm:flex">
-                      <ShieldCheck className="h-3.5 w-3.5 text-ink-3" />
-                      {guardCount} guard{guardCount === 1 ? '' : 's'}
-                    </span>
-                    <span
-                      className={`flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                        geofenced
-                          ? 'bg-accent-green/15 text-accent-green'
-                          : 'bg-accent-red/15 text-accent-red'
-                      }`}
-                    >
-                      <MapPin className="h-3 w-3" />
-                      {geofenced ? `${site.geofence_radius_m ?? 120}m` : 'Set GPS'}
-                    </span>
-                  </Link>
+                  </div>
+                  <span
+                    className={`flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                      geofenced ? 'bg-accent-green/15 text-accent-green' : 'bg-accent-red/15 text-accent-red'
+                    }`}
+                  >
+                    <MapPin className="h-3 w-3" />
+                    {geofenced ? <span className="tabular-nums">{site.geofence_radius_m ?? 120}m</span> : 'Set GPS'}
+                  </span>
+                </div>
+
+                <div className="mt-6 flex items-center justify-between">
+                  <span className="pointer-events-none flex items-center gap-1.5 rounded-full bg-white/[0.05] px-3 py-1 text-xs font-medium text-ink-2">
+                    <ShieldCheck className="h-3.5 w-3.5 text-ink-3" />
+                    <span className="tabular-nums">{guardCount}</span> guard{guardCount === 1 ? '' : 's'}
+                  </span>
                   <Link
                     to={`/admin/site/${site.id}`}
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-ink-3 transition hover:bg-white/10 hover:text-ink"
+                    className="relative z-10 flex items-center gap-1 rounded-full bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-ink-2 transition hover:bg-white/10 hover:text-ink"
                     title="Open site dashboard"
                     aria-label={`Open ${site.name} dashboard`}
                   >
-                    <ChevronRight className="h-4 w-4" />
+                    Dashboard <ArrowUpRight className="h-3.5 w-3.5" />
                   </Link>
                 </div>
-              )
-            })}
-          </div>
+              </div>
+            )
+          })}
         </div>
       )}
     </Layout>

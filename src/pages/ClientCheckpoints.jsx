@@ -30,9 +30,9 @@ export default function ClientCheckpoints() {
   return (
     <Layout variant="client">
       <div className="mb-6">
-        <p className="text-sm font-medium uppercase tracking-wide text-accent-cyan-line">Client Portal</p>
-        <h1 className="mt-1 font-display text-2xl font-bold">Shift Clock</h1>
-        <p className="text-ink-2">
+        <p className="deck-eyebrow text-accent-cyan-line">Client Portal</p>
+        <h1 className="mt-1.5 font-display text-2xl font-bold tracking-tight sm:text-3xl">Shift Clock</h1>
+        <p className="mt-1 text-ink-2">
           {site?.name || 'Your site'} — when guards signed in for the selected date
         </p>
       </div>
@@ -53,11 +53,11 @@ export default function ClientCheckpoints() {
       <ClientShiftClock guardShifts={guardShifts} scheduled={scheduled} loading={loading} />
 
       {guards.length > 0 && (
-        <div className="mt-8 rounded-xl border border-white/10 bg-surface p-4 shadow-sm">
-          <p className="text-sm font-medium text-ink-2">Guards at this site</p>
-          <div className="mt-2 flex flex-wrap gap-2">
+        <div className="dk-card mt-8 p-5">
+          <p className="deck-eyebrow">Guards at this site</p>
+          <div className="mt-3 flex flex-wrap gap-2">
             {guards.map((g) => (
-              <span key={g.id} className="rounded-lg bg-white/5 px-3 py-1.5 text-sm">
+              <span key={g.id} className="rounded-full bg-white/[0.06] px-3 py-1.5 text-sm text-ink">
                 {g.name}
               </span>
             ))}
