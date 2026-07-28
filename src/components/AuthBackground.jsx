@@ -1,6 +1,8 @@
+import Particles from './auth/Particles.jsx'
+
 /**
  * Dark Ops login backdrop — deep charcoal/forest canvas, lime auras,
- * faint mechanical watermark, and soft sparkles (matches Kratos sign-in art).
+ * Magic UI–style particles, faint mechanical watermark.
  */
 export default function AuthBackground() {
   return (
@@ -9,16 +11,18 @@ export default function AuthBackground() {
         className="absolute inset-0"
         style={{
           background:
-            'radial-gradient(85% 65% at 72% 18%, rgba(150, 238, 96, 0.14) 0%, transparent 55%),' +
-            'radial-gradient(60% 50% at 12% 82%, rgba(127, 208, 159, 0.10) 0%, transparent 50%),' +
-            'radial-gradient(40% 35% at 88% 78%, rgba(150, 238, 96, 0.06) 0%, transparent 60%),' +
+            'radial-gradient(85% 65% at 72% 18%, rgba(150, 238, 96, 0.16) 0%, transparent 55%),' +
+            'radial-gradient(60% 50% at 12% 82%, rgba(127, 208, 159, 0.12) 0%, transparent 50%),' +
+            'radial-gradient(40% 35% at 88% 78%, rgba(150, 238, 96, 0.07) 0%, transparent 60%),' +
             'linear-gradient(165deg, #141714 0%, #0e110e 45%, #0b0d0b 100%)',
         }}
       />
 
+      <Particles quantity={56} speed={0.28} />
+
       {/* Faint gear / circuit watermark on the left */}
       <svg
-        className="absolute -left-8 top-1/2 h-[min(90vh,720px)] w-[min(55vw,520px)] -translate-y-1/2 opacity-[0.07]"
+        className="absolute -left-8 top-1/2 h-[min(90vh,720px)] w-[min(55vw,520px)] -translate-y-1/2 opacity-[0.08]"
         viewBox="0 0 400 520"
         fill="none"
       >
@@ -56,17 +60,21 @@ export default function AuthBackground() {
 
       {/* Soft hatch */}
       <div
-        className="absolute inset-0 opacity-[0.22]"
+        className="absolute inset-0 opacity-[0.18]"
         style={{
           backgroundImage:
             'repeating-linear-gradient(135deg, rgba(255,255,255,0.018) 0 1px, transparent 1px 11px)',
         }}
       />
 
-      {/* Sparkles */}
-      <span className="kratos-auth-sparkle kratos-auth-sparkle--a" />
-      <span className="kratos-auth-sparkle kratos-auth-sparkle--b" />
-      <span className="kratos-auth-sparkle kratos-auth-sparkle--c" />
+      {/* Vignette */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.45) 100%)',
+        }}
+      />
     </div>
   )
 }

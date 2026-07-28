@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import AuthShell from '../components/AuthShell.jsx'
+import ShinyButton from '../components/auth/ShinyButton.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { isSupabaseConfigured } from '../lib/supabase.js'
 import { BRAND } from '../lib/brand.js'
@@ -139,9 +140,9 @@ export default function Signup() {
           />
         </div>
 
-        <button type="submit" disabled={loading || Boolean(success)} className="kratos-auth-submit">
+        <ShinyButton type="submit" disabled={loading || Boolean(success)} className="mt-2 w-full">
           {loading ? 'Creating account…' : 'Create account'}
-        </button>
+        </ShinyButton>
       </form>
     </AuthShell>
   )

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AlertCircle } from 'lucide-react'
 import AuthShell from '../components/AuthShell.jsx'
+import ShinyButton from '../components/auth/ShinyButton.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { isSupabaseConfigured } from '../lib/supabase.js'
 import { BRAND } from '../lib/brand.js'
@@ -90,9 +91,9 @@ export default function Login() {
           />
         </div>
 
-        <button type="submit" disabled={loading} className="kratos-auth-submit">
+        <ShinyButton type="submit" disabled={loading} className="mt-2 w-full">
           {loading ? 'Signing in…' : 'Sign in'}
-        </button>
+        </ShinyButton>
       </form>
 
       <p className="kratos-auth-footnote mt-5">
