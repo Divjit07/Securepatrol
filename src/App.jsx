@@ -67,8 +67,6 @@ const AdminOps = lazyRetry(() => import('./pages/AdminOps.jsx'))
 const AdminLiveMap = lazyRetry(() => import('./pages/AdminLiveMap.jsx'))
 const ClientCoverage = lazyRetry(() => import('./pages/ClientCoverage.jsx'))
 const GuardSchedule = lazyRetry(() => import('./pages/GuardSchedule.jsx'))
-const AdminOfficeStaff = lazyRetry(() => import('./pages/AdminOfficeStaff.jsx'))
-const OfficeDashboard = lazyRetry(() => import('./pages/OfficeDashboard.jsx'))
 const RosterPreview = import.meta.env.DEV ? lazy(() => import('./pages/dev/RosterPreview.jsx')) : null
 const AdminPreview = import.meta.env.DEV ? lazy(() => import('./pages/dev/AdminPreview.jsx')) : null
 const ApplePreview = import.meta.env.DEV ? lazy(() => import('./pages/dev/ApplePreview.jsx')) : null
@@ -85,12 +83,11 @@ function PageLoader() {
 }
 
 function HomeRedirect() {
-  const { user, isAdmin, isClient, isOffice, loading } = useAuth()
+  const { user, isAdmin, isClient, loading } = useAuth()
   if (loading) return null
   if (!user) return <Navigate to="/login" replace />
   if (isAdmin) return <Navigate to="/admin" replace />
   if (isClient) return <Navigate to="/client" replace />
-  if (isOffice) return <Navigate to="/office" replace />
   return <Navigate to="/guard" replace />
 }
 
@@ -209,14 +206,6 @@ export default function App() {
           element={
             <ProtectedRoute requireAdmin>
               <ClientManager />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/office"
-          element={
-            <ProtectedRoute requireAdmin>
-              <AdminOfficeStaff />
             </ProtectedRoute>
           }
         />
@@ -354,15 +343,6 @@ export default function App() {
           element={
             <ProtectedRoute requireClient>
               <ClientIncidents />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/office"
-          element={
-            <ProtectedRoute requireOffice>
-              <OfficeDashboard />
             </ProtectedRoute>
           }
         />

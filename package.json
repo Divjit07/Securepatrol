@@ -13,7 +13,6 @@
     "deploy:client-functions": "supabase functions deploy create-client --project-ref vktxadadhnrcuxtubzxr && supabase functions deploy list-clients --project-ref vktxadadhnrcuxtubzxr && supabase functions deploy delete-client --project-ref vktxadadhnrcuxtubzxr",
     "deploy:schedule-function": "supabase functions deploy publish-schedule --project-ref vktxadadhnrcuxtubzxr",
     "deploy:alerts-function": "supabase functions deploy roster-alerts --project-ref vktxadadhnrcuxtubzxr",
-    "deploy:office-function": "supabase functions deploy create-office-employee --project-ref vktxadadhnrcuxtubzxr",
     "deploy:digest-functions": "supabase functions deploy ai-alert-digest --project-ref vktxadadhnrcuxtubzxr && supabase functions deploy ai-daily-digest --project-ref vktxadadhnrcuxtubzxr"
   },
   "dependencies": {

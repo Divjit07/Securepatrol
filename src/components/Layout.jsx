@@ -20,7 +20,6 @@ import {
   Lock,
   Wallet,
   ScrollText,
-  Users,
 } from 'lucide-react'
 import { Sparkles } from 'lucide-react'
 import Logo from './Logo.jsx'
@@ -60,7 +59,6 @@ export function buildAdminNavGroups({ canApproveScans, canManageShiftClock, isSu
         { to: '/admin/checkpoints', label: 'Checkpoints', icon: MapPin },
         { to: '/admin/guards', label: 'Guards', icon: ShieldCheck },
         { to: '/admin/clients', label: 'Clients', icon: Building2 },
-        { to: '/admin/office', label: 'Office Staff', icon: Users },
       ],
     },
     {
@@ -441,52 +439,8 @@ function GuardLayout({ children }) {
   )
 }
 
-/** Office-staff portal: a minimal dark top bar. Office employees only have the
- *  one clock screen, so there's no nav — just brand, identity, and sign out. */
-function OfficeLayout({ children }) {
-  const { profile, signOut } = useAuth()
-  const navigate = useNavigate()
-
-  const handleSignOut = async () => {
-    await signOut()
-    navigate('/login')
-  }
-
-  return (
-    <div className="app-shell">
-      <header className="app-header sticky top-0 z-40">
-        <div className="mx-auto flex max-w-[1440px] items-center gap-3 px-4 py-2.5 sm:gap-4 sm:px-6">
-          <Link to="/office" className="shrink-0">
-            <Logo size="lg" showText variant="light" framed />
-          </Link>
-          <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
-            <div className="hidden w-36 lg:block">
-              <ThemeSwitcher menuPlacement="down" />
-            </div>
-            <div className="hidden min-w-0 text-right sm:block">
-              <p className="truncate text-sm font-medium text-ink">{profile?.name}</p>
-              <p className="text-[10px] uppercase tracking-wider text-ink-3">Office Staff</p>
-            </div>
-            <button
-              type="button"
-              onClick={handleSignOut}
-              className="rounded-lg p-2.5 text-ink-3 transition hover:bg-white/5 hover:text-ink"
-              aria-label="Sign out"
-            >
-              <LogOut className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="app-main mx-auto max-w-3xl px-4 py-8 sm:px-6">{children}</main>
-    </div>
-  )
-}
-
 export default function Layout({ children, variant = 'admin' }) {
   if (variant === 'admin') return <AdminLayout>{children}</AdminLayout>
   if (variant === 'client') return <ClientLayout>{children}</ClientLayout>
-  if (variant === 'office') return <OfficeLayout>{children}</OfficeLayout>
   return <GuardLayout>{children}</GuardLayout>
 }

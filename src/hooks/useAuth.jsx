@@ -141,7 +141,6 @@ export function AuthProvider({ children }) {
   const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin'
   const isGuard = profile?.role === 'guard'
   const isClient = profile?.role === 'client'
-  const isOffice = profile?.role === 'office'
   const isSuperAdmin = profile?.role === 'super_admin'
 
   useEffect(() => {
@@ -207,7 +206,6 @@ export function AuthProvider({ children }) {
         isAdmin,
         isGuard,
         isClient,
-        isOffice,
         isSuperAdmin,
         canApproveScans,
         canManageShiftClock,
