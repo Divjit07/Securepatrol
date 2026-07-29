@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { Sparkles } from 'lucide-react'
 import Logo from './Logo.jsx'
+import AppBackdrop from './backdrop/AppBackdrop.jsx'
 import { useMemo, useState } from 'react'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { useGuardClockStatus } from '../hooks/useGuardClockStatus.js'
@@ -156,7 +157,7 @@ const COLLAPSE_KEY = 'sp-sidebar-collapsed'
 
 /** Enterprise sidebar shell (admin + client portals): 260px white sidebar on
  *  gray-50, collapsible on desktop, slide-over on mobile. */
-function SidebarLayout({ children, groups, roleLabel, homeTo }) {
+function SidebarLayout({ children, groups, roleLabel, homeTo, backdrop = false }) {
   const { profile, signOut } = useAuth()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -235,6 +236,8 @@ function SidebarLayout({ children, groups, roleLabel, homeTo }) {
 
   return (
     <div className="app-shell">
+      {backdrop && <AppBackdrop />}
+
       {/* Desktop sidebar */}
       <aside
         className={`app-sidebar fixed inset-y-0 left-0 z-40 hidden w-[260px] flex-col transition-transform duration-200 lg:flex ${
@@ -297,7 +300,11 @@ function SidebarLayout({ children, groups, roleLabel, homeTo }) {
         </div>
       )}
 
-      <main className={`transition-[padding] duration-200 ${collapsed ? 'lg:pl-14' : 'lg:pl-[260px]'}`}>
+      <main
+        className={`app-content transition-[padding] duration-200 ${
+          collapsed ? 'lg:pl-14' : 'lg:pl-[260px]'
+        }`}
+      >
         <div className="app-main px-4 py-6 sm:px-6 lg:px-10 lg:py-8">{children}</div>
       </main>
     </div>
@@ -319,7 +326,7 @@ function AdminLayout({ children }) {
 
 function ClientLayout({ children }) {
   return (
-    <SidebarLayout groups={clientNavGroups} roleLabel="Client" homeTo="/client">
+    <SidebarLayout groups={clientNavGroups} roleLabel="Client" homeTo="/client" backdrop>
       {children}
     </SidebarLayout>
   )
