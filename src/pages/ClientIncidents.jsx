@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, Download, ExternalLink, Loader2, MapPin, X } from 'lucide-react'
+import { AlertTriangle, Download, ExternalLink, FileText, Loader2, MapPin, X } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import ViewportModal, { ModalBody, ModalHeader } from '../components/ViewportModal.jsx'
@@ -122,10 +122,25 @@ export default function ClientIncidents() {
 
   return (
     <Layout variant="client">
-      <PageHeader
-        title="Incident reports"
-        description={`Guard-submitted site reports for ${site?.name || 'your site'}. These are written by on-duty guards during their shift.`}
-      />
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[20px] bg-gradient-to-br from-[#FDECC8] to-[#F4C877] text-[#4a3510] shadow-[0_10px_24px_-8px_rgba(244,200,119,0.75)]">
+            <AlertTriangle className="h-7 w-7" strokeWidth={2.2} />
+          </span>
+          <div className="min-w-0">
+            <p className="deck-eyebrow text-[#E8A33D]">Client Portal · Reports</p>
+            <h1 className="mt-0.5 font-display text-2xl font-bold tracking-tight sm:text-[2rem]">Incident reports</h1>
+            <p className="mt-1 text-sm text-ink-2">
+              Guard-submitted site reports for {site?.name || 'your site'} — written on-duty during their shift.
+            </p>
+          </div>
+        </div>
+        {reports.length > 0 && (
+          <span className="hidden shrink-0 items-center gap-2 rounded-full bg-[#E8A33D]/15 px-3.5 py-2 text-sm font-bold text-[#E8A33D] sm:flex">
+            <FileText className="h-4 w-4" /> {reports.length} report{reports.length === 1 ? '' : 's'}
+          </span>
+        )}
+      </div>
 
       {loading ? (
         <div className="flex justify-center py-12">

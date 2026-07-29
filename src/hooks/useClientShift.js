@@ -122,7 +122,16 @@ export function scheduledShiftBounds(dateStr, operatingHours) {
 }
 
 export function useClientShift(operatingHours) {
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
+  // Deep-link support: /client?date=YYYY-MM-DD opens that day (e.g. from Coverage).
+  const [date, setDate] = useState(() => {
+    try {
+      const param = new URLSearchParams(window.location.search).get('date')
+      if (param && /^\d{4}-\d{2}-\d{2}$/.test(param)) return param
+    } catch {
+      /* ignore */
+    }
+    return new Date().toISOString().slice(0, 10)
+  })
   const [shift, setShift] = useState(loadShift)
 
   const scheduled = getScheduledShiftForDate(date, operatingHours)

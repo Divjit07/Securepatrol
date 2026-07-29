@@ -498,7 +498,7 @@ export default function AdminPayroll() {
         description="The payroll department's home — guard hours from verified clock punches, and the paystub generator."
       />
 
-      <div className="mb-6 flex gap-2 rounded-full border border-ink/10 bg-ink/5 p-1">
+      <div className="dk-seg mb-6" role="tablist" aria-label="Payroll view">
         {[
           { id: 'hours', label: 'Guard hours' },
           { id: 'paystubs', label: 'Paystub generator' },
@@ -507,10 +507,10 @@ export default function AdminPayroll() {
           <button
             key={id}
             type="button"
+            role="tab"
+            aria-selected={tab === id}
             onClick={() => setTab(id)}
-            className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition ${
-              tab === id ? 'bg-black text-white' : 'text-ink-2 hover:text-ink'
-            }`}
+            className="dk-seg-item"
           >
             {label}
           </button>

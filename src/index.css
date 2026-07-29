@@ -297,6 +297,40 @@
     background: var(--fill-hover);
   }
 
+  /* Segmented switch — recessed track, ink-on-canvas active pill. Derived from
+     the theme tokens so it never lands dark-on-dark (Night canvas is #000). */
+  .dk-seg {
+    @apply flex gap-1 rounded-full p-1;
+    background: var(--fill-subtle);
+    border: 1px solid var(--hairline);
+  }
+
+  .dk-seg-item {
+    @apply flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition;
+    color: var(--color-ink-2);
+  }
+
+  .dk-seg-item:hover {
+    color: var(--color-ink);
+    background: var(--fill-hover);
+  }
+
+  /* Accent the icon on the resting tabs; the active pill keeps its own ink. */
+  .dk-seg-item svg {
+    color: var(--color-accent-orange);
+  }
+
+  .dk-seg-item[aria-selected="true"],
+  .dk-seg-item[aria-selected="true"]:hover {
+    background: var(--color-ink);
+    color: var(--color-canvas);
+    box-shadow: 0 8px 20px -10px rgba(0, 0, 0, 0.6);
+  }
+
+  .dk-seg-item[aria-selected="true"] svg {
+    color: currentColor;
+  }
+
   .dk-label {
     @apply text-[10px] font-semibold uppercase tracking-wider text-ink-2;
   }
@@ -868,6 +902,17 @@
     @apply absolute inset-0 rounded-full;
     background: var(--color-accent-green);
     animation: live-pulse 2.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  }
+
+  /* Black activity/alerts tile with a slanting-line grid texture — forced dark
+     in every theme (use explicit white text on it, never theme ink). */
+  .slant-grid {
+    background-color: #0a0b0a;
+    background-image: repeating-linear-gradient(
+      116deg,
+      rgba(255, 255, 255, 0.05) 0 1px,
+      transparent 1px 15px
+    );
   }
 
   /* Command-Deck table row — hairline-separated, quiet hover. */

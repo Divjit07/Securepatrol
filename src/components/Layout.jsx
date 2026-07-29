@@ -80,7 +80,7 @@ export function buildAdminNavGroups({ canApproveScans, canManageShiftClock, isSu
 const clientNavGroups = [
   {
     label: null,
-    items: [{ to: '/client', label: 'Scan History', end: true, icon: History }],
+    items: [{ to: '/client', label: 'Patrol Overview', end: true, icon: History }],
   },
   {
     label: 'Site',

@@ -62,7 +62,7 @@ export default function SiteDashboard() {
           patrolScanCount,
           patrolCheckpointCount,
           scannedCount,
-          totalCheckpoints: checkpoints.length,
+          totalCheckpoints: patrolCheckpointCount,
         }}
       />
 

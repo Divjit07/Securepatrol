@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { shiftBounds, shiftScanBounds } from './useClientShift.js'
-import { countPatrolRounds, computeGuardShiftForDay, formatShiftDuration } from '../lib/clientStats.js'
+import { countPatrolRounds, computeGuardShiftForDay, formatShiftDuration, getPatrolCheckpoints } from '../lib/clientStats.js'
 import { fetchShiftAdjustmentsForDate, mapShiftAdjustments, shiftAdjustmentKey } from '../lib/shiftAdjustments.js'
 
 export function useClientSiteData(siteId, date, shift, guardId = null) {
@@ -150,7 +150,10 @@ export function useClientSiteData(siteId, date, shift, guardId = null) {
     return acc
   }, {})
 
-  const scannedCount = checkpoints.filter((cp) => scansByCheckpoint[cp.id]).length
+  // Coverage counts patrol-role checkpoints only (clock-in/out tags are GPS-clock
+  // fallbacks, never part of a patrol round).
+  const patrolCheckpoints = getPatrolCheckpoints(checkpoints)
+  const scannedCount = patrolCheckpoints.filter((cp) => scansByCheckpoint[cp.id]).length
   const { rounds, patrolScanCount, patrolCheckpointCount } = countPatrolRounds(scans, checkpoints, {
     date,
     shiftStart: shift.start,
