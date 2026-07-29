@@ -21,9 +21,9 @@ export default function Logo({
   return (
     <div className={`flex items-center gap-3 sm:gap-3.5 ${className}`}>
       <div
-        className={`flex shrink-0 items-center justify-center rounded-xl bg-accent-orange/15 ${s.box}`}
+        className={`flex shrink-0 items-center justify-center rounded-xl border border-[#96ee60]/35 bg-[#96ee60]/15 ${s.box}`}
       >
-        <Shield className={`${s.icon} text-accent-orange`} strokeWidth={1.75} />
+        <Shield className={`${s.icon} text-[#96ee60]`} strokeWidth={1.75} fill="currentColor" fillOpacity={0.15} />
       </div>
 
       {showText && (

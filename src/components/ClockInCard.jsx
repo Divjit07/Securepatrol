@@ -12,7 +12,7 @@ import { getOptionalPosition } from '../lib/gps.js'
 import { shiftBounds } from '../hooks/useClientShift.js'
 
 const EARLY_WINDOW_MIN = 15 // clock-in opens this many minutes before the shift
-const LATE_GRACE_MIN = 10 // matches the roster-alerts "late" threshold
+const LATE_GRACE_MIN = 10 // how long after shift end before clock-IN is treated as "day over"
 const EARLY_OUT_GRACE_MIN = 5 // last N minutes of shift = normal clock-out, no note
 
 function fmtTime(d) {
@@ -58,7 +58,8 @@ export function punchState(type, window, now = new Date()) {
   const min = 60_000
   if (type === 'in') {
     // Shift already over → not "late", the day is done. Caller fills in the
-    // next-shift details.
+    // next-shift details. Keep a short post-end buffer so a late punch near
+    // end-of-day still shows as late rather than vanishing instantly.
     if (now > new Date(window.end.getTime() + LATE_GRACE_MIN * min)) {
       return { tone: 'grey', allowed: false, shiftOver: true, note: null }
     }
@@ -69,34 +70,53 @@ export function punchState(type, window, now = new Date()) {
     if (now < window.start) {
       return { tone: 'yellow', allowed: true, note: `You’re early — shift starts at ${fmtTime(window.start)}.` }
     }
-    if (now <= new Date(window.start.getTime() + LATE_GRACE_MIN * min)) {
-      return { tone: 'green', allowed: true, note: null }
+    // At/after scheduled start and still not punched → red urgency.
+    return {
+      tone: 'red',
+      allowed: true,
+      urgent: true,
+      note: `Your shift started at ${fmtTime(window.start)} — CLOCK IN NOW!`,
     }
-    return { tone: 'red', allowed: true, note: `You’re running late — shift started at ${fmtTime(window.start)}. Clock in now.` }
   }
   // clock-out — always allowed, from anywhere
-  if (now < new Date(window.end.getTime() - EARLY_WINDOW_MIN * min)) {
+  if (now < window.end) {
+    // Last 15 minutes: gentle nudge, still green.
+    if (now >= new Date(window.end.getTime() - EARLY_WINDOW_MIN * min)) {
+      return {
+        tone: 'green',
+        allowed: true,
+        note: `Shift ends at ${fmtTime(window.end)} — wrap up and clock out soon.`,
+      }
+    }
     return { tone: 'green', allowed: true, note: `On duty — your shift runs until ${fmtTime(window.end)}.` }
   }
-  if (now <= new Date(window.end.getTime() + LATE_GRACE_MIN * min)) {
-    return { tone: 'green', allowed: true, note: null }
+  // At or past scheduled end → red urgency to clock out.
+  return {
+    tone: 'red',
+    allowed: true,
+    urgent: true,
+    note: `Your shift ended at ${fmtTime(window.end)} — CLOCK OUT NOW!`,
   }
-  return { tone: 'red', allowed: true, note: `Shift ended at ${fmtTime(window.end)} — clock out now.` }
 }
 
 const TONE_BUTTON = {
   grey: 'bg-white/10 text-ink-3',
   yellow: 'bg-[#FACC15] text-[#422006] hover:brightness-105',
   green: 'bg-[#22C55E] text-[#052E16] hover:brightness-105',
-  red: 'bg-[#EF4444] text-white hover:brightness-105',
+  red: 'bg-[#EF4444] text-white hover:brightness-105 animate-pulse',
 }
 
 // Card-level traffic light: border tint + status pill.
 const TONE_CARD = {
-  grey: { ring: 'border-white/10', pill: 'bg-white/10 text-ink-2', label: 'Off duty' },
-  yellow: { ring: 'border-[#FACC15]/50', pill: 'bg-[#FACC15]/15 text-[#FACC15]', label: 'Early window' },
-  green: { ring: 'border-[#22C55E]/50', pill: 'bg-[#22C55E]/15 text-[#22C55E]', label: 'On duty' },
-  red: { ring: 'border-[#EF4444]/50', pill: 'bg-[#EF4444]/15 text-[#EF4444]', label: 'Late' },
+  grey: { ring: 'border-white/10', bg: '', pill: 'bg-white/10 text-ink-2', label: 'Off duty' },
+  yellow: { ring: 'border-[#FACC15]/50', bg: 'bg-[#FACC15]/5', pill: 'bg-[#FACC15]/15 text-[#FACC15]', label: 'Early window' },
+  green: { ring: 'border-[#22C55E]/50', bg: 'bg-[#22C55E]/5', pill: 'bg-[#22C55E]/15 text-[#22C55E]', label: 'On duty' },
+  red: {
+    ring: 'border-[#EF4444]',
+    bg: 'bg-[#EF4444]/15',
+    pill: 'bg-[#EF4444] text-white',
+    label: 'Action needed',
+  },
 }
 
 /** "Next shift: Tomorrow 9:00 PM at Site — clock-in opens 8:45 PM." */
@@ -167,17 +187,25 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
   const fence = position && site ? geofenceStatus(position, site) : null
   const siteLocated = site && site.latitude != null && site.longitude != null
 
-  // Re-evaluate the traffic light every 30s so it flips at the right moment.
+  // Re-evaluate the traffic light every 10s so late / overdue flips feel instant.
   const [, forceTick] = useState(0)
   useEffect(() => {
-    const id = setInterval(() => forceTick((n) => n + 1), 30_000)
+    const id = setInterval(() => forceTick((n) => n + 1), 10_000)
     return () => clearInterval(id)
   }, [])
   const punch = punchState(clockedIn ? 'out' : 'in', window_)
   // Card color: green whenever clocked in (red only when overdue to leave);
   // when clocked out it follows the clock-in traffic light.
   const cardTone = clockedIn ? (punch.tone === 'red' ? 'red' : 'green') : punch.tone
-  const card = TONE_CARD[cardTone]
+  const card = {
+    ...TONE_CARD[cardTone],
+    label:
+      cardTone === 'red'
+        ? clockedIn
+          ? 'CLOCK OUT NOW'
+          : 'CLOCK IN NOW'
+        : TONE_CARD[cardTone].label,
+  }
 
   // Early clock-out: anytime before the published shift end needs a reason.
   // Last few minutes of the shift (and after end) = normal clock-out, no note.
@@ -275,10 +303,10 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
   }
 
   return (
-    <div id="face-clock" className={`sp-card mb-4 scroll-mt-24 border p-5 transition-colors ${card.ring}`}>
+    <div id="face-clock" className={`sp-card mb-4 scroll-mt-24 border p-5 transition-colors ${card.ring} ${card.bg}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="flex items-center gap-2 text-sm font-semibold text-ink">
-          <Clock className="h-4 w-4 text-accent-orange" /> Shift clock
+          <Clock className={`h-4 w-4 ${cardTone === 'red' ? 'text-[#EF4444]' : 'text-accent-orange'}`} /> Shift clock
           <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide ${card.pill}`}>
             {card.label}
           </span>
@@ -377,12 +405,12 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
               <Clock className="h-5 w-5" />
               {clockedIn
                 ? punch.tone === 'red'
-                  ? 'Clock out now — you’re over'
+                  ? 'CLOCK OUT NOW!'
                   : earlyOut
                     ? 'Leave early (note required)'
                     : 'Clock out'
                 : punch.tone === 'red'
-                  ? 'Clock in now — you’re late'
+                  ? 'CLOCK IN NOW!'
                   : punch.tone === 'yellow'
                     ? 'Clock in early'
                     : 'Clock in'}
@@ -392,7 +420,11 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
       )}
 
       {!confirmingOut && statusNote && (
-        <p className={`mt-2 text-center text-xs ${punch.tone === 'red' ? 'font-semibold text-accent-red' : 'text-ink-3'}`}>
+        <p
+          className={`mt-2 text-center text-xs ${
+            punch.tone === 'red' ? 'text-sm font-bold uppercase tracking-wide text-[#EF4444]' : 'text-ink-3'
+          }`}
+        >
           {statusNote}
         </p>
       )}

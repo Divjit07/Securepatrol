@@ -9,8 +9,16 @@
 //  - Page navigations are network-first with a cached index.html offline fallback.
 //  - Everything else same-origin is network-first, cache fallback, and a failed
 //    non-navigation request NEVER falls back to index.html.
-const CACHE_NAME = 'securepatrol-v18'
-const SHELL_URLS = ['/', '/index.html', '/manifest.json', '/logo.png']
+const CACHE_NAME = 'securepatrol-v19'
+const SHELL_URLS = [
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/logo.png',
+  '/favicon.svg',
+  '/favicon-32.png',
+  '/apple-touch-icon.png',
+]
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_URLS)))

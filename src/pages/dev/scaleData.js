@@ -350,19 +350,20 @@ export function runScaleChecks(data, pipeline) {
   const win = { start: new Date('2026-07-11T10:00:00'), end: new Date('2026-07-11T17:00:00') }
   const at = (h, m) => new Date(2026, 6, 11, h, m)
   add(
-    'Clock-in traffic light: grey→yellow→green→red→shift-over',
+    'Clock-in traffic light: grey→yellow→red(at start)→shift-over',
     punchState('in', win, at(9, 40)).tone === 'grey' &&
       punchState('in', win, at(9, 40)).allowed === false &&
       punchState('in', win, at(9, 50)).tone === 'yellow' &&
-      punchState('in', win, at(10, 5)).tone === 'green' &&
+      punchState('in', win, at(10, 0)).tone === 'red' &&
       punchState('in', win, at(10, 30)).tone === 'red' &&
       punchState('in', win, at(17, 30)).shiftOver === true &&
       punchState('in', win, at(17, 30)).allowed === false,
   )
   add(
-    'Clock-out traffic light: green on shift, red when overdue, always allowed',
+    'Clock-out traffic light: green on shift, red at/after end, always allowed',
     punchState('out', win, at(12, 0)).tone === 'green' &&
       punchState('out', win, at(12, 0)).allowed === true &&
+      punchState('out', win, at(17, 0)).tone === 'red' &&
       punchState('out', win, at(17, 20)).tone === 'red' &&
       punchState('out', win, at(17, 20)).allowed === true,
   )
