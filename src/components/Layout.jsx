@@ -209,7 +209,7 @@ function SidebarLayout({ children, groups, roleLabel, homeTo, backdrop = false }
       <SidebarNav groups={groups} onNavigate={() => setMenuOpen(false)} />
 
       <div className="border-t border-white/5 p-2">
-        <ThemeSwitcher />
+        <ThemeSwitcher primary="day" />
         <div className="px-2">
           <SyncIndicator />
         </div>
@@ -374,7 +374,7 @@ function GuardLayout({ children }) {
 
           <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
             <div className="hidden w-36 lg:block">
-              <ThemeSwitcher menuPlacement="down" />
+              <ThemeSwitcher menuPlacement="down" primary="night" />
             </div>
             <SyncIndicator dark />
             <div className="hidden h-8 w-px bg-white/10 sm:block" />
@@ -404,7 +404,7 @@ function GuardLayout({ children }) {
         {menuOpen && (
           <nav className="border-t border-white/5 px-4 py-3 md:hidden">
             <div className="mb-3 px-1">
-              <ThemeSwitcher menuPlacement="down" />
+              <ThemeSwitcher menuPlacement="down" primary="night" />
             </div>
             {guardLinks.map((link) =>
               link.needsClock && !clockedIn ? (

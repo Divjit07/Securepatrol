@@ -6,9 +6,9 @@
     <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="theme-color" content="#141a14" />
+    <meta name="theme-color" content="#f4f4f4" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <link rel="manifest" href="/manifest.json" />
     <!-- Warm the connections the first paint depends on: fonts + Supabase API -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -21,13 +21,24 @@
     <title>Kratos | Workforce Command</title>
       <script>
       try {
-        var saved = localStorage.getItem('sp-theme')
-        // Retired themes collapse to the black primary; only night + day remain.
+        // Portal primaries: Day for admin/client, Night for guard. A stored value
+        // only wins when the user picked it in that portal's switcher.
         var valid = { night: 1, day: 1 }
-        var id = valid[saved] ? saved : 'night'
+        var isGuard = location.pathname.indexOf('/guard') === 0
+        var primary = isGuard ? 'night' : 'day'
+        var themeKey = isGuard ? 'sp-theme-guard' : 'sp-theme'
+        var choiceKey = isGuard ? 'sp-theme-choice-guard' : 'sp-theme-choice'
+        var saved = localStorage.getItem(themeKey)
+        var chosen = localStorage.getItem(choiceKey) === '1'
+        var id = chosen && valid[saved] ? saved : primary
         document.documentElement.dataset.theme = id
+        var meta = document.querySelector('meta[name="theme-color"]')
+        if (meta) meta.setAttribute('content', id === 'night' ? '#000000' : '#f4f4f4')
+        var status = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')
+        if (status) status.setAttribute('content', id === 'night' ? 'black-translucent' : 'default')
       } catch (e) {
-        document.documentElement.dataset.theme = 'night'
+        document.documentElement.dataset.theme =
+          location.pathname.indexOf('/guard') === 0 ? 'night' : 'day'
       }
     </script>
   </head>
