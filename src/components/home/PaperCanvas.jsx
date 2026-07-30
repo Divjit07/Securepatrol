@@ -1,143 +1,101 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import * as THREE from 'three'
-import { paintReport, SHEET_W, SHEET_H } from './paintReport.js'
+import { useEffect, useRef, useState } from 'react'
+import { Canvas, useFrame } from '@react-three/fiber'
+import { PaperLights, PaperMesh } from './PaperMesh.jsx'
+import { paintReport } from './paintReport.js'
+import { loadIncidentPhotos, paintIncident } from './paintIncident.js'
+import { paintTimesheet } from './paintTimesheet.js'
 
 /**
- * The client's report as a real sheet of paper standing in the operator's dark room.
+ * The client's record as a real sheet of paper standing in the operator's dark room.
  *
  * This is the page's one authored moment: the record assembling itself. Rows land on
  * the stock as scans come in, the VERIFIED stamp sets only once the record is
  * complete, and the sheet holds a genuine curl so the key light rakes across it.
  *
- * The document's accessible text lives in ReportSheet.jsx. This canvas is
- * decorative (aria-hidden) and is never the only way to read the record.
+ * Then it changes. The three artifacts a night actually produces — the patrol
+ * verification report, the incident report, the pay stub — come around in the order
+ * the work produces them, each one dropping in with a spin and bouncing to rest.
+ * One mesh, one canvas, three documents: the reader is being shown that these are
+ * the same record printed for three different people, so they had better be the
+ * same piece of paper.
+ *
+ * The documents' accessible text lives in ReportSheet.jsx and Artifacts.jsx. This
+ * canvas is decorative (aria-hidden) and is never the only way to read a record.
  */
 
-const SHEET_H_UNITS = 4.6
-const SHEET_W_UNITS = SHEET_H_UNITS * (SHEET_W / SHEET_H)
+/** The night's output, in the order the night produces it. */
+const DOCUMENTS = [
+  { id: 'report', paint: paintReport },
+  { id: 'incident', paint: paintIncident },
+  { id: 'timesheet', paint: paintTimesheet },
+]
 
-function Sheet({ progressRef, pointerRef }) {
-  const meshRef = useRef(null)
-  const groupRef = useRef(null)
-  const { invalidate } = useThree()
+/**
+ * One 3-second cycle: hold, fade out, swap, fade back in.
+ *
+ * The swap is deliberately hidden inside the dark part of the fade. Changing
+ * document forces a full redraw of a 1000×1414 canvas and a texture upload —
+ * roughly a frame's work, and the incident sheet also has two photographs to
+ * composite. Doing that while the sheet is visible is what made the change read
+ * as a stutter; doing it at zero opacity means the hitch has nothing to land on.
+ */
+const HOLD = 2
+const FADE_OUT = 0.42
+const FADE_IN = 0.58
 
-  // The document is drawn to a 2D canvas and used as the sheet's colour map.
-  const { texture, ctx, canvas } = useMemo(() => {
-    const c = document.createElement('canvas')
-    c.width = SHEET_W
-    c.height = SHEET_H
-    const context = c.getContext('2d')
-    const t = new THREE.CanvasTexture(c)
-    t.colorSpace = THREE.SRGBColorSpace
-    t.anisotropy = 8
-    return { texture: t, ctx: context, canvas: c }
-  }, [])
+/**
+ * Runs the cycle on the render loop rather than a timer, so it stays in step with
+ * the frame clock and stops dead whenever the canvas is not rendering.
+ */
+function Cycler({ fadeRef, onSwap, paused }) {
+  const elapsed = useRef(0)
+  const phase = useRef('hold')
 
-  const paintedAt = useRef(-1)
+  useFrame((_state, delta) => {
+    if (paused) return
+    // A long delta means the tab was hidden; do not fast-forward the queue.
+    elapsed.current += Math.min(delta, 1 / 20)
 
-  // Repaint once webfonts land, otherwise the first paint uses fallback metrics.
-  useEffect(() => {
-    let alive = true
-    const repaint = () => {
-      if (!alive) return
-      paintedAt.current = -1
-      invalidate()
-    }
-    if (document.fonts?.ready) document.fonts.ready.then(repaint)
-    return () => {
-      alive = false
-    }
-  }, [invalidate])
-
-  useEffect(() => () => texture.dispose(), [texture])
-
-  // Flat plane, displaced on the CPU so the sheet can hold a curl and settle.
-  const geometry = useMemo(
-    () => new THREE.PlaneGeometry(SHEET_W_UNITS, SHEET_H_UNITS, 40, 56),
-    [],
-  )
-  useEffect(() => () => geometry.dispose(), [geometry])
-
-  const base = useMemo(() => geometry.attributes.position.array.slice(), [geometry])
-  const settle = useRef(1)
-
-  useFrame((state, delta) => {
-    const p = progressRef.current
-
-    // Repaint the document only when the record actually advances a row.
-    const step = Math.round(p * 64) / 64
-    if (step !== paintedAt.current) {
-      paintReport(ctx, p)
-      texture.needsUpdate = true
-      paintedAt.current = step
+    if (phase.current === 'hold') {
+      if (elapsed.current >= HOLD) {
+        phase.current = 'out'
+        elapsed.current = 0
+      }
+      return
     }
 
-    // The sheet drops into place once, then breathes.
-    settle.current = Math.max(0, settle.current - delta * 0.55)
-    const s = settle.current * settle.current
-    const t = state.clock.elapsedTime
-
-    const pos = geometry.attributes.position
-    const arr = pos.array
-    for (let i = 0; i < arr.length; i += 3) {
-      const x = base[i]
-      const y = base[i + 1]
-      const nx = x / (SHEET_W_UNITS / 2)
-      const ny = y / (SHEET_H_UNITS / 2)
-      // A page held at its left edge bows away from the viewer on the right.
-      const curl = 0.34 * nx * nx * (nx > 0 ? 1 : 0.45)
-      // Faint slack across the stock, plus a bigger sway while it settles.
-      const slack = Math.sin(ny * 2.1 + t * 0.5) * 0.045 * (1 - Math.abs(nx) * 0.4)
-      const drop = s * (Math.sin(ny * 3.0 + t * 2.2) * 0.28 + nx * 0.35)
-      arr[i + 2] = base[i + 2] - curl + slack + drop
+    if (phase.current === 'out') {
+      const k = Math.min(1, elapsed.current / FADE_OUT)
+      fadeRef.current = 1 - k * k // ease in — lingers, then goes
+      if (k >= 1) {
+        fadeRef.current = 0
+        onSwap()
+        phase.current = 'in'
+        elapsed.current = 0
+      }
+      return
     }
-    pos.needsUpdate = true
-    geometry.computeVertexNormals()
 
-    if (groupRef.current) {
-      const g = groupRef.current
-      const { x: px, y: py } = pointerRef.current
-      // Light pointer parallax — the sheet turns toward the reader, never spins.
-      g.rotation.y += (px * 0.16 - 0.14 - g.rotation.y) * Math.min(1, delta * 3)
-      g.rotation.x += (-py * 0.1 + 0.02 - g.rotation.x) * Math.min(1, delta * 3)
-      g.position.y = Math.sin(t * 0.42) * 0.055 - s * 0.9
-      g.rotation.z = -0.012 + Math.sin(t * 0.31) * 0.006 + s * 0.05
+    const k = Math.min(1, elapsed.current / FADE_IN)
+    fadeRef.current = k * (2 - k) // ease out — arrives quickly, then eases
+    if (k >= 1) {
+      fadeRef.current = 1
+      phase.current = 'hold'
+      elapsed.current = 0
     }
   })
 
-  return (
-    <group ref={groupRef}>
-      <mesh ref={meshRef} geometry={geometry} castShadow>
-        <meshStandardMaterial
-          map={texture}
-          roughness={0.82}
-          metalness={0}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-    </group>
-  )
-}
-
-function Lights() {
-  return (
-    <>
-      {/* Ambient sits low: this is a dark room with one desk lamp on the page. */}
-      <ambientLight intensity={0.55} color="#cfd8c4" />
-      {/* Key light, upper left, slightly warm — the lamp. */}
-      <directionalLight position={[-3.4, 4.2, 5.2]} intensity={2.3} color="#fffaf0" />
-      {/* Lime rim from the operator's screens, off to the right. */}
-      <pointLight position={[4.6, -1.4, 2.6]} intensity={9} distance={14} color="#96ee60" />
-      {/* Cool bounce so the shaded side never goes muddy. */}
-      <pointLight position={[-2.2, -3.2, 3.4]} intensity={3.2} distance={12} color="#8fb0d8" />
-    </>
-  )
+  return null
 }
 
 export default function PaperCanvas({ progressRef }) {
+  const rootRef = useRef(null)
   const pointerRef = useRef({ x: 0, y: 0 })
+  const fadeRef = useRef(1)
   const [ready, setReady] = useState(false)
+  const [index, setIndex] = useState(0)
+  const [photoKey, setPhotoKey] = useState(0)
+  const [paused, setPaused] = useState(false)
 
   useEffect(() => {
     const onMove = (e) => {
@@ -150,8 +108,40 @@ export default function PaperCanvas({ progressRef }) {
     return () => window.removeEventListener('pointermove', onMove)
   }, [])
 
+  // The incident sheet prints two photographs; repaint once they decode.
+  useEffect(() => {
+    let alive = true
+    loadIncidentPhotos().then(() => {
+      if (alive) setPhotoKey((k) => k + 1)
+    })
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  // Nothing turns while the hero is off screen — an unwatched page turn is
+  // wasted work, and it would also mean the reader misses the first document.
+  useEffect(() => {
+    const el = rootRef.current
+    if (!el || typeof IntersectionObserver === 'undefined') return undefined
+    const io = new IntersectionObserver(
+      ([e]) => setPaused(!e.isIntersecting),
+      { threshold: 0.25 },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+
+  // Respect a reader who has asked for less motion: they get the report, still.
+  const still =
+    typeof window !== 'undefined' &&
+    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+
+  const doc = DOCUMENTS[index]
+
   return (
     <div
+      ref={rootRef}
       aria-hidden="true"
       className={`absolute inset-0 transition-opacity duration-1000 ${
         ready ? 'opacity-100' : 'opacity-0'
@@ -163,8 +153,28 @@ export default function PaperCanvas({ progressRef }) {
         gl={{ antialias: true, alpha: true }}
         onCreated={() => setReady(true)}
       >
-        <Lights />
-        <Sheet progressRef={progressRef} pointerRef={pointerRef} />
+        <PaperLights />
+        {/* settleKey is the index, so every swap re-drops the sheet: it arrives
+            turned by `spin`, overshoots, and rocks to rest — all of it under the
+            fade, so the reader sees the motion and never the repaint. */}
+        <PaperMesh
+          paint={doc.paint}
+          paintKey={photoKey}
+          settleKey={index}
+          progressRef={progressRef}
+          pointerRef={pointerRef}
+          spin={0.5}
+          bounce={0.22}
+          settleRate={0.72}
+          opacityRef={still ? null : fadeRef}
+        />
+        {!still && (
+          <Cycler
+            fadeRef={fadeRef}
+            paused={paused}
+            onSwap={() => setIndex((i) => (i + 1) % DOCUMENTS.length)}
+          />
+        )}
       </Canvas>
     </div>
   )

@@ -1193,6 +1193,99 @@
   }
 }
 
+/* Chain of custody: a node is an open ring until you reach it, then it sets and
+   stays set. Styled here rather than in the markup because the state is toggled
+   by a class from ScrollTrigger. */
+.kr-chain-node {
+  background: var(--kr-void);
+  border-color: var(--kr-edge-strong);
+  transition:
+    border-color 420ms ease,
+    background-color 420ms ease,
+    box-shadow 420ms ease;
+}
+
+.kr-chain-link.is-on .kr-chain-node {
+  border-color: var(--kr-lime);
+  background: color-mix(in srgb, var(--kr-lime) 26%, var(--kr-void));
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--kr-lime) 8%, transparent);
+}
+
+.kr-chain-link.is-on [data-chain-step] {
+  color: var(--kr-ink-2);
+}
+
+/* Contents plates. The lime is a light source in a dark room, so it enters from
+   one corner and rides the top edge rather than washing the whole surface.
+   Nothing here moves the element: `.kr-rise` owns transform via GSAP inline
+   styles, and a hover translate would either lose to it or fight it. */
+.kr-plate {
+  transition:
+    border-color 420ms ease,
+    background-color 420ms ease;
+}
+
+.kr-plate::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 460ms ease;
+  background: radial-gradient(
+    120% 90% at 100% 0%,
+    color-mix(in srgb, var(--kr-lime) 13%, transparent) 0%,
+    transparent 62%
+  );
+}
+
+/* A lit top edge, so a plate reads as a surface catching light rather than a
+   box with a border drawn round it. */
+.kr-plate::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 1px;
+  pointer-events: none;
+  opacity: 0.45;
+  transition: opacity 460ms ease;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--kr-lime) 24%, transparent) 50%,
+    transparent 100%
+  );
+}
+
+.kr-plate:hover {
+  border-color: var(--kr-edge-strong);
+  background: var(--kr-raise);
+}
+
+.kr-plate:hover::before,
+.kr-plate:hover::after {
+  opacity: 1;
+}
+
+/* The evidence table's caption sits in a fixed column between the station rail
+   and the play control, so on a short laptop screen it has to give ground
+   rather than run past either of them. */
+@media (max-height: 860px) {
+  .kr-caption {
+    padding: 1.15rem 1.3rem;
+  }
+
+  .kr-caption [data-cap-title] {
+    font-size: 1.35rem;
+  }
+
+  .kr-caption [data-cap-body] {
+    font-size: 0.875rem;
+    line-height: 1.55;
+  }
+}
+
 /* Anchored sections must clear the sticky masthead. */
 .kr [id] {
   scroll-margin-top: 5.25rem;

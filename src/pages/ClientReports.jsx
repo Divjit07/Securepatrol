@@ -125,31 +125,36 @@ const CHIP_HOLIDAY = 'inline-flex rounded-full bg-[#96EE60] px-2.5 py-1 text-xs 
 const GUARD_TONES = ['lime', 'sky', 'lavender', 'blossom', 'moss']
 const GUARD_DOTS = ['#96EE60', '#D9F0FF', '#ECEEFE', '#FBE4E3', '#7FD09F']
 
-export default function ClientReports() {
+/**
+ * `demo` is the dev-only harness seam (/dev/reports): it seeds every row the
+ * page would have fetched and short-circuits the queries, so the screenshot
+ * harness renders this exact page instead of a look-alike that can drift.
+ */
+export default function ClientReports({ demo = null }) {
   const { profile } = useAuth()
-  const siteId = profile?.site_id
-  const [site, setSite] = useState(null)
-  const [tab, setTab] = useState('scans')
+  const siteId = demo ? demo.site.id : profile?.site_id
+  const [site, setSite] = useState(demo?.site ?? null)
+  const [tab, setTab] = useState(demo?.tab ?? 'scans')
   const [scanFilters, setScanFilters] = useState({
-    fromDate: new Date().toISOString().slice(0, 10),
-    toDate: new Date().toISOString().slice(0, 10),
+    fromDate: demo?.scanFrom ?? new Date().toISOString().slice(0, 10),
+    toDate: demo?.scanTo ?? new Date().toISOString().slice(0, 10),
   })
   const [hoursFilters, setHoursFilters] = useState({
-    fromDate: defaultPayPeriodStart(),
-    toDate: defaultPayPeriodEnd(),
+    fromDate: demo?.hoursFrom ?? defaultPayPeriodStart(),
+    toDate: demo?.hoursTo ?? defaultPayPeriodEnd(),
   })
-  const [scans, setScans] = useState([])
-  const [checkpoints, setCheckpoints] = useState([])
-  const [guards, setGuards] = useState([])
-  const [hoursScans, setHoursScans] = useState([])
+  const [scans, setScans] = useState(demo?.scans ?? [])
+  const [checkpoints, setCheckpoints] = useState(demo?.checkpoints ?? [])
+  const [guards, setGuards] = useState(demo?.guards ?? [])
+  const [hoursScans, setHoursScans] = useState(demo?.hoursScans ?? [])
   const [hoursAdjustments, setHoursAdjustments] = useState({})
-  const [publishedShifts, setPublishedShifts] = useState([])
+  const [publishedShifts, setPublishedShifts] = useState(demo?.publishedShifts ?? [])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (!siteId) return
+    if (!siteId || demo) return
     supabase.from('sites').select('*').eq('id', siteId).single().then(({ data }) => setSite(data))
-  }, [siteId])
+  }, [siteId, demo])
 
   const loadSiteMeta = async () => {
     const [{ data: floors }, { data: guardData }] = await Promise.all([
@@ -259,12 +264,12 @@ export default function ClientReports() {
   }
 
   useEffect(() => {
-    if (siteId && tab === 'scans') loadScans()
-  }, [siteId, tab, scanFilters.fromDate, scanFilters.toDate])
+    if (siteId && !demo && tab === 'scans') loadScans()
+  }, [siteId, demo, tab, scanFilters.fromDate, scanFilters.toDate])
 
   useEffect(() => {
-    if (siteId && tab === 'hours') loadHoursData()
-  }, [siteId, tab, hoursFilters.fromDate, hoursFilters.toDate])
+    if (siteId && !demo && tab === 'hours') loadHoursData()
+  }, [siteId, demo, tab, hoursFilters.fromDate, hoursFilters.toDate])
 
   const exportScanCsv = () => {
     const headers = ['Date', 'Checkpoint', 'Floor', 'Guard', 'Distance (m)']

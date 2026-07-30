@@ -85,12 +85,26 @@ function Filed() {
   )
 }
 
+function Exception() {
+  return (
+    <>
+      {/* An exception, raised on the page rather than kept off it */}
+      <path d="M11 6h15l7 7v25H11z" {...stroke} />
+      <path d="M26 6v7h7" {...stroke} />
+      <path d="M22 18.5l7.5 13h-15z" {...stroke} strokeWidth="1.7" />
+      <path d="M22 23v3.6" {...stroke} strokeWidth="1.7" />
+      <path d="M22 28.8v.7" {...stroke} strokeWidth="1.9" />
+    </>
+  )
+}
+
 const GLYPHS = {
   sticker: Sticker,
   scan: Scan,
   gps: Radius,
   punch: Punch,
   hours: Sum,
+  incident: Exception,
   report: Filed,
 }
 

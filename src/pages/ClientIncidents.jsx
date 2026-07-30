@@ -28,12 +28,13 @@ function mapsUrl(lat, lng) {
   return `https://www.google.com/maps?q=${lat},${lng}`
 }
 
-export default function ClientIncidents() {
+/** `demo` is the dev-only harness seam — see the note on ClientReports. */
+export default function ClientIncidents({ demo = null }) {
   const { profile } = useAuth()
-  const siteId = profile?.site_id
-  const [site, setSite] = useState(null)
-  const [reports, setReports] = useState([])
-  const [loading, setLoading] = useState(true)
+  const siteId = demo ? demo.site.id : profile?.site_id
+  const [site, setSite] = useState(demo?.site ?? null)
+  const [reports, setReports] = useState(demo?.reports ?? [])
+  const [loading, setLoading] = useState(!demo)
   const [selected, setSelected] = useState(null)
   const [pdfLoading, setPdfLoading] = useState(false)
   const [previews, setPreviews] = useState({})
@@ -68,19 +69,19 @@ export default function ClientIncidents() {
   }, [reports])
 
   useEffect(() => {
-    if (!siteId) return
+    if (!siteId || demo) return
     supabase.from('sites').select('name, address').eq('id', siteId).single().then(({ data }) => setSite(data))
-  }, [siteId])
+  }, [siteId, demo])
 
   useEffect(() => {
-    if (!siteId) return
+    if (!siteId || demo) return
 
     setLoading(true)
     fetchIncidentReportsForSite(siteId)
       .then(setReports)
       .catch((err) => console.error(err))
       .finally(() => setLoading(false))
-  }, [siteId])
+  }, [siteId, demo])
 
   const openReport = (report) => {
     setSelected(report)

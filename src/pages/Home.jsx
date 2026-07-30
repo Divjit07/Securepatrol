@@ -28,24 +28,32 @@ import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import {
   ArrowRight,
+  Building2,
+  Calculator,
+  CalendarDays,
   Check,
   ChevronDown,
+  ClipboardCheck,
+  Layers,
   Nfc,
   QrCode,
   Radio,
+  RadioTower,
   TriangleAlert,
+  UserPlus,
   WifiOff,
 } from 'lucide-react'
 import ReportSheet from '../components/home/ReportSheet.jsx'
+import EvidenceTable from '../components/home/EvidenceTable.jsx'
 import ChainGlyph from '../components/home/ChainGlyph.jsx'
 import { EagleMark } from '../components/home/EagleMark.jsx'
 import {
   RosterSheet,
   TimesheetSheet,
   IncidentSheet,
-  CheckpointLabel,
+  ScanReportSheet,
 } from '../components/home/Artifacts.jsx'
-import { CHAIN, REPORT } from '../components/home/reportData.js'
+import { CHAIN } from '../components/home/reportData.js'
 
 const PaperCanvas = lazy(() => import('../components/home/PaperCanvas.jsx'))
 const SiteField = lazy(() => import('../components/home/SiteField.jsx'))
@@ -63,86 +71,146 @@ const NAV = [
   { label: 'Questions', href: '#questions' },
 ]
 
-/** What the admin sees while the client's report writes itself. Synthetic. */
-const BOARD = [
-  { site: 'Northgate Tower', guard: 'A. Okonkwo', state: 'on-post', detail: 'Round 5 of 6 · L4' },
-  { site: 'Bay & King', guard: 'M. Dubois', state: 'on-post', detail: 'Round 2 of 8 · P1' },
-  { site: 'Harbour Yards', guard: 'R. Sandhu', state: 'alert', detail: 'No scan for 74 min' },
-  { site: 'Civic Centre', guard: 'Open shift', state: 'open', detail: '22:00 — 06:00 · unclaimed' },
-  { site: 'Westline Depot', guard: 'J. Baptiste', state: 'on-post', detail: 'Round 4 of 5 · Gate 2' },
-]
-
 const LEDGER = [
   {
     ref: 'A',
+    chips: ['Templates', 'Recurrence', 'Conflict detection', 'Draft → publish', 'Calendar invites'],
+    icon: CalendarDays,
+    span: 'lg:col-span-2',
     title: 'Roster',
-    body: 'Drag-drop scheduling with templates, recurrence and conflict detection. Build it as a draft, publish when it is right — publishing emails every guard a calendar invite.',
+    body: 'Build the week as a draft and publish it when it is right. Publishing is the commit — every guard gets a calendar invite, and a double-booking is caught before anyone has been told to show up.',
   },
   {
     ref: 'B',
+    icon: UserPlus,
+    span: '',
     title: 'Open shifts',
     body: 'Post a gap and let qualified guards claim it. The claim is race-safe, so two guards tapping at once cannot both take the shift.',
   },
   {
     ref: 'C',
+    icon: Calculator,
+    span: '',
     title: 'Payroll',
     body: '15-minute rounding and the overtime split, derived over immutable punches. Manual adjustments and statutory holidays are recorded as adjustments, never as edits.',
   },
   {
     ref: 'D',
+    icon: ClipboardCheck,
+    span: '',
     title: 'Timesheets',
     body: 'Guards sign off their own hours before payroll closes, so a disputed shift is settled against the scan record rather than from memory.',
   },
   {
     ref: 'E',
+    icon: TriangleAlert,
+    span: '',
     title: 'Incidents',
     body: 'A field report with photo attachments, filed from the phone, delivered by email and as a PDF the client can keep.',
   },
   {
     ref: 'F',
+    chips: ['Who is on duty', 'Scan history', 'Coverage', 'Hours', 'Incidents', 'PDF export'],
+    icon: Building2,
+    span: 'lg:col-span-2',
     title: 'Client portal',
-    body: 'Read-only access for the building owner: who is on duty, scan history, coverage, hours, incidents, PDF export. You stop being the middleman for status requests.',
+    body: 'Read-only access for the building owner, scoped to their own site and nothing else. They stop phoning you for a status update, and you stop being the middleman between the night and the morning.',
   },
   {
     ref: 'G',
+    icon: RadioTower,
+    span: '',
     title: 'Watch',
     body: 'A ten-minute cycle raises late, no-show and stale-patrol alerts on its own, so a quiet site is not mistaken for a covered one.',
   },
   {
     ref: 'H',
+    chips: ['Multi-floor buildings', 'Per-site operating hours', 'Patrol checkpoints', 'Clock-in checkpoints'],
+    icon: Layers,
+    span: 'lg:col-span-3',
     title: 'Sites',
-    body: 'Multi-floor buildings, per-site operating hours, and checkpoints that can be normal patrol points or clock-in points.',
+    body: 'A site is more than a name on an invoice. Floors, hours and checkpoint behaviour are set per building, so a downtown tower and a fenced lock-up yard do not have to pretend to be the same shape.',
   },
 ]
 
 /**
- * Three shapes of operation, not three feature gates. Every tier is the whole
- * platform — that is the honest description of the product and it is also the
- * difference from competitors who withhold alerts or client access until you
- * upgrade. No figures appear: none have been set, so none are invented.
+ * The rate card. Annual is the same product billed a year at a time at 20% off,
+ * so the headline figure stays a monthly one on both tabs and the annual total
+ * is stated underneath — a reader comparing plans should never have to divide.
+ *
+ * Every annual figure is exactly 12 × monthly less 20%, and each saving is that
+ * difference. If a price changes, all four numbers on that plan change together.
  */
 const PLANS = [
   {
-    id: 'post',
-    name: 'Post',
-    shape: 'One site, one or two shifts a day',
-    who: 'A single contract you cannot afford to lose — a condo board, one building, one guard on nights.',
-    scope: ['1 site', 'Up to ~15 guards', 'Checkpoints on one or two floors'],
+    id: 'standard',
+    name: 'Standard',
+    line: 'Proof the round was walked',
+    who: 'One site or a handful, and a client who wants to see that the patrol happened.',
+    monthly: '99.99',
+    annualMonthly: '79.99',
+    annualTotal: '959.90',
+    saving: '240',
+    features: [
+      'Guard check-in at every patrol point — the app logs the time and the location',
+      'Patrol history on your phone or desktop, any time',
+      'Monthly patrol report as a PDF, every checkpoint hit',
+      'Incident reports filed from the phone with photos attached',
+      'Email alerts when a guard misses a patrol or runs late',
+      'Email support',
+    ],
   },
   {
-    id: 'patrol',
-    name: 'Patrol',
-    shape: 'Several sites, a roster that moves every week',
-    who: 'The shape most guard companies actually are: mobile patrol plus static posts, and a schedule that never sits still.',
-    scope: ['2–20 sites', 'Up to ~120 guards', 'Multi-floor sites, open-shift claiming'],
+    id: 'premium',
+    name: 'Premium',
+    line: 'See everything, in real time',
+    who: 'The shape most guard companies actually are: several sites, a roster that moves, and mornings that start with questions.',
+    monthly: '149.99',
+    annualMonthly: '119.99',
+    annualTotal: '1,439.90',
+    saving: '360',
     lead: true,
+    inherits: 'Everything in Standard, plus',
+    features: [
+      'Live clock in and out, timestamped to the minute',
+      'Live view — watch patrols happen as they happen',
+      'Guard hours log, so you can see exactly when each guard worked',
+      'Schedule management: set who should be on duty when',
+      'Daily operations email before 9 AM',
+      'Ten incident categories, each with timestamp, location, photos and notes',
+      'Weekly summary email',
+      'Phone and email support',
+    ],
+    detail: {
+      label: 'The morning email covers',
+      items: [
+        'Guards on duty yesterday and hours worked',
+        'Patrols completed and checkpoints hit',
+        'Incidents filed, with summaries',
+        'Coverage gaps',
+        'Total patrols and compliance %',
+      ],
+    },
   },
   {
-    id: 'command',
-    name: 'Command',
-    shape: 'Multiple regions and a lot of client reporting',
-    who: 'Enough contracts that the office job is now reporting and payroll rather than scheduling.',
-    scope: ['20+ sites', '120+ guards', 'Per-region operating hours and exports'],
+    id: 'max',
+    name: 'Max',
+    line: 'Payroll and accounting, automatic',
+    who: 'Enough contracts that the office job is now payroll and reporting rather than scheduling.',
+    monthly: '199.99',
+    annualMonthly: '159.99',
+    annualTotal: '1,919.90',
+    saving: '480',
+    inherits: 'Everything in Premium, plus',
+    features: [
+      'Automatic paystubs — hours come from the app, no manual timesheets',
+      'Canadian deductions built in: tax, EI and CPP',
+      'QuickBooks sync, so payroll lands in your accounting without re-entry',
+      'Also syncs with ADP, Dayforce, Wagepoint, Xero and Sage',
+      'Service invoicing for extra coverage and call-outs',
+      'Accounting CSV for your bookkeeper',
+      'Priority support, phone and email, same-day response',
+    ],
   },
 ]
 
@@ -212,9 +280,38 @@ export default function Home() {
   const rootRef = useRef(null)
   const progressRef = useRef(0)
   const enhanced = useEnhancements()
+  const [scrolled, setScrolled] = useState(false)
+  const [activeSection, setActiveSection] = useState('')
+  const [billing, setBilling] = useState('monthly')
 
   useEffect(() => {
     document.title = 'Kronus — proof your client can audit'
+  }, [])
+
+  // The masthead condenses once you leave the top, so the document's header
+  // takes less of the page the further into the record you are.
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // Which section you are actually reading, so the nav marks your place rather
+  // than sitting inert. The margins keep the band at roughly mid-viewport.
+  useEffect(() => {
+    const els = NAV.map((n) => document.getElementById(n.href.slice(1))).filter(Boolean)
+    if (!els.length) return undefined
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) setActiveSection(e.target.id)
+        })
+      },
+      { rootMargin: '-45% 0px -50% 0px' },
+    )
+    els.forEach((el) => io.observe(el))
+    return () => io.disconnect()
   }, [])
 
   useEffect(() => {
@@ -258,34 +355,49 @@ export default function Home() {
         })
       })
 
-      // The chain: one pinned, scrubbed pass through the six links.
-      const track = root.querySelector('[data-chain-track]')
-      const pin = root.querySelector('[data-chain-pin]')
-      if (track && pin && window.matchMedia('(min-width: 1024px)').matches) {
-        const distance = () => track.scrollWidth - pin.clientWidth + 120
-        gsap
-          .timeline({
-            scrollTrigger: {
-              trigger: pin,
-              start: 'top top',
-              end: () => `+=${Math.max(600, distance() * 1.15)}`,
-              scrub: 1,
-              pin: true,
-              anticipatePin: 1,
-              invalidateOnRefresh: true,
-            },
-          })
-          .to(track, { x: () => -distance(), ease: 'none' })
-          .to('[data-chain-progress]', { scaleX: 1, ease: 'none' }, 0)
+      // Fail-safe. `.kr-js .kr-rise` starts at opacity 0, so anything that never
+      // gets its trigger — a refresh landing at the wrong scroll position, an
+      // image resizing the page under it, a hot reload swapping these nodes out
+      // from under the context — would stay invisible for good. Copy going
+      // permanently blank is a far worse outcome than a reveal that does not
+      // animate, so sweep once on the next frame and again after load, and just
+      // show anything still hidden that the reader can already reach.
+      const reveal = () => {
+        gsap.utils.toArray('.kr-rise').forEach((el) => {
+          if (el.getBoundingClientRect().top > window.innerHeight) return
+          if (Number(gsap.getProperty(el, 'opacity')) > 0.01) return
+          gsap.set(el, { opacity: 1, y: 0 })
+        })
       }
+      requestAnimationFrame(reveal)
+      window.addEventListener('load', reveal, { once: true })
 
-      // One record, two sides — the client's half is uncovered, not faded in.
-      gsap.from('[data-uncover]', {
-        clipPath: 'inset(0% 0% 0% 100%)',
-        duration: 1.2,
-        ease: 'expo.out',
-        scrollTrigger: { trigger: '[data-uncover]', start: 'top 78%', once: true },
-      })
+      // The chain: the lime line draws down the run as you read it, and each
+      // node sets as it reaches reading height and stays set — a link that has
+      // been forged does not come apart again behind you.
+      const track = root.querySelector('[data-chain-track]')
+      if (track) {
+        gsap.to('[data-chain-progress]', {
+          scaleY: 1,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: track,
+            start: 'top 62%',
+            end: 'bottom 76%',
+            scrub: 0.6,
+            invalidateOnRefresh: true,
+          },
+        })
+
+        gsap.utils.toArray('[data-chain-link]').forEach((link) => {
+          ScrollTrigger.create({
+            trigger: link,
+            start: 'top 74%',
+            once: true,
+            onEnter: () => link.classList.add('is-on'),
+          })
+        })
+      }
     }, root)
 
     ScrollTrigger.refresh()
@@ -318,32 +430,84 @@ export default function Home() {
         Skip to the record
       </a>
 
-      {/* ---- Masthead: the document's own header, not a SaaS navbar ---------- */}
-      <header className="sticky top-0 z-40 border-b border-[var(--kr-edge)] bg-[color-mix(in_srgb,#0f1209_88%,transparent)] backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-[84rem] items-center justify-between gap-6 px-5 sm:px-8">
-          <p className="flex items-center gap-2.5">
-            <EagleMark className="h-[1.35rem] w-[1.35rem] text-[var(--kr-lime)]" />
+      {/* ---- Masthead: the document's own header, not a SaaS navbar ----------
+           It condenses on scroll and marks the section you are reading, so it
+           behaves like a document header rather than a fixed chrome bar. */}
+      <header
+        className="sticky top-0 z-40 backdrop-blur-xl transition-[background-color,box-shadow] duration-500"
+        style={{
+          background: scrolled
+            ? 'color-mix(in srgb, #0f1209 94%, transparent)'
+            : 'color-mix(in srgb, #0f1209 72%, transparent)',
+          boxShadow: scrolled ? '0 18px 40px -32px rgba(0,0,0,0.9)' : 'none',
+        }}
+      >
+        {/* The rule under the head is lit in the middle and fades at both ends,
+            so the header sits on the page instead of being boxed off from it. */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-px transition-opacity duration-500"
+          style={{
+            opacity: scrolled ? 1 : 0.55,
+            background:
+              'linear-gradient(90deg, transparent 0%, var(--kr-edge) 12%, color-mix(in srgb, #96ee60 34%, transparent) 50%, var(--kr-edge) 88%, transparent 100%)',
+          }}
+        />
+
+        <div
+          className={`mx-auto flex max-w-[84rem] items-center justify-between gap-6 px-5 transition-[height] duration-500 sm:px-8 ${
+            scrolled ? 'h-[3.4rem]' : 'h-[4.25rem]'
+          }`}
+        >
+          <a href="#top" className="group flex items-center gap-2.5">
+            <span className="relative flex items-center">
+              {/* A faint lime bloom behind the mark — the one warm thing in the bar. */}
+              <span
+                aria-hidden="true"
+                className="absolute -inset-2 rounded-full opacity-60 transition-opacity duration-500 group-hover:opacity-100"
+                style={{
+                  background:
+                    'radial-gradient(circle, color-mix(in srgb, #96ee60 26%, transparent) 0%, transparent 70%)',
+                }}
+              />
+              <EagleMark className="relative h-[1.35rem] w-[1.35rem] text-[var(--kr-lime)]" />
+            </span>
             <span
               className="kr-display text-lg"
               style={{ fontVariationSettings: '"wdth" 110' }}
             >
               KRONUS
             </span>
-          </p>
+          </a>
 
           <nav aria-label="Sections" className="hidden items-center gap-1 md:flex">
-            {NAV.map((n) => (
-              <a
-                key={n.href}
-                href={n.href}
-                className="rounded px-3 py-2 text-sm text-[var(--kr-ink-2)] transition-colors duration-200 hover:bg-[color-mix(in_srgb,#96ee60_9%,transparent)] hover:text-[var(--kr-ink)]"
-              >
-                {n.label}
-              </a>
-            ))}
+            {NAV.map((n) => {
+              const on = activeSection === n.href.slice(1)
+              return (
+                <a
+                  key={n.href}
+                  href={n.href}
+                  aria-current={on ? 'true' : undefined}
+                  className="group relative px-3 py-2 text-sm transition-colors duration-300"
+                  style={{ color: on ? 'var(--kr-ink)' : 'var(--kr-ink-2)' }}
+                >
+                  <span className="transition-colors duration-300 group-hover:text-[var(--kr-ink)]">
+                    {n.label}
+                  </span>
+                  {/* Draws from the centre on hover, and stays drawn for the
+                      section you are in — the nav reports position, not just links. */}
+                  <span
+                    aria-hidden="true"
+                    className={`absolute inset-x-2.5 bottom-1 h-px origin-center bg-[var(--kr-lime)] transition-transform duration-300 ease-out ${
+                      on ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+                    }`}
+                  />
+                </a>
+              )
+            })}
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <Link
               to="/login"
               className="rounded px-3 py-2 text-sm text-[var(--kr-ink-2)] transition-colors duration-200 hover:text-[var(--kr-ink)]"
@@ -352,7 +516,7 @@ export default function Home() {
             </Link>
             <a
               href={DEMO_HREF}
-              className="rounded-[3px] bg-[var(--kr-lime)] px-4 py-2 text-sm font-semibold text-[#0f1209] transition-all duration-200 hover:bg-[color-mix(in_srgb,#96ee60_82%,white)]"
+              className="rounded-[3px] bg-[var(--kr-lime)] px-4 py-2 text-sm font-semibold text-[#0f1209] transition-all duration-300 hover:bg-[color-mix(in_srgb,#96ee60_82%,white)] hover:shadow-[0_10px_28px_-10px_color-mix(in_srgb,#96ee60_70%,transparent)]"
             >
               Book a demo
             </a>
@@ -403,8 +567,10 @@ export default function Home() {
           }}
         />
 
-        <div className="relative mx-auto grid max-w-[84rem] items-center gap-y-14 px-5 pt-16 pb-20 sm:px-8 sm:pt-24 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-x-12 lg:pt-28 lg:pb-28">
-          <div className="max-w-[34rem]">
+        {/* Top padding is deliberately short: the masthead is a document header,
+            and the record should start under it, not float in a band of nothing. */}
+        <div className="relative mx-auto grid max-w-[84rem] gap-y-14 px-5 pt-10 pb-20 sm:px-8 sm:pt-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-start lg:gap-x-12 lg:pt-14 lg:pb-28">
+          <div className="max-w-[37rem] lg:pt-6">
             <p
               data-hero-line
               className="kr-meas mb-7 flex items-center gap-2.5 text-[11px] tracking-wide text-[var(--kr-ink-3)]"
@@ -413,21 +579,27 @@ export default function Home() {
               PVR-2026-0724-NGT · filed 06:04
             </p>
 
+            {/* A category statement, not a slogan, so it is set below hero scale:
+                at 4.4rem it ran four lines and pushed the proof strip off the
+                fold. "AI-Powered" carries the lime so the phrase reads as one
+                thing and the eye still lands on what the system actually is. */}
             <h1
               data-hero-line
-              className="kr-display text-[2.75rem] leading-[0.95] sm:text-[3.9rem] lg:text-[4.4rem]"
+              className="kr-display text-[2.5rem] leading-[1.0] sm:text-[3.2rem] lg:text-[3.55rem]"
             >
-              Hand your client the record, not a summary.
+              <span className="text-[var(--kr-lime)]">AI-Powered</span> Workforce
+              Management System
             </h1>
 
             <p
               data-hero-line
               className="mt-7 max-w-[33rem] text-[1.0625rem] leading-relaxed text-[var(--kr-ink-2)] sm:text-lg"
             >
-              Kronus runs scheduling, patrol verification and payroll for security
-              companies. Every line your client reads began as a guard tapping a tag on a
-              wall, inside a verified GPS radius — and nothing downstream can be typed over
-              it.
+              Kronus watches the night so you can hand over the proof. It runs scheduling,
+              patrol verification and payroll for security companies — checking every site
+              every ten minutes, raising the missed round before your client notices it,
+              and filing the morning report on its own from GPS-verified scans that nothing
+              downstream can type over.
             </p>
 
             <div data-hero-line className="mt-9 flex flex-wrap items-center gap-3">
@@ -456,9 +628,9 @@ export default function Home() {
               className="mt-11 flex flex-wrap gap-x-9 gap-y-5 border-t border-[var(--kr-edge)] pt-7"
             >
               {[
-                { l: 'Verified by', v: 'NFC · QR · GPS', icon: Nfc },
-                { l: 'Radius', v: `${REPORT.radius} of the tag`, icon: QrCode },
-                { l: 'Watch cycle', v: 'every 10 min', icon: Radio },
+                { l: 'Watches', v: 'every 10 min', icon: Radio },
+                { l: 'Verifies', v: 'NFC · QR · GPS', icon: Nfc },
+                { l: 'Files', v: 'nobody types it', icon: QrCode },
               ].map((s) => (
                 <div key={s.l} className="flex items-start gap-2.5">
                   <s.icon
@@ -495,7 +667,7 @@ export default function Home() {
             )}
 
             <p className="kr-meas mt-4 text-center text-[10.5px] tracking-wide text-[var(--kr-ink-3)]">
-              SAMPLE REPORT · SYNTHETIC DATA, NOT A CUSTOMER RECORD
+              SAMPLE RECORDS · SYNTHETIC DATA, NOT A CUSTOMER RECORD
             </p>
           </div>
         </div>
@@ -513,195 +685,140 @@ export default function Home() {
             </h2>
             <p className="mt-6 max-w-[38rem] text-[1.0625rem] leading-relaxed text-[var(--kr-ink-2)]">
               Most guard software starts with a form. Kronus starts with a physical object
-              in a building, and follows it all the way to the invoice line. Six links, no
-              gap where a number could be entered by hand.
+              in a building, and follows it all the way to the invoice line and the page
+              your client audits. Seven links, no gap where a number could be entered by
+              hand.
             </p>
           </div>
         </div>
 
-        {/* Pinned and scrubbed on desktop; an honest vertical rail on smaller screens. */}
-        <div
-          data-chain-pin
-          className="overflow-hidden pb-20 lg:flex lg:h-screen lg:max-h-[54rem] lg:min-h-[34rem] lg:flex-col lg:pb-0"
+        {/* One vertical run, and from lg up the links alternate across it: the
+            chain hangs down the middle and each step steps out to one side. The
+            spine stays unbroken through all six, because that is the claim. */}
+        <ol
+          data-chain-track
+          className="relative mx-auto w-full max-w-[84rem] px-5 pb-24 sm:px-8 sm:pb-32"
         >
-          {/* Stays put through the pin, and clears the sticky masthead. */}
-          <div className="mx-auto hidden w-full max-w-[84rem] items-end justify-between gap-6 border-b border-[var(--kr-edge)] px-5 pt-20 pb-5 sm:px-8 lg:flex">
-            <p className="kr-doc-label text-[10px] text-[var(--kr-ink-3)]">
-              Chain of custody
-            </p>
-            <p className="kr-meas shrink-0 text-[11px] text-[var(--kr-ink-3)]">
-              PVR-2026-0724-NGT · 6 links
-            </p>
-          </div>
+          <span
+            aria-hidden="true"
+            className="absolute top-2 bottom-2 left-[calc(1.25rem+6.5px)] w-px bg-[var(--kr-edge-strong)] sm:left-[calc(2rem+6.5px)] lg:left-1/2 lg:-translate-x-1/2"
+          />
+          <span
+            aria-hidden="true"
+            data-chain-progress
+            className="absolute top-2 bottom-2 left-[calc(1.25rem+6.5px)] w-px origin-top scale-y-0 bg-[var(--kr-lime)] sm:left-[calc(2rem+6.5px)] lg:left-1/2 lg:-translate-x-1/2"
+          />
 
-          <div className="mx-auto flex w-full max-w-[84rem] flex-1 flex-col justify-center px-5 sm:px-8 lg:py-10">
-            <ol
-              data-chain-track
-              className="relative flex flex-col gap-10 lg:w-max lg:flex-row lg:gap-0 lg:will-change-transform"
-            >
-              {/* The chain itself — continuous, because the point is that it never
-                  breaks. Scrub position is reported by the rail at the foot instead. */}
-              <span
-                aria-hidden="true"
-                className="absolute top-[2.6rem] left-0 hidden h-px w-full bg-[var(--kr-edge-strong)] lg:block"
-              />
+          {CHAIN.map((link, i) => {
+            // 01 reads text-left, 02 text-right, and so on down to 06.
+            const textRight = i % 2 === 1
+            return (
+              <li
+                key={link.id}
+                data-chain-link
+                className="kr-chain-link kr-rise relative pb-16 pl-12 last:pb-0 sm:pb-24 sm:pl-16 lg:grid lg:grid-cols-2 lg:items-center lg:gap-x-20 lg:pb-28 lg:pl-0"
+              >
+                {/* On the rail below lg, centred on the spine from lg up. */}
+                <span
+                  aria-hidden="true"
+                  className="kr-chain-node absolute top-[0.2rem] left-0 h-3.5 w-3.5 rounded-full border lg:top-1/2 lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2"
+                />
 
-              {CHAIN.map((link, i) => (
-                <li
-                  key={link.id}
-                  className="kr-rise relative flex gap-5 lg:w-[25rem] lg:shrink-0 lg:flex-col lg:gap-0 lg:pr-14"
+                {/* Text. Left-aligned in both columns — this page is a document,
+                    and documents do not set body copy ragged-left. */}
+                <div
+                  className={`min-w-0 lg:row-start-1 ${
+                    textRight ? 'lg:col-start-2 lg:pl-2' : 'lg:col-start-1 lg:pr-2'
+                  }`}
                 >
-                  {/* Mobile rail */}
-                  <div
-                    aria-hidden="true"
-                    className="relative flex w-6 shrink-0 justify-center lg:hidden"
-                  >
-                    <span className="absolute top-8 bottom-[-2.5rem] w-px bg-[var(--kr-edge)]" />
-                    <span className="relative z-10 mt-1.5 h-3 w-3 rounded-full border border-[var(--kr-lime)] bg-[var(--kr-void)]" />
-                  </div>
-
-                  <div className="min-w-0">
-                    <div className="flex items-baseline gap-3 lg:h-8">
-                      <span className="kr-meas text-sm text-[var(--kr-lime)]">
-                        {String(i + 1).padStart(2, '0')}
-                      </span>
-                      <span className="kr-doc-label text-[11px] text-[var(--kr-ink-3)]">
-                        {link.step}
-                      </span>
-                    </div>
-
-                    {/* Node on the chain — aligned to the rail on desktop. */}
+                  <div className="flex items-baseline gap-3">
+                    <span className="kr-meas text-sm text-[var(--kr-lime)]">
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
                     <span
-                      aria-hidden="true"
-                      className="mt-[0.6rem] hidden h-3 w-3 rounded-full border border-[var(--kr-lime)] bg-[var(--kr-void)] lg:block"
-                    />
-
+                      data-chain-step
+                      className="kr-doc-label text-[11px] text-[var(--kr-ink-3)] transition-colors duration-500"
+                    >
+                      {link.step}
+                    </span>
                     <ChainGlyph
                       id={link.id}
-                      className="mt-8 h-10 w-10 text-[var(--kr-lime)] lg:mt-9"
+                      className="ml-auto hidden h-9 w-9 shrink-0 text-[var(--kr-lime)] opacity-60 sm:block"
                     />
-
-                    <h3 className="kr-display mt-6 text-[1.4rem] leading-[1.12] sm:text-[1.55rem]">
-                      {link.title}
-                    </h3>
-                    <p className="mt-3.5 max-w-[21rem] text-[0.9375rem] leading-relaxed text-[var(--kr-ink-2)]">
-                      {link.body}
-                    </p>
-                    <p className="kr-meas mt-5 inline-block rounded-[2px] border border-[var(--kr-edge)] bg-[var(--kr-ground)] px-2.5 py-1.5 text-xs text-[var(--kr-lime)]">
-                      {link.meas}
-                    </p>
                   </div>
-                </li>
-              ))}
-            </ol>
-          </div>
 
-          {/* Scrub position, so a pinned section still tells you where you are. */}
-          <div className="mx-auto hidden w-full max-w-[84rem] px-5 pb-8 sm:px-8 lg:block">
-            <span className="block h-px w-full bg-[var(--kr-edge)]">
-              <span
-                aria-hidden="true"
-                data-chain-progress
-                className="block h-px w-full origin-left scale-x-0 bg-[var(--kr-lime)]"
-              />
-            </span>
-          </div>
-        </div>
-      </section>
+                  <h3 className="kr-display mt-4 text-[1.45rem] leading-[1.12] sm:text-[1.75rem]">
+                    {link.title}
+                  </h3>
+                  <p className="mt-4 max-w-[38rem] text-[0.9375rem] leading-relaxed text-[var(--kr-ink-2)] sm:text-[1.0625rem]">
+                    {link.body}
+                  </p>
 
-      {/* ================= ONE RECORD, TWO SIDES ============================ */}
-      <section
-        id="operations"
-        className="border-b border-[var(--kr-edge)] bg-[var(--kr-ground)]"
-      >
-        <div className="mx-auto max-w-[84rem] px-5 py-20 sm:px-8 sm:py-28">
-          <div className="kr-rise max-w-[46rem]">
-            <p className="kr-doc-label mb-5 text-[11px] text-[var(--kr-lime)]">
-              One record, two sides
-            </p>
-            <h2 className="kr-display text-[2.25rem] sm:text-[3.1rem]">
-              You watch the night. They read the morning.
-            </h2>
-            <p className="mt-6 max-w-[38rem] text-[1.0625rem] leading-relaxed text-[var(--kr-ink-2)]">
-              The same events, rendered for two different people. Nobody retypes anything
-              between these two panels — the left is the live state of the record, the right
-              is that record printed for the building owner.
-            </p>
-          </div>
+                  {/* The specifics under the claim. A prose paragraph states the
+                      rule; these say what it actually costs you to believe it. */}
+                  <ul className="mt-7 space-y-3 border-t border-[var(--kr-edge)] pt-6">
+                    {link.detail.map((d) => (
+                      <li
+                        key={d}
+                        className="kr-meas flex gap-3 text-[11.5px] leading-relaxed text-[var(--kr-ink-3)]"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="mt-[0.42rem] h-1 w-1 shrink-0 rounded-full bg-[var(--kr-lime)]"
+                        />
+                        {d}
+                      </li>
+                    ))}
+                  </ul>
 
-          <div className="mt-14 grid gap-6 lg:grid-cols-2 lg:gap-8">
-            {/* Operator side */}
-            <div className="kr-rise min-w-0 rounded-[4px] border border-[var(--kr-edge)] bg-[var(--kr-void)]">
-              <div className="flex items-center justify-between border-b border-[var(--kr-edge)] px-5 py-3.5">
-                <p className="kr-doc-label text-[10px] text-[var(--kr-ink-3)]">
-                  Your console · 02:14
-                </p>
-                <p className="kr-meas flex items-center gap-2 text-[11px] text-[var(--kr-lime)]">
-                  <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--kr-lime)]" />
-                  LIVE
-                </p>
-              </div>
+                  <p className="kr-meas mt-7 inline-block rounded-[2px] border border-[var(--kr-edge)] bg-[var(--kr-ground)] px-2.5 py-1.5 text-xs text-[var(--kr-lime)]">
+                    {link.meas}
+                  </p>
+                </div>
 
-              <ul className="divide-y divide-[var(--kr-edge)]">
-                {BOARD.map((b) => (
-                  <li
-                    key={b.site}
-                    className="flex items-center justify-between gap-4 px-5 py-3.5"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-[var(--kr-ink)]">
-                        {b.site}
-                      </p>
-                      <p className="kr-meas mt-1 truncate text-[11.5px] text-[var(--kr-ink-3)]">
-                        {b.guard} · {b.detail}
-                      </p>
-                    </div>
+                {/* The photograph of the step. The frame carries the ground
+                    colour, so a link whose image has not landed yet reads as an
+                    empty plate rather than a broken page. */}
+                <figure
+                  className={`mt-8 lg:row-start-1 lg:mt-0 ${
+                    textRight ? 'lg:col-start-1' : 'lg:col-start-2'
+                  }`}
+                >
+                  {/* No fixed aspect: each photograph keeps the shape it was shot
+                      in. The wide ones are wide because their subject is a
+                      distance across a room, and cropping them to a common
+                      portrait frame would cut exactly the thing they are of. */}
+                  <div className="relative min-h-[16rem] overflow-hidden rounded-[3px] border border-[var(--kr-edge)] bg-[var(--kr-ground)]">
+                    {/* Plate marker. The photograph covers it once it lands; until
+                        then the frame reads as an unexposed plate. */}
                     <span
-                      className={`kr-doc-label shrink-0 rounded-[2px] px-2 py-1 text-[9.5px] ${
-                        b.state === 'alert'
-                          ? 'bg-[color-mix(in_srgb,#ef4444_18%,transparent)] text-[#ff9a95]'
-                          : b.state === 'open'
-                            ? 'bg-[color-mix(in_srgb,#ecfab5_14%,transparent)] text-[var(--kr-meadow)]'
-                            : 'bg-[color-mix(in_srgb,#96ee60_14%,transparent)] text-[var(--kr-lime)]'
-                      }`}
+                      aria-hidden="true"
+                      className="kr-doc-label absolute inset-0 flex items-center justify-center text-[10px] text-[var(--kr-ink-3)]"
                     >
-                      {b.state === 'alert'
-                        ? 'Stale patrol'
-                        : b.state === 'open'
-                          ? 'Unclaimed'
-                          : 'On post'}
+                      {String(i + 1).padStart(2, '0')} · {link.step}
                     </span>
-                  </li>
-                ))}
-              </ul>
-
-              <div className="flex items-start gap-3 border-t border-[var(--kr-edge)] bg-[color-mix(in_srgb,#ef4444_9%,transparent)] px-5 py-4">
-                <TriangleAlert
-                  className="mt-0.5 h-4 w-4 shrink-0 text-[#ff9a95]"
-                  strokeWidth={2.2}
-                  aria-hidden="true"
-                />
-                <p className="text-[13px] leading-relaxed text-[var(--kr-ink-2)]">
-                  <span className="font-semibold text-[var(--kr-ink)]">
-                    Harbour Yards raised itself.
-                  </span>{' '}
-                  Nobody was watching that site at 01:36. The ten-minute cycle noticed the
-                  gap and told you before the client could.
-                </p>
-              </div>
-            </div>
-
-            {/* Client side — uncovered rather than faded in. */}
-            <div data-uncover className="kr-rise min-w-0">
-              <ReportSheet compact />
-              <p className="kr-meas mt-3 text-[10.5px] tracking-wide text-[var(--kr-ink-3)]">
-                SYNTHETIC SAMPLE DATA · NOT A CUSTOMER RECORD
-              </p>
-            </div>
-          </div>
-        </div>
+                    {/* text-transparent so a missing image does not dump its alt
+                        string across the plate; screen readers still get it. */}
+                    <img
+                      src={link.image.src}
+                      alt={link.image.alt}
+                      width={link.image.w}
+                      height={link.image.h}
+                      loading="lazy"
+                      decoding="async"
+                      draggable={false}
+                      className="relative block h-auto w-full text-transparent"
+                    />
+                  </div>
+                </figure>
+              </li>
+            )
+          })}
+        </ol>
       </section>
 
+      {/* ================= THE EVIDENCE TABLE =============================== */}
+      <EvidenceTable enhanced={enhanced} />
 
       {/* ================= WHAT THE RECORD PRODUCES ========================= */}
       <section id="artifacts" className="border-b border-[var(--kr-edge)]">
@@ -713,9 +830,9 @@ export default function Home() {
             </h2>
             <p className="mt-6 max-w-[38rem] text-[1.0625rem] leading-relaxed text-[var(--kr-ink-2)]">
               A roster your guards can act on, a payroll line your bookkeeper can post, an
-              incident your client reads the same night, and the label on the wall that
-              started it. Four documents, one record underneath — these are real samples on
-              synthetic data.
+              incident your client reads the same night, and the scan history all three are
+              derived from. Four documents, one record underneath — these are real samples
+              on synthetic data.
             </p>
           </div>
 
@@ -746,12 +863,12 @@ export default function Home() {
                   'The guard files it from the phone with photos attached while standing there. Your client gets the email and the PDF the same night — before they hear about it from a tenant.',
               },
               {
-                key: 'label',
-                node: <CheckpointLabel />,
+                key: 'scans',
+                node: <ScanReportSheet />,
                 tilt: '0.8deg',
-                title: 'Where the chain starts',
+                title: 'Every pass, with its distance',
                 body:
-                  'An NFC tag or printed label, mounted at a real spot, carrying its own reference, coordinates and radius. Every number on every document above traces back to something like this on a wall.',
+                  'The scan history your client can pull for themselves, or take as a CSV. Each row carries how far the phone was from the tag when it logged — so "the guard was there" is a measurement rather than a claim, and the three documents above are all derived from these rows.',
               },
             ].map((a) => (
               <div key={a.key} className="kr-rise min-w-0">
@@ -776,24 +893,67 @@ export default function Home() {
       {/* ================= THE REST OF THE RECORD =========================== */}
       <section className="border-b border-[var(--kr-edge)]">
         <div className="mx-auto max-w-[84rem] px-5 py-20 sm:px-8 sm:py-28">
-          <div className="kr-rise max-w-[46rem]">
-            <p className="kr-doc-label mb-5 text-[11px] text-[var(--kr-lime)]">Contents</p>
-            <h2 className="kr-display text-[2.25rem] sm:text-[3.1rem]">
-              What else runs off the same record.
-            </h2>
+          <div className="kr-rise flex flex-wrap items-end justify-between gap-x-10 gap-y-6">
+            <div className="max-w-[46rem]">
+              <p className="kr-doc-label mb-5 text-[11px] text-[var(--kr-lime)]">Contents</p>
+              <h2 className="kr-display text-[2.25rem] sm:text-[3.1rem]">
+                What else runs off the same record.
+              </h2>
+            </div>
+            <p className="kr-meas max-w-[24rem] text-[12.5px] leading-relaxed text-[var(--kr-ink-3)]">
+              Eight surfaces, one event stream. Nothing here keeps its own copy of
+              the hours.
+            </p>
           </div>
 
-          <dl className="mt-12 border-t border-[var(--kr-edge)]">
+          {/* A ruled list of eight equal rows said everything was equally
+              important and left a corridor of dead space down the middle. As
+              plates, the three that carry the operation get the room: the roster
+              is where the work starts, the portal is what the client actually
+              buys, and sites are the ground the rest of it stands on. */}
+          <dl className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {LEDGER.map((item) => (
               <div
                 key={item.ref}
-                className="kr-rise grid gap-2 border-b border-[var(--kr-edge)] py-6 transition-colors duration-200 hover:bg-[color-mix(in_srgb,#96ee60_5%,transparent)] sm:grid-cols-[3rem_minmax(0,14rem)_minmax(0,1fr)] sm:items-baseline sm:gap-6"
+                className={`kr-plate kr-rise group relative flex flex-col overflow-hidden rounded-[5px] border border-[var(--kr-edge)] bg-[var(--kr-ground)] p-6 sm:p-7 ${item.span}`}
               >
-                <dt className="kr-meas text-sm text-[var(--kr-lime)]">{item.ref}</dt>
-                <dt className="kr-display text-[1.3rem] leading-tight">{item.title}</dt>
-                <dd className="max-w-[42rem] text-[0.9375rem] leading-relaxed text-[var(--kr-ink-2)]">
+                {/* The index letter, set enormous and nearly invisible — the
+                    page's own filing mark, the way the chain sets its count. */}
+                <span
+                  aria-hidden="true"
+                  className="kr-display pointer-events-none absolute -top-3 right-3 text-[5.5rem] leading-none text-[var(--kr-edge)] transition-colors duration-500 group-hover:text-[var(--kr-edge-strong)]"
+                >
+                  {item.ref}
+                </span>
+
+                <div className="relative flex items-center gap-3">
+                  <item.icon
+                    className="h-[1.15rem] w-[1.15rem] shrink-0 text-[var(--kr-lime)]"
+                    strokeWidth={1.9}
+                    aria-hidden="true"
+                  />
+                  <dt className="kr-display text-[1.3rem] leading-tight">{item.title}</dt>
+                </div>
+
+                <dd className="relative mt-3.5 max-w-[40rem] text-[0.9375rem] leading-relaxed text-[var(--kr-ink-2)]">
                   {item.body}
                 </dd>
+
+                {/* The wide plates pay for their room. Without this they were
+                    two lines of copy in a lot of empty space, which reads as a
+                    layout accident rather than as emphasis. */}
+                {item.chips && (
+                  <dd className="relative mt-auto flex flex-wrap gap-2 pt-6">
+                    {item.chips.map((chip) => (
+                      <span
+                        key={chip}
+                        className="kr-meas rounded-[2px] border border-[var(--kr-edge)] px-2.5 py-1.5 text-[11px] text-[var(--kr-ink-3)] transition-colors duration-500 group-hover:border-[var(--kr-edge-strong)] group-hover:text-[var(--kr-ink-2)]"
+                      >
+                        {chip}
+                      </span>
+                    ))}
+                  </dd>
+                )}
               </div>
             ))}
           </dl>
@@ -801,8 +961,42 @@ export default function Home() {
       </section>
 
       {/* ================= THE QUIET PASSAGE: THE NIGHT SHIFT =============== */}
-      <section className="border-b border-[var(--kr-edge)] bg-[var(--kr-ground)]">
-        <div className="mx-auto max-w-[52rem] px-5 py-24 text-center sm:px-8 sm:py-36">
+      {/* The one photograph on the page that is not a document: the place the
+          record comes from. It sits under the copy, so it is framed and scrimmed
+          hard — the lit wall behind the guard measures L 240 raw, and body copy
+          at L 190 over that is unreadable. */}
+      <section className="relative overflow-hidden border-b border-[var(--kr-edge)] bg-[var(--kr-ground)]">
+        <img
+          src="/bg/parkade-night.jpg"
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          decoding="async"
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-[0.5]"
+          style={{ objectPosition: '38% 55%' }}
+        />
+        {/* Pool of ground colour under the type, thinning toward the edges so the
+            column and the deck still read. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              'radial-gradient(ellipse 58% 66% at 50% 50%, color-mix(in srgb, #151a10 95%, transparent) 0%, color-mix(in srgb, #151a10 78%, transparent) 46%, transparent 80%)',
+          }}
+        />
+        {/* Fades into the sections above and below, so the photograph does not
+            announce itself as a rectangle. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              'linear-gradient(180deg, var(--kr-ground) 0%, transparent 26%, transparent 74%, var(--kr-ground) 100%)',
+          }}
+        />
+
+        <div className="relative mx-auto max-w-[52rem] px-5 py-24 text-center sm:px-8 sm:py-36">
           <WifiOff
             className="kr-rise mx-auto h-7 w-7 text-[var(--kr-ink-3)]"
             strokeWidth={1.6}
@@ -827,115 +1021,174 @@ export default function Home() {
               Scope of work
             </p>
             <h2 className="kr-display text-[2.25rem] sm:text-[3.1rem]">
-              Priced against your posts, not per seat.
+              Three plans. Every one starts free for seven days.
             </h2>
             <p className="mt-6 max-w-[38rem] text-[1.0625rem] leading-relaxed text-[var(--kr-ink-2)]">
-              A twelve-guard company with one building and a forty-guard company with thirty
-              are not the same job to run, and a per-user price pretends they are. Pick the
-              shape that sounds like your operation; we quote against that.
+              Priced per company, not per guard — hire a fourth guard in March and the bill
+              does not move. Full access on the trial, no card, cancel any time.
             </p>
           </div>
 
-          <div className="mt-14 grid gap-5 lg:grid-cols-3 lg:gap-6">
-            {PLANS.map((plan) => (
-              <div
-                key={plan.id}
-                className={`kr-rise flex min-w-0 flex-col rounded-[4px] p-7 sm:p-8 ${
-                  plan.lead
-                    ? 'border border-[var(--kr-lime)] bg-[var(--kr-raise)]'
-                    : 'border border-[var(--kr-edge)] bg-[var(--kr-ground)]'
-                }`}
-              >
-                <div className="flex items-baseline justify-between gap-3">
-                  <h3 className="kr-display text-[1.75rem]">{plan.name}</h3>
+          {/* Monthly / annual. Both tabs quote a monthly figure so the plans stay
+              comparable at a glance; the annual total sits underneath it. */}
+          <div className="kr-rise mt-10 flex justify-center">
+            <div
+              role="tablist"
+              aria-label="Billing period"
+              className="inline-flex rounded-full border border-[var(--kr-edge-strong)] bg-[var(--kr-ground)] p-1"
+            >
+              {[
+                { id: 'monthly', label: 'Monthly' },
+                { id: 'annual', label: 'Annual · save 20%' },
+              ].map((tab) => {
+                const on = billing === tab.id
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={on}
+                    onClick={() => setBilling(tab.id)}
+                    className={`rounded-full px-5 py-2.5 text-sm font-semibold transition-colors duration-300 ${
+                      on
+                        ? 'bg-[var(--kr-lime)] text-[#0f1209]'
+                        : 'text-[var(--kr-ink-2)] hover:text-[var(--kr-ink)]'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="mt-10 grid items-start gap-5 lg:grid-cols-3 lg:gap-6">
+            {PLANS.map((plan) => {
+              const annual = billing === 'annual'
+              return (
+                <div
+                  key={plan.id}
+                  className={`kr-rise relative flex min-w-0 flex-col rounded-[5px] p-7 sm:p-8 ${
+                    plan.lead
+                      ? 'border border-[var(--kr-lime)] bg-[var(--kr-raise)]'
+                      : 'border border-[var(--kr-edge)] bg-[var(--kr-ground)]'
+                  }`}
+                >
                   {plan.lead && (
-                    <span className="kr-doc-label rounded-[2px] bg-[var(--kr-lime)] px-2 py-1 text-[9px] text-[#0f1209]">
+                    <span className="kr-doc-label absolute -top-2.5 left-7 rounded-[2px] bg-[var(--kr-lime)] px-2.5 py-1 text-[9px] text-[#0f1209] sm:left-8">
                       Most operations
                     </span>
                   )}
-                </div>
 
-                <p className="mt-3 text-[0.9375rem] leading-snug font-medium text-[var(--kr-ink)]">
-                  {plan.shape}
-                </p>
-                <p className="mt-3.5 text-[0.9375rem] leading-relaxed text-[var(--kr-ink-2)]">
-                  {plan.who}
-                </p>
-
-                {/* The price field is left open, the way a quote form leaves it open.
-                    No rate card exists yet, so inventing a number here would be a lie
-                    on the one page whose whole argument is that records do not lie. */}
-                <div className="mt-7 border-t border-[var(--kr-edge)] pt-5">
-                  <p className="kr-doc-label text-[9.5px] text-[var(--kr-ink-3)]">
-                    Monthly
+                  <h3 className="kr-display text-[1.75rem]">{plan.name}</h3>
+                  <p className="mt-2 text-[0.9375rem] leading-snug font-medium text-[var(--kr-ink)]">
+                    {plan.line}
                   </p>
-                  <p className="mt-2 flex items-end gap-2.5">
-                    <span
-                      aria-hidden="true"
-                      className="mb-1.5 block h-px w-20 bg-[var(--kr-edge-strong)]"
-                      style={{
-                        backgroundImage:
-                          'repeating-linear-gradient(to right, currentColor 0 6px, transparent 6px 11px)',
-                        color: 'var(--kr-ink-3)',
-                        background: 'none',
-                        height: '1px',
-                      }}
-                    />
-                    <span className="kr-meas text-sm text-[var(--kr-ink-3)]">
-                      to be quoted
-                    </span>
+                  <p className="mt-3.5 text-[0.9375rem] leading-relaxed text-[var(--kr-ink-2)]">
+                    {plan.who}
                   </p>
-                </div>
 
-                <ul className="mt-6 space-y-2.5">
-                  {plan.scope.map((f) => (
-                    <li key={f} className="flex items-start gap-2.5">
-                      <Check
-                        className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--kr-lime)]"
-                        strokeWidth={2.8}
-                        aria-hidden="true"
-                      />
-                      <span className="kr-meas text-[0.8125rem] text-[var(--kr-ink-2)]">
-                        {f}
+                  <div className="mt-7 border-t border-[var(--kr-edge)] pt-6">
+                    <p className="flex items-end gap-1.5">
+                      <span className="kr-display text-[2.9rem] leading-none">
+                        ${annual ? plan.annualMonthly : plan.monthly}
                       </span>
-                    </li>
-                  ))}
-                </ul>
+                      <span className="mb-1 text-[0.9375rem] text-[var(--kr-ink-3)]">
+                        /month
+                      </span>
+                    </p>
+                    <p className="kr-meas mt-3 text-[11.5px] leading-relaxed text-[var(--kr-ink-3)]">
+                      {annual ? (
+                        <>
+                          ${plan.annualTotal} billed yearly ·{' '}
+                          <span className="text-[var(--kr-lime)]">save ${plan.saving}</span>
+                        </>
+                      ) : (
+                        'billed monthly · CAD'
+                      )}
+                    </p>
+                  </div>
 
-                <a
-                  href={DEMO_HREF}
-                  className={`group mt-auto inline-flex items-center justify-center gap-2 rounded-[3px] px-5 py-3.5 pt-3.5 font-semibold transition-all duration-200 ${
-                    plan.lead
-                      ? 'bg-[var(--kr-lime)] text-[#0f1209] hover:bg-[color-mix(in_srgb,#96ee60_80%,white)]'
-                      : 'border border-[var(--kr-edge-strong)] text-[var(--kr-ink)] hover:bg-[color-mix(in_srgb,#96ee60_8%,transparent)]'
-                  }`}
-                  style={{ marginTop: '2rem' }}
-                >
-                  Scope {plan.name}
-                  <ArrowRight
-                    className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
-                    strokeWidth={2.5}
-                    aria-hidden="true"
-                  />
-                </a>
-              </div>
-            ))}
+                  <a
+                    href={DEMO_HREF}
+                    className={`group mt-7 inline-flex items-center justify-center gap-2 rounded-[3px] px-5 py-3.5 font-semibold transition-all duration-200 ${
+                      plan.lead
+                        ? 'bg-[var(--kr-lime)] text-[#0f1209] hover:bg-[color-mix(in_srgb,#96ee60_80%,white)]'
+                        : 'border border-[var(--kr-edge-strong)] text-[var(--kr-ink)] hover:bg-[color-mix(in_srgb,#96ee60_8%,transparent)]'
+                    }`}
+                  >
+                    Start 7 days free
+                    <ArrowRight
+                      className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                      strokeWidth={2.5}
+                      aria-hidden="true"
+                    />
+                  </a>
+
+                  {plan.inherits && (
+                    <p className="kr-doc-label mt-7 text-[9.5px] text-[var(--kr-lime)]">
+                      {plan.inherits}
+                    </p>
+                  )}
+
+                  <ul className={`space-y-3 ${plan.inherits ? 'mt-4' : 'mt-7'}`}>
+                    {plan.features.map((f) => (
+                      <li key={f} className="flex items-start gap-2.5">
+                        <Check
+                          className="mt-1 h-3.5 w-3.5 shrink-0 text-[var(--kr-lime)]"
+                          strokeWidth={2.8}
+                          aria-hidden="true"
+                        />
+                        <span className="text-[0.875rem] leading-snug text-[var(--kr-ink-2)]">
+                          {f}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* The one feature worth itemising, because "daily email" sounds
+                      like noise until you see what is actually in it. */}
+                  {plan.detail && (
+                    <div className="mt-6 rounded-[3px] border border-[var(--kr-edge)] bg-[var(--kr-ground)] p-4">
+                      <p className="kr-doc-label text-[9px] text-[var(--kr-ink-3)]">
+                        {plan.detail.label}
+                      </p>
+                      <ul className="mt-3 space-y-1.5">
+                        {plan.detail.items.map((d) => (
+                          <li
+                            key={d}
+                            className="kr-meas flex gap-2 text-[11px] leading-relaxed text-[var(--kr-ink-3)]"
+                          >
+                            <span
+                              aria-hidden="true"
+                              className="mt-[0.44rem] h-1 w-1 shrink-0 rounded-full bg-[var(--kr-edge-strong)]"
+                            />
+                            {d}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
 
-          {/* The differentiator worth saying out loud. */}
           <div className="kr-rise mt-6 rounded-[4px] border border-[var(--kr-edge)] bg-[var(--kr-ground)] p-7 sm:p-8">
             <div className="flex flex-wrap items-baseline justify-between gap-4">
               <h3 className="kr-display text-[1.5rem]">
-                Every tier is the whole platform.
+                Priced per company, not per guard.
               </h3>
               <p className="kr-meas text-[11px] text-[var(--kr-ink-3)]">
-                no feature gates · no per-seat licence
+                7 days free · no card · cancel any time
               </p>
             </div>
             <p className="mt-4 max-w-[52rem] text-[0.9375rem] leading-relaxed text-[var(--kr-ink-2)]">
-              Tiers describe the size of your operation, not how much of the product you are
-              allowed to use. Alerts, client access and payroll are not upsells — a company
-              with one building needs a late-shift alert exactly as much as one with thirty.
+              A per-seat licence charges you for growing. These do not: the plan covers your
+              company, so taking on a new contract in March costs you the contract, not the
+              software. Every plan is the whole record — scanning, GPS validation, incidents
+              and the client portal are in the base tier, because a company with one building
+              needs a late-shift alert exactly as much as one with thirty.
             </p>
 
             <ul className="mt-7 grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -952,12 +1205,6 @@ export default function Home() {
                 </li>
               ))}
             </ul>
-
-            <p className="mt-7 border-t border-[var(--kr-edge)] pt-5 text-[0.875rem] leading-relaxed text-[var(--kr-ink-3)]">
-              Scoping looks at sites and floors, guards on the roster and how often it
-              changes, checkpoints to install, whether your clients get portal access or
-              PDFs, your payroll rules, and what has to come out as an accounting export.
-            </p>
           </div>
         </div>
       </section>

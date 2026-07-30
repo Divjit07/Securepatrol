@@ -1,11 +1,19 @@
 import { Camera, Check, Nfc, TriangleAlert } from 'lucide-react'
 import { EagleMark } from './EagleMark.jsx'
-import { ROSTER, TIMESHEET, INCIDENT, LABEL, labelModules } from './artifactData.js'
+import {
+  ROSTER,
+  TIMESHEET,
+  INCIDENT,
+  LABEL,
+  SCAN_EXPORT,
+  labelModules,
+} from './artifactData.js'
 
 /**
  * The paper family. Everything the record produces, as the actual artifact rather
  * than a claim about it: a published roster, a payroll stub, an incident report,
- * and the physical label that starts the whole chain.
+ * the scan history the other three are derived from, and the physical label that
+ * starts the whole chain.
  *
  * All four share the same stock, masthead and rules as the patrol report, so the
  * page reads as one filing system rather than four unrelated cards.
@@ -268,24 +276,27 @@ export function IncidentSheet({ className = '' }) {
         <p className="mt-1.5 text-[12.5px] leading-relaxed">{INCIDENT.narrative}</p>
       </div>
 
-      {/* Attachment slots, drawn as the print placeholders a filed report carries. */}
+      {/* The photographs as they print: keyed by reference, on the stock. */}
       <div className="mt-4">
-        <Label>Attachments · {INCIDENT.photos} photos</Label>
+        <Label>Attachments · {INCIDENT.photos.length} photos</Label>
         <div className="mt-2 grid grid-cols-2 gap-2.5">
-          {Array.from({ length: INCIDENT.photos }).map((_, i) => (
-            <div
-              key={i}
-              className="flex aspect-[4/3] flex-col items-center justify-center gap-1.5 rounded-[2px] border border-dashed border-[color-mix(in_srgb,#171a12_28%,transparent)] bg-[color-mix(in_srgb,#171a12_4%,transparent)]"
+          {INCIDENT.photos.map((photo) => (
+            <figure
+              key={photo.ref}
+              className="overflow-hidden rounded-[2px] border border-[color-mix(in_srgb,#171a12_22%,transparent)] bg-[color-mix(in_srgb,#171a12_6%,transparent)]"
             >
-              <Camera
-                className="h-4 w-4 text-[color-mix(in_srgb,#171a12_38%,transparent)]"
-                strokeWidth={1.6}
-                aria-hidden="true"
+              <img
+                src={photo.src}
+                alt={photo.alt}
+                loading="lazy"
+                decoding="async"
+                className="block aspect-[4/3] w-full object-cover"
               />
-              <span className="kr-meas text-[9px] text-[var(--kr-paper-ink-2)]">
-                IMG-{String(i + 1).padStart(2, '0')}
-              </span>
-            </div>
+              <figcaption className="kr-meas flex items-center gap-1.5 px-1.5 py-1 text-[9px] text-[var(--kr-paper-ink-2)]">
+                <Camera className="h-2.5 w-2.5" strokeWidth={1.8} aria-hidden="true" />
+                {photo.ref}
+              </figcaption>
+            </figure>
           ))}
         </div>
       </div>
@@ -308,6 +319,92 @@ export function IncidentSheet({ className = '' }) {
       </p>
 
       <Foot left={INCIDENT.docRef} />
+    </Sheet>
+  )
+}
+
+/* ── Scan export ──────────────────────────────────────────────────────────── */
+
+export function ScanReportSheet({ className = '' }) {
+  return (
+    <Sheet title="Scan history" docRef={SCAN_EXPORT.docRef} className={className}>
+      <div className="grid grid-cols-2 gap-4 pt-4">
+        <div>
+          <Label>Site</Label>
+          <p className="mt-1 text-[13px] font-semibold">{SCAN_EXPORT.site}</p>
+          <p className="kr-meas mt-0.5 text-[10.5px] text-[var(--kr-paper-ink-2)]">
+            {SCAN_EXPORT.guard} #{SCAN_EXPORT.guardId}
+          </p>
+        </div>
+        <div>
+          <Label>Period</Label>
+          <p className="mt-1 text-[13px] font-semibold">{SCAN_EXPORT.period}</p>
+        </div>
+      </div>
+
+      <table className="mt-4 w-full border-collapse text-left">
+        <caption className="sr-only">
+          Checkpoint passes logged for the shift, with the measured distance from each tag
+        </caption>
+        <thead>
+          <tr className="border-y border-[color-mix(in_srgb,#171a12_20%,transparent)]">
+            <th scope="col" className="kr-doc-label py-1.5 text-[9px]">
+              Time
+            </th>
+            <th scope="col" className="kr-doc-label py-1.5 text-[9px]">
+              Checkpoint
+            </th>
+            <th scope="col" className="kr-doc-label py-1.5 text-right text-[9px]">
+              GPS
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {SCAN_EXPORT.rows.map((r) => (
+            <tr
+              key={`${r.time}-${r.point}`}
+              className="border-b border-[color-mix(in_srgb,#171a12_9%,transparent)]"
+            >
+              <td className="kr-meas py-2 pr-3 text-[12px] whitespace-nowrap">{r.time}</td>
+              <td className="py-2 pr-3">
+                <span className="block text-[12px] font-medium">{r.point}</span>
+                <span className="kr-meas block text-[10px] text-[var(--kr-paper-ink-2)]">
+                  {r.floor}
+                </span>
+              </td>
+              <td className="kr-meas py-2 text-right text-[12px] whitespace-nowrap">
+                {r.dist}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div className="mt-4 flex flex-wrap items-end justify-between gap-4 border-t-2 border-[color-mix(in_srgb,#171a12_45%,transparent)] pt-3">
+        <dl className="flex gap-6">
+          <div>
+            <dt className="kr-doc-label text-[9px] text-[var(--kr-paper-ink-2)]">Passes</dt>
+            <dd className="kr-meas mt-0.5 text-[13px]">{SCAN_EXPORT.passes}</dd>
+          </div>
+          <div>
+            <dt className="kr-doc-label text-[9px] text-[var(--kr-paper-ink-2)]">
+              Within radius
+            </dt>
+            <dd className="kr-meas mt-0.5 text-[13px]">{SCAN_EXPORT.withinRadius}</dd>
+          </div>
+        </dl>
+        <div className="text-right">
+          <p className="kr-doc-label text-[9px] text-[var(--kr-paper-ink-2)]">Furthest</p>
+          <p className="kr-meas mt-0.5 text-xl font-semibold">{SCAN_EXPORT.furthest}</p>
+        </div>
+      </div>
+
+      <p className="kr-meas mt-3 flex items-center gap-1.5 text-[10.5px] text-[#1f5c23]">
+        <Check className="h-3 w-3" strokeWidth={3} aria-hidden="true" />
+        {SCAN_EXPORT.exported}
+      </p>
+
+      <Foot left={SCAN_EXPORT.docRef} />
     </Sheet>
   )
 }

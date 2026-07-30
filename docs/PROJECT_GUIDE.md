@@ -48,7 +48,7 @@ in is just a pass scan on a `shift_clock_in` checkpoint.
 
 ```
 src/
-  App.jsx                 # All routes (lazy). Dev-only routes /dev/roster, /dev/admin
+  App.jsx                 # All routes (lazy). Dev-only routes /dev/* (see §9)
   main.jsx                # Entry; AuthProvider wrap; online-event queue flush
   index.css               # Tailwind @theme tokens + sp-* component classes
   components/
@@ -122,8 +122,9 @@ supabase/
 - **Deploy commands**: `npm run build` (Vercel builds on push);
   `npm run deploy:client-functions`, `deploy:schedule-function`, `deploy:alerts-function`
   for edge functions.
-- **Dev**: `npm run dev` → http://localhost:5173. Visual harnesses at `/dev/roster` and
-  `/dev/admin` (mock data, no login needed; DEV builds only).
+- **Dev**: `npm run dev` → http://localhost:5173. Visual harnesses at `/dev/roster`,
+  `/dev/admin`, `/dev/client`, `/dev/guard` and `/dev/reports` (mock data, no login
+  needed; DEV builds only) — see §9.
 
 ## 5. Roles & auth
 
@@ -458,6 +459,17 @@ export for their site (same engines as admin Reports, site-locked, uses site hou
 `/dev/roster` — RosterGrid + ShiftSheet with mock guards/shifts/conflicts.
 `/dev/admin` — sidebar shell + spec components with mock data. **Use these to screenshot
 UI changes** (headless browser) without credentials.
+`/dev/client` — client dashboard surfaces (shift bar, clock-ins, activity, live feed).
+`/dev/guard` — guard portal on a phone: identity + shift status, the shift clock on duty
+(`?state=ended` backdates the shift so the card goes red), scan history and checkpoint
+cards. `?view=incident` renders the real `GuardIncidentReport` page — it needs no session
+because it only touches Supabase on submit.
+`/dev/reports` — the real `ClientReports` (`?view=hours` for the pay-period tab) and
+`ClientIncidents` (`?view=incident`), fed by a seeded July dataset through the `demo` prop
+those two pages accept. The prop seeds every row the page would have fetched and
+short-circuits the queries, so the harness renders the shipping page rather than a
+look-alike that can drift. **This is the seam to use when a marketing screenshot has to
+show a real product screen.**
 `/dev/admin-scale` — **admin Overview at scale**: the real Overview widget tiles
 (Compliance/Rounds/Scans/Clock/Feed/Coverage/Workforce/Alerts), coverage + activity charts,
 all 15 site cards and the day's alerts, computed from the /dev/scale dataset's last day.

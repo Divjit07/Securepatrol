@@ -51,7 +51,21 @@ export const INCIDENT = {
     'Driver-side window of a parked vehicle found broken. Glass on the deck, nothing visible taken. Vehicle owner not on site. Photographed, taped off the bay, notified building management line at 23:04.',
   actions: ['Bay taped off', 'Building management notified', 'Police file not opened'],
   delivered: 'Emailed to the client 23:11 · PDF attached',
-  photos: 2,
+  // What the guard's phone attached, in the order it was shot: the damage
+  // first, then the bay it was in. Staged photographs, same as every other
+  // number on this page — the caption under the sheet says so.
+  photos: [
+    {
+      src: '/shots/incident/img-01.jpg',
+      ref: 'IMG-01',
+      alt: 'Shattered driver-side window of a parked sedan, safety glass on the parkade deck.',
+    },
+    {
+      src: '/shots/incident/img-02.jpg',
+      ref: 'IMG-02',
+      alt: 'The wider parking bay, glass visible on the concrete beside the vehicle.',
+    },
+  ],
 }
 
 export const LABEL = {
@@ -89,4 +103,33 @@ export function labelModules(size = 21, seed = 20260724) {
     grid.push(row)
   }
   return grid
+}
+
+/**
+ * The scan history a client pulls for themselves, or takes as a CSV. Every row
+ * carries the distance the phone was from the tag when it logged, which is the
+ * difference between "the guard was there" as a claim and as a measurement.
+ * Same night and same site as the patrol report in reportData.js.
+ */
+export const SCAN_EXPORT = {
+  docRef: 'SCN-2026-0724-NGT',
+  site: 'Northgate Tower',
+  period: 'Fri 24 Jul 2026 · 18:00 — 06:00',
+  rows: [
+    { time: '18:31', point: 'Loading dock', floor: 'L1', dist: '11 m' },
+    { time: '19:44', point: 'North stairwell', floor: 'L3', dist: '12 m' },
+    { time: '21:07', point: 'Roof access', floor: 'L6', dist: '6 m' },
+    { time: '22:52', point: 'Parkade west', floor: 'P2', dist: '9 m' },
+    { time: '00:18', point: 'Elevator lobby', floor: 'L4', dist: '14 m' },
+    { time: '02:14', point: 'North stairwell', floor: 'L3', dist: '12 m' },
+    { time: '03:48', point: 'Mechanical room', floor: 'L5', dist: '15 m' },
+    { time: '05:29', point: 'Parkade east', floor: 'P1', dist: '11 m' },
+  ],
+  guard: 'A. Okonkwo',
+  guardId: 'G-0412',
+  // Reconciles with the patrol report: 34 passes, all inside the 20 m radius.
+  passes: '34',
+  withinRadius: '34 / 34',
+  furthest: '15 m',
+  exported: 'CSV exported 06:12 · 34 rows',
 }

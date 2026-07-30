@@ -35,6 +35,15 @@ testsprite_tests/
 venv/
 downloads/
 .theme-preview/
+# Raw capture output from scripts/shoot_*.py — processed shots live in public/shots/
+.shots/
 fix_blocked_tests.py
 fix_get_jwt.py
 SecurePatrol_PRD_v2.0.docx
+
+# Raw generator output for the chain-of-custody photographs (~25 MB). The shipped
+# 1200px versions live in public/chain/ — these originals are kept locally only.
+ASSESTS FOR CHAIN OF CUSTODY/
+# Impeccable local run state (the surface direction doc IS tracked).
+.impeccable/hook.cache.json
+.impeccable/questions/

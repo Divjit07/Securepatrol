@@ -81,9 +81,18 @@ an alert.
 
 One authored moment, not scattered effects: **the record assembling itself.** A scan
 lands, GPS resolves, the stamp sets, the chain draws. GSAP ScrollTrigger with `scrub`
-drives it; at most two pinned sections on the page. Content is visible by default and
-never depends on JS to be readable. Easing is exponential ease-out. Everything collapses
-to a static, fully-legible page under `prefers-reduced-motion`.
+drives it.
+
+Everything on the page moves in the direction the reader is already moving — down. The
+chain of custody is a vertical run whose line draws as you descend it, and the evidence
+table's stations rise out of frame as the next comes up from below. Nothing travels
+sideways under a vertical gesture, and only the evidence table is sticky: a section that
+holds the viewport has to earn it with content that changes, which is why the chain gave
+its pin up.
+
+Content is visible by default and never depends on JS to be readable. Easing is
+exponential ease-out. Everything collapses to a static, fully-legible page under
+`prefers-reduced-motion`.
 
 ## Truth rules for this surface
 

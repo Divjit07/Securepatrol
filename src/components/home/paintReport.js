@@ -1,5 +1,22 @@
 import { REPORT } from './reportData.js'
 import { paintEagle } from './eagleShape.js'
+import {
+  ALERT,
+  BODY,
+  DISPLAY,
+  INK,
+  INK_2,
+  INK_3,
+  M,
+  MONO,
+  PAPER,
+  SHEET_H,
+  SHEET_W,
+  VERIFIED,
+  grain,
+  label,
+  rule,
+} from './paperInk.js'
 
 /**
  * Paints the patrol verification report onto a 2D canvas so it can be used as a
@@ -11,51 +28,7 @@ import { paintEagle } from './eagleShape.js'
  * canvas is presentational only.
  */
 
-export const SHEET_W = 1000
-export const SHEET_H = 1414 // √2, so the sheet is a real A-series page
-
-const PAPER = '#f7f6f2'
-const INK = '#171a12'
-const INK_2 = '#585f4c'
-const INK_3 = '#8c9179'
-const RULE = 'rgba(23, 26, 18, 0.14)'
-const VERIFIED = '#2f7d34'
-const ALERT = '#b3261e'
-
-const MONO = '"SF Mono", "JetBrains Mono", Menlo, monospace'
-const DISPLAY = 'Archivo, "Instrument Sans", sans-serif'
-const BODY = '"DM Sans", sans-serif'
-
-const M = 76 // page margin
-
-function label(ctx, text, x, y, size = 17, spacing = 2.4) {
-  ctx.font = `600 ${size}px ${DISPLAY}`
-  ctx.fillStyle = INK_3
-  ctx.letterSpacing = `${spacing}px`
-  ctx.fillText(text.toUpperCase(), x, y)
-  ctx.letterSpacing = '0px'
-}
-
-function rule(ctx, y, x1 = M, x2 = SHEET_W - M, color = RULE, width = 1) {
-  ctx.strokeStyle = color
-  ctx.lineWidth = width
-  ctx.beginPath()
-  ctx.moveTo(x1, y + 0.5)
-  ctx.lineTo(x2, y + 0.5)
-  ctx.stroke()
-}
-
-/** Paper fibre. Subtle enough to read as stock, not as noise. */
-function grain(ctx) {
-  const n = 2600
-  for (let i = 0; i < n; i++) {
-    const x = Math.random() * SHEET_W
-    const y = Math.random() * SHEET_H
-    const a = Math.random() * 0.035
-    ctx.fillStyle = `rgba(23, 26, 18, ${a})`
-    ctx.fillRect(x, y, 1.5, 1.5)
-  }
-}
+export { SHEET_W, SHEET_H } from './paperInk.js'
 
 /**
  * @param {CanvasRenderingContext2D} ctx
