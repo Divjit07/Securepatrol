@@ -37,6 +37,7 @@ function lazyRetry(importer) {
   )
 }
 
+const Home = lazyRetry(() => import('./pages/Home.jsx'))
 const GuardDashboard = lazyRetry(() => import('./pages/GuardDashboard.jsx'))
 const ScanScreen = lazyRetry(() => import('./pages/ScanScreen.jsx'))
 const ScanResult = lazyRetry(() => import('./pages/ScanResult.jsx'))
@@ -83,10 +84,14 @@ function PageLoader() {
   )
 }
 
+/**
+ * `/` is the public marketing homepage for visitors; signed-in users go straight to
+ * their portal. Standard SaaS behaviour — the landing page never shadows the app.
+ */
 function HomeRedirect() {
   const { user, isAdmin, isClient, loading } = useAuth()
   if (loading) return null
-  if (!user) return <Navigate to="/login" replace />
+  if (!user) return <Home />
   if (isAdmin) return <Navigate to="/admin" replace />
   if (isClient) return <Navigate to="/client" replace />
   return <Navigate to="/guard" replace />

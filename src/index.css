@@ -1057,3 +1057,143 @@
     animation: none;
   }
 }
+
+/* ============================================================================
+   MARKETING SURFACE (public homepage, src/pages/Home.jsx)
+   ----------------------------------------------------------------------------
+   Scoped to .kr so it is immune to `data-theme` on <html>. The theme boot script
+   in index.html sets data-theme="day" (a LIGHT theme) for every non-/guard path,
+   so a marketing page built on canvas/surface tokens would render light and lose
+   the world. These values are the deep end of the same olive family. See
+   DESIGN.md § "Marketing surface".
+   ========================================================================= */
+.kr {
+  --kr-void: #0f1209;
+  --kr-ground: #151a10;
+  --kr-raise: #1d2417;
+  --kr-raise-2: #252e1d;
+  --kr-edge: color-mix(in srgb, #96ee60 13%, transparent);
+  --kr-edge-strong: color-mix(in srgb, #96ee60 26%, transparent);
+  --kr-lime: #96ee60;
+  --kr-moss: #7fd09f;
+  --kr-meadow: #ecfab5;
+  --kr-alert: #ef4444;
+  --kr-paper: #f7f6f2;
+  --kr-paper-2: #eceae1;
+  --kr-paper-ink: #171a12;
+  --kr-paper-ink-2: #4a5040;
+  /* On the olive ground these clear 4.5:1 for body and 3:1 for large text. */
+  --kr-ink: #f2f5ec;
+  --kr-ink-2: #b9c2ad;
+  --kr-ink-3: #8d977f;
+
+  background: var(--kr-void);
+  color: var(--kr-ink);
+  font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* `@layer base` pins h1-h3 to `text-ink`, which resolves to near-black under the
+   product's default `day` theme. This surface owns its own ink on both grounds. */
+.kr h1,
+.kr h2,
+.kr h3,
+.kr h4 {
+  color: var(--kr-ink);
+}
+.kr .kr-paper h1,
+.kr .kr-paper h2,
+.kr .kr-paper h3,
+.kr .kr-paper h4,
+.kr .kr-paper p,
+.kr .kr-paper th,
+.kr .kr-paper td,
+.kr .kr-paper dt,
+.kr .kr-paper dd {
+  color: inherit;
+}
+.kr ::selection {
+  background: color-mix(in srgb, #96ee60 32%, transparent);
+  color: var(--kr-ink);
+}
+
+/* Archivo — the filed-document voice. Width axis is the point: display setting
+   pulls tighter than the app's UI face ever should. */
+.kr-display {
+  font-family: "Archivo", "Instrument Sans", ui-sans-serif, sans-serif;
+  font-variation-settings: "wdth" 92;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 0.98;
+  text-wrap: balance;
+}
+
+.kr-doc-label {
+  font-family: "Archivo", ui-sans-serif, sans-serif;
+  font-variation-settings: "wdth" 112;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Measurement voice: timestamps, coordinates, distances, document refs, money. */
+.kr-meas {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.kr-rule {
+  border-color: var(--kr-edge);
+}
+
+/* The client's side of the record: warm stock, ink, a printed hairline grid.
+   Deliberately light inside the dark chrome — the product's printables are light. */
+.kr-paper {
+  background: var(--kr-paper);
+  color: var(--kr-paper-ink);
+  background-image:
+    linear-gradient(color-mix(in srgb, #171a12 4%, transparent) 1px, transparent 1px);
+  background-size: 100% 2.25rem;
+  background-position: 0 -1px;
+}
+
+.kr-stamp {
+  color: color-mix(in srgb, #2f7d34 78%, transparent);
+  border: 2px solid color-mix(in srgb, #2f7d34 55%, transparent);
+  font-family: "Archivo", sans-serif;
+  font-variation-settings: "wdth" 118;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+/* Focus that survives on both the olive ground and the paper fields. */
+.kr :where(a, button, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--kr-lime);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+.kr .kr-paper :where(a, button, summary, [tabindex]):focus-visible {
+  outline-color: #2f7d34;
+}
+
+/* The authored moment: the record assembling. Content is legible before JS runs,
+   so `.kr-rise` only ever animates FROM a visible default once GSAP takes over. */
+.kr-js .kr-rise {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kr-js .kr-rise {
+    opacity: 1;
+  }
+  .kr * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Anchored sections must clear the sticky masthead. */
+.kr [id] {
+  scroll-margin-top: 5.25rem;
+}
