@@ -586,18 +586,19 @@ export default function EvidenceTable({ enhanced = false }) {
               className="h-px flex-1 bg-[linear-gradient(90deg,var(--kr-edge-strong),transparent)]"
             />
           </p>
-          {/* The section is the demo. The headline should say so and remove the
-              reason a buyer stalls — that seeing it costs them a sales call. */}
+          {/* Leads on what the software does and closes on what the owner is
+              left holding — the trade the whole page is selling. The proof
+              claim moves to the first line of the body so it still lands. */}
           <h2 className="kr-display text-[2.6rem] leading-[0.98] sm:text-[4rem] lg:text-[4.6rem]">
-            Eight screens. One night.{' '}
-            <span className="text-[var(--kr-lime)]">No mockups.</span>
+            AI runs the night.{' '}
+            <span className="text-[var(--kr-lime)]">You just read the record.</span>
           </h2>
           <p className="mt-8 max-w-[38rem] text-[1.0625rem] leading-relaxed text-[var(--kr-ink-2)]">
-            This is the product running a real shift, not a feature list. The tag on the
-            wall, the phone that tapped it, the incident written in front of it, the report
-            that left for the client that night, the console that caught what was missing,
-            and the portal your client opens in the morning. Scroll the table, or press
-            play and let it walk itself.
+            Eight real product screens, one shift, no mockups. The tag on the wall, the
+            phone that tapped it, the incident written in front of it, the report that left
+            for the client that night, the console that caught what was missing, and the
+            portal your client opens in the morning. Scroll the table, or press play and
+            let it walk itself.
           </p>
         </div>
 
@@ -611,7 +612,7 @@ export default function EvidenceTable({ enhanced = false }) {
             <ul className="mt-4 space-y-3 border-b border-[var(--kr-edge)] pb-5">
               {[
                 ['Real product screens', 'the same pages your team signs into'],
-                ['Eight stations, one shift', 'tag on a wall through to the client'],
+                ['AI watches and writes', 'alerts, reports and the morning digest'],
                 ['Synthetic data throughout', 'never a customer’s record'],
               ].map(([t, d]) => (
                 <li key={t}>
