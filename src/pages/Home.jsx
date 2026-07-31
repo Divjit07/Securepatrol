@@ -685,7 +685,7 @@ export default function Home() {
                 sheet is sized by this box. Cancelling the page gutter and giving it
                 height is what lets the document actually fill the screen instead of
                 sitting in a postage stamp with margins on every side. */}
-            <div className="relative -mx-5 min-h-[33rem] sm:mx-0 sm:min-h-[32rem] lg:min-h-[40rem]">
+            <div className="relative -mx-5 min-h-[35.5rem] sm:mx-0 sm:min-h-[36rem] lg:min-h-[42rem]">
               {enhanced ? (
                 <Suspense fallback={null}>
                   <PaperCanvas progressRef={progressRef} />
