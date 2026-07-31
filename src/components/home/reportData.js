@@ -100,7 +100,7 @@ export const CHAIN = [
     image: {
       src: '/chain/03-log.jpg',
       w: 1200,
-      h: 1500,
+      h: 1600,
       alt:
         "Close over a guard's shoulder onto a phone screen showing a checkpoint pass confirmed and timestamped, seconds after the tag was tapped.",
     },
@@ -120,7 +120,7 @@ export const CHAIN = [
     image: {
       src: '/chain/04-clock.jpg',
       w: 1200,
-      h: 1607,
+      h: 1600,
       alt:
         'A uniformed guard clocking in on a phone outside the lit glass doors of an office lobby at the start of a night shift, on a wet street.',
     },

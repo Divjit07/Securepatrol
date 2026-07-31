@@ -1068,12 +1068,25 @@
    DESIGN.md § "Marketing surface".
    ========================================================================= */
 .kr {
-  --kr-void: #0f1209;
-  --kr-ground: #151a10;
-  --kr-raise: #1d2417;
-  --kr-raise-2: #252e1d;
-  --kr-edge: color-mix(in srgb, #96ee60 13%, transparent);
-  --kr-edge-strong: color-mix(in srgb, #96ee60 26%, transparent);
+  /* Materials, not shades. The canvas drops away and the surfaces lift, so a
+     card reads as an object standing on the page rather than a slightly
+     different colour painted onto it. Near black, contrast ratios compress
+     toward 1:1 and stop being useful — these are tuned by absolute step. */
+  --kr-void: #080b05;
+  --kr-ground: #1a2213;
+  --kr-raise: #26311c;
+  --kr-raise-2: #334026;
+  --kr-edge: color-mix(in srgb, #96ee60 17%, transparent);
+  --kr-edge-strong: color-mix(in srgb, #96ee60 34%, transparent);
+  /* One light source, above. The top inset line is the edge catching it and the
+     ambient shadow is the surface sitting off the page — dark UI has no other
+     way to say "this is raised", which is why hairlines alone read flat. */
+  --kr-lift:
+    inset 0 1px 0 0 rgba(236, 250, 181, 0.055),
+    0 22px 44px -26px rgba(0, 0, 0, 0.85);
+  --kr-lift-hi:
+    inset 0 1px 0 0 rgba(236, 250, 181, 0.1),
+    0 30px 60px -28px rgba(0, 0, 0, 0.95);
   --kr-lime: #96ee60;
   --kr-moss: #7fd09f;
   --kr-meadow: #ecfab5;
@@ -1083,9 +1096,9 @@
   --kr-paper-ink: #171a12;
   --kr-paper-ink-2: #4a5040;
   /* On the olive ground these clear 4.5:1 for body and 3:1 for large text. */
-  --kr-ink: #f2f5ec;
-  --kr-ink-2: #b9c2ad;
-  --kr-ink-3: #8d977f;
+  --kr-ink: #f4f7ee;
+  --kr-ink-2: #ccd5c0;
+  --kr-ink-3: #98a288;
 
   background: var(--kr-void);
   color: var(--kr-ink);
@@ -1220,9 +1233,11 @@
    Nothing here moves the element: `.kr-rise` owns transform via GSAP inline
    styles, and a hover translate would either lose to it or fight it. */
 .kr-plate {
+  box-shadow: var(--kr-lift);
   transition:
     border-color 420ms ease,
-    background-color 420ms ease;
+    background-color 420ms ease,
+    box-shadow 420ms ease;
 }
 
 .kr-plate::before {
@@ -1261,6 +1276,7 @@
 .kr-plate:hover {
   border-color: var(--kr-edge-strong);
   background: var(--kr-raise);
+  box-shadow: var(--kr-lift-hi);
 }
 
 .kr-plate:hover::before,
