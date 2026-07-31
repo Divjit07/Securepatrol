@@ -107,8 +107,8 @@ export function labelModules(size = 21, seed = 20260724) {
 
 /**
  * The scan history a client pulls for themselves, or takes as a CSV. Every row
- * carries the distance the phone was from the tag when it logged, which is the
- * difference between "the guard was there" as a claim and as a measurement.
+ * records how each pass was proven — the tap on the tag itself. Location does
+ * not appear here: GPS belongs to clock-in and clock-out, not to a round.
  * Same night and same site as the patrol report in reportData.js.
  */
 export const SCAN_EXPORT = {
@@ -116,20 +116,20 @@ export const SCAN_EXPORT = {
   site: 'Northgate Tower',
   period: 'Fri 24 Jul 2026 · 18:00 — 06:00',
   rows: [
-    { time: '18:31', point: 'Loading dock', floor: 'L1', dist: '11 m' },
-    { time: '19:44', point: 'North stairwell', floor: 'L3', dist: '12 m' },
-    { time: '21:07', point: 'Roof access', floor: 'L6', dist: '6 m' },
-    { time: '22:52', point: 'Parkade west', floor: 'P2', dist: '9 m' },
-    { time: '00:18', point: 'Elevator lobby', floor: 'L4', dist: '14 m' },
-    { time: '02:14', point: 'North stairwell', floor: 'L3', dist: '12 m' },
-    { time: '03:48', point: 'Mechanical room', floor: 'L5', dist: '15 m' },
-    { time: '05:29', point: 'Parkade east', floor: 'P1', dist: '11 m' },
+    { time: '18:31', point: 'Loading dock', floor: 'L1', via: 'NFC' },
+    { time: '19:44', point: 'North stairwell', floor: 'L3', via: 'NFC' },
+    { time: '21:07', point: 'Roof access', floor: 'L6', via: 'QR' },
+    { time: '22:52', point: 'Parkade west', floor: 'P2', via: 'NFC' },
+    { time: '00:18', point: 'Elevator lobby', floor: 'L4', via: 'NFC' },
+    { time: '02:14', point: 'North stairwell', floor: 'L3', via: 'NFC' },
+    { time: '03:48', point: 'Mechanical room', floor: 'L5', via: 'QR' },
+    { time: '05:29', point: 'Parkade east', floor: 'P1', via: 'NFC' },
   ],
   guard: 'A. Okonkwo',
   guardId: 'G-0412',
-  // Reconciles with the patrol report: 34 passes, all inside the 20 m radius.
+  // Reconciles with the patrol report: 34 passes across 9 checkpoints, none missed.
   passes: '34',
-  withinRadius: '34 / 34',
-  furthest: '15 m',
+  checkpoints: '9',
+  missed: '0',
   exported: 'CSV exported 06:12 · 34 rows',
 }

@@ -3,9 +3,10 @@
  *
  * Every value here is authored, not real. It is labeled synthetic wherever a
  * visitor could mistake it for a customer's data (see DESIGN.md § "Truth rules").
- * The shape mirrors the real product: a scan only counts inside the ~20 m GPS
- * radius of the checkpoint's recorded coordinates, clock-in is itself a pass scan
- * on a `shift_clock_in` checkpoint, and a raised alert stays on the record.
+ * The shape mirrors the real product, and the two proofs are kept apart: a
+ * checkpoint pass is proven by the tap on the tag and carries no location, while
+ * GPS is taken only at clock-in and clock-out to confirm the guard was on site
+ * when the shift opened and closed. A raised alert stays on the record.
  */
 
 export const REPORT = {
@@ -15,24 +16,24 @@ export const REPORT = {
   period: 'Fri 24 Jul 2026 · 18:00 — 06:00',
   guard: 'A. Okonkwo',
   guardId: 'G-0412',
-  radius: '20 m',
+  clockRadius: '20 m',
   // The ledger below shows a slice of the shift, not all of it. Said plainly on the
   // sheet: on a page about auditability, a total that does not reconcile with the
   // rows under it would be the worst possible detail to get wrong.
   excerpt: 'Selected entries · 11 of 35 logged events',
   pages: 'page 1 of 4',
   rows: [
-    { time: '18:02', point: 'Lobby desk', kind: 'CLOCK IN', gps: '7 m', status: 'verified' },
-    { time: '18:31', point: 'L1 · Loading dock', gps: '11 m', status: 'verified' },
-    { time: '19:44', point: 'L3 · North stairwell', gps: '12 m', status: 'verified' },
-    { time: '21:07', point: 'L6 · Roof access', gps: '6 m', status: 'verified' },
-    { time: '22:52', point: 'P2 · Parkade west', gps: '9 m', status: 'verified' },
-    { time: '00:18', point: 'L4 · Elevator lobby', gps: '14 m', status: 'verified' },
-    { time: '01:36', point: 'Round 5 · started 9:12 late', gps: '—', status: 'alert' },
-    { time: '02:14', point: 'L3 · North stairwell', gps: '12 m', status: 'verified' },
-    { time: '03:48', point: 'L5 · Mechanical room', gps: '15 m', status: 'verified' },
-    { time: '05:29', point: 'P1 · Parkade east', gps: '11 m', status: 'verified' },
-    { time: '06:03', point: 'Lobby desk', kind: 'CLOCK OUT', gps: '8 m', status: 'verified' },
+    { time: '18:02', point: 'Lobby desk', kind: 'CLOCK IN', via: 'GPS · 7 m', status: 'verified' },
+    { time: '18:31', point: 'L1 · Loading dock', via: 'NFC', status: 'verified' },
+    { time: '19:44', point: 'L3 · North stairwell', via: 'NFC', status: 'verified' },
+    { time: '21:07', point: 'L6 · Roof access', via: 'QR', status: 'verified' },
+    { time: '22:52', point: 'P2 · Parkade west', via: 'NFC', status: 'verified' },
+    { time: '00:18', point: 'L4 · Elevator lobby', via: 'NFC', status: 'verified' },
+    { time: '01:36', point: 'Round 5 · started 9:12 late', via: '—', status: 'alert' },
+    { time: '02:14', point: 'L3 · North stairwell', via: 'NFC', status: 'verified' },
+    { time: '03:48', point: 'L5 · Mechanical room', via: 'QR', status: 'verified' },
+    { time: '05:29', point: 'P1 · Parkade east', via: 'NFC', status: 'verified' },
+    { time: '06:03', point: 'Lobby desk', kind: 'CLOCK OUT', via: 'GPS · 8 m', status: 'verified' },
   ],
   summary: [
     { label: 'Rounds complete', value: '6 / 6' },
@@ -49,10 +50,10 @@ export const CHAIN = [
     step: 'Sticker',
     title: 'An NTAG sticker goes on the wall',
     body:
-      'A checkpoint is a physical object, not a row somebody created in a database. You mount an NTAG 213 sticker or a printed QR label at a real spot in the building — a stairwell landing, a loading dock, a parkade column — and its GPS coordinates are captured at the moment you install it. That fixed position becomes the thing every future scan is measured against, for as long as the site is yours.',
+      'A checkpoint is a physical object, not a row somebody created in a database. You mount an NTAG 213 sticker or a printed QR label at a real spot in the building — a stairwell landing, a loading dock, a parkade column — and register it once. From then on the only way to log a pass at that spot is to stand at it with a phone, because the tag cannot be anywhere else.',
     detail: [
       'NTAG 213 sticker, or a printed QR label where NFC will not reach',
-      'Coordinates captured at install — never typed in afterwards',
+      'Registered once at install, then left alone on the wall',
       'One tag, one fixed point, for the life of the contract',
     ],
     meas: 'L3 · North stairwell',
@@ -85,43 +86,43 @@ export const CHAIN = [
     },
   },
   {
-    id: 'gps',
-    step: 'GPS',
-    title: 'The scan is validated against the tag',
+    id: 'log',
+    step: 'Log',
+    title: 'The pass is written the moment it is tapped',
     body:
-      'Every scan carries the device position with it, and that position is checked against the checkpoint\'s recorded coordinates before the pass is allowed to count. Inside the radius it logs with the measured distance attached to the row. Outside it, the scan is refused and the guard is told why on the spot — so a broken round gets fixed at 02:14, not discovered by your client at nine the next morning.',
+      'The tap is the record. It is written on the device the instant the tag responds, timestamped then and there, and it does not need a signal to count — a basement stairwell logs exactly the same as a lobby. What syncs later is the upload, never the time. Once a pass is written, nothing edits it.',
     detail: [
-      'Radius set per site, 20 m by default',
-      'The measured distance is stored on every pass, not just pass or fail',
-      'Refusals are explained on the guard\'s screen while they can still act',
+      'No signal needed — passes queue on the phone and sync on reconnect',
+      'The time recorded is when the tag was tapped, not when it uploaded',
+      'A written pass is never edited, only added to',
     ],
-    meas: '12 m / 20 m',
+    meas: 'WRITE ONCE',
     image: {
-      src: '/chain/03-gps.jpg',
+      src: '/chain/03-log.jpg',
       w: 1200,
-      h: 874,
+      h: 1500,
       alt:
-        'A checkpoint label on a parkade column in the foreground, a guard standing further back across the deck with a phone lit green in their hands.',
+        "Close over a guard's shoulder onto a phone screen showing a checkpoint pass confirmed and timestamped, seconds after the tag was tapped.",
     },
   },
   {
-    id: 'punch',
-    step: 'Punch',
-    title: 'The raw record is written once',
+    id: 'clock',
+    step: 'Clock',
+    title: 'GPS proves the shift, the tag proves the round',
     body:
-      'Clock-in is not a separate system bolted on beside patrol. It is a pass scan on a clock-in checkpoint, which means attendance and patrol are one record with one chain of proof behind them. Once a punch is written it is never edited. Corrections are stored as separate, attributed adjustments layered over a raw row that stays exactly as it happened, so an audit can always reach the original.',
+      'These are two different claims and Kronus keeps them apart. A checkpoint pass is proven by the tap — the guard held a phone to a tag bolted to a wall. Attendance is proven by location: at clock-in and clock-out the device takes a GPS fix and checks it against the site, so a shift cannot be opened from a driveway. Raw punches are immutable; corrections sit on top as attributed adjustments.',
     detail: [
-      'Attendance and patrol share a single event stream',
-      'Adjustments are additive and attributed — never overwrites',
-      'The original punch survives every correction made on top of it',
+      'A GPS fix at clock-in and clock-out, not tracking through the shift',
+      'Site radius set per building, 20 m by default',
+      'Raw punches immutable — corrections are adjustments, never overwrites',
     ],
-    meas: 'IMMUTABLE',
+    meas: 'IN 18:02 · OUT 06:03',
     image: {
-      src: '/chain/04-punch.jpg',
+      src: '/chain/04-clock.jpg',
       w: 1200,
       h: 1607,
       alt:
-        'A uniformed guard taps a phone to a checkpoint tag beside the lit glass doors of an office lobby on a wet street at night.',
+        'A uniformed guard clocking in on a phone outside the lit glass doors of an office lobby at the start of a night shift, on a wet street.',
     },
   },
   {

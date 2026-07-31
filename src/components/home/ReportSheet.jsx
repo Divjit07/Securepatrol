@@ -36,7 +36,7 @@ export default function ReportSheet({ className = '', compact = false }) {
         <dl className="grid grid-cols-2 gap-x-6 gap-y-4 pt-5 sm:grid-cols-4">
           {[
             { l: 'Site', v: REPORT.site, s: REPORT.address },
-            { l: 'Period', v: REPORT.period, s: `GPS radius ${REPORT.radius}` },
+            { l: 'Period', v: REPORT.period, s: `Clock-in radius ${REPORT.clockRadius}` },
             { l: 'Guard', v: REPORT.guard, s: `#${REPORT.guardId}` },
             { l: 'Prepared', v: '06:04', s: 'automatic' },
           ].map((m) => (
@@ -54,14 +54,14 @@ export default function ReportSheet({ className = '', compact = false }) {
         </p>
         <table className="w-full table-fixed border-collapse text-left">
           <caption className="sr-only">
-            GPS-validated checkpoint passes for the shift — selected entries
+            Checkpoint passes for the shift — selected entries
           </caption>
           <thead>
             <tr className="border-y border-[color-mix(in_srgb,#171a12_20%,transparent)]">
               {[
                 { h: 'Time', w: 'w-[3.6rem]' },
                 { h: 'Checkpoint', w: 'w-auto' },
-                { h: 'GPS', w: 'hidden w-[3.5rem] sm:table-cell' },
+                { h: 'Method', w: 'hidden w-[5rem] sm:table-cell' },
                 { h: 'Status', w: 'w-[5.5rem] text-right sm:w-[7rem]' },
               ].map((c) => (
                 <th
@@ -101,7 +101,7 @@ export default function ReportSheet({ className = '', compact = false }) {
                       alert ? 'text-[#b3261e]' : 'text-[var(--kr-paper-ink-2)]'
                     }`}
                   >
-                    {r.gps}
+                    {r.via}
                   </td>
                   <td className="py-2 text-right">
                     <span

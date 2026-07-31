@@ -66,18 +66,18 @@ export const STATIONS = [
     screen: 'Guard app · Site incident report → Client portal · Incidents',
     title: 'The exception is written where it is standing.',
     body:
-      'Most of what a client is actually paying for is the night something was off. The guard writes it on the same phone, in front of the thing, while it is still true: what they found, what they did about it, up to five photos, and the GPS fix taken as they type. Nothing is phoned to a supervisor or retyped in the morning. It lands in the client’s own list with the guard’s name and the coordinates attached.',
+      'Most of what a client is actually paying for is the night something was off. The guard writes it on the same phone, in front of the thing, while it is still true: what they found, what they did about it, up to five photos, taken as they type. Nothing is phoned to a supervisor or retyped in the morning. It lands in the client’s own list with the guard’s name and the time attached.',
     notes: [
       'Filed at the loading dock at 7:26 PM, 237 characters',
       'Up to five photos, PDFs or DOCX files · 10 MB each',
-      'Location attached automatically — the client sees a GPS badge',
+      'Filed against the checkpoint the guard is standing at',
       'Six reports this month, in the client portal as they land',
     ],
     shots: {
       phone: ['/shots/guard-6-incident.jpg'],
       wide: ['/shots/client-incident.jpg'],
     },
-    alt: "Kronus incident report on a guard's phone describing an unsecured loading dock door, and the same report in the client portal's incident list with the guard's name, the time and a GPS marker.",
+    alt: "Kronus incident report on a guard's phone describing an unsecured loading dock door, and the same report in the client portal's incident list with the guard's name and the time.",
   },
   {
     id: 'incident-paper',
@@ -124,13 +124,13 @@ export const STATIONS = [
       'This is the artifact the entire product exists to produce. Twelve hours of a building — every checkpoint pass with the time it happened and how far the phone was standing from the tag, the round that started nine minutes late marked in red rather than quietly dropped, and the totals at the foot counted from those rows instead of typed above them. The seal sets only once the record is complete, so a page that is still missing scans cannot be handed to anyone as if it were finished.',
     notes: [
       'PVR-2026-0724-NGT · Fri 24 Jul, 18:00 – 06:00, 12.02 h',
-      'Every line carries its GPS distance — 6 m to 15 m here',
+      'Every line carries how it was proven — the tap on the tag',
       'Round 5 started 9:12 late · ALERT RAISED, printed in red',
       'Verified seal sets on completion, never before',
     ],
     paper: 'report',
     shots: {},
-    alt: 'A Kronus patrol verification report on paper for Northgate Tower, listing eleven timestamped checkpoint passes with GPS distances, one late round raised as an alert, six of six rounds complete and 12.02 hours on site, stamped as a verified record.',
+    alt: 'A Kronus patrol verification report on paper for Northgate Tower, listing eleven timestamped checkpoint passes, one late round raised as an alert, six of six rounds complete and 12.02 hours on site, stamped as a verified record.',
   },
   {
     id: 'report',

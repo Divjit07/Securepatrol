@@ -344,7 +344,7 @@ export function ScanReportSheet({ className = '' }) {
 
       <table className="mt-4 w-full border-collapse text-left">
         <caption className="sr-only">
-          Checkpoint passes logged for the shift, with the measured distance from each tag
+          Checkpoint passes logged for the shift, and how each one was proven
         </caption>
         <thead>
           <tr className="border-y border-[color-mix(in_srgb,#171a12_20%,transparent)]">
@@ -355,7 +355,7 @@ export function ScanReportSheet({ className = '' }) {
               Checkpoint
             </th>
             <th scope="col" className="kr-doc-label py-1.5 text-right text-[9px]">
-              GPS
+              Method
             </th>
           </tr>
         </thead>
@@ -373,7 +373,7 @@ export function ScanReportSheet({ className = '' }) {
                 </span>
               </td>
               <td className="kr-meas py-2 text-right text-[12px] whitespace-nowrap">
-                {r.dist}
+                {r.via}
               </td>
             </tr>
           ))}
@@ -388,14 +388,14 @@ export function ScanReportSheet({ className = '' }) {
           </div>
           <div>
             <dt className="kr-doc-label text-[9px] text-[var(--kr-paper-ink-2)]">
-              Within radius
+              Checkpoints
             </dt>
-            <dd className="kr-meas mt-0.5 text-[13px]">{SCAN_EXPORT.withinRadius}</dd>
+            <dd className="kr-meas mt-0.5 text-[13px]">{SCAN_EXPORT.checkpoints}</dd>
           </div>
         </dl>
         <div className="text-right">
-          <p className="kr-doc-label text-[9px] text-[var(--kr-paper-ink-2)]">Furthest</p>
-          <p className="kr-meas mt-0.5 text-xl font-semibold">{SCAN_EXPORT.furthest}</p>
+          <p className="kr-doc-label text-[9px] text-[var(--kr-paper-ink-2)]">Missed</p>
+          <p className="kr-meas mt-0.5 text-xl font-semibold">{SCAN_EXPORT.missed}</p>
         </div>
       </div>
 

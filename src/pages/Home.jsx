@@ -11,7 +11,7 @@
  * body, the mono stack for every measurement. Hairlines, never shadows.
  *
  * STORY: this is what your client sees when you run Kronus → every line on it started
- * as a GPS-validated tap on a wall → the chain from sticker to invoice never breaks →
+ * as a tap on a tag bolted to a wall → the chain from sticker to invoice never breaks →
  * book a demo.
  *
  * FIRST VIEWPORT: headline and primary action low-left in the dark; a real sheet of
@@ -157,7 +157,7 @@ const PLANS = [
     annualTotal: '959.90',
     saving: '240',
     features: [
-      'Guard check-in at every patrol point — the app logs the time and the location',
+      'Guard check-in at every patrol point — the app logs the tap and the time',
       'Patrol history on your phone or desktop, any time',
       'Monthly patrol report as a PDF, every checkpoint hit',
       'Incident reports filed from the phone with photos attached',
@@ -221,9 +221,9 @@ const PLANS = [
 
 /** Included at every tier — because it is one platform, not a ladder. */
 const INCLUDED = [
-  'GPS-validated NFC and QR scanning',
+  'NFC and QR checkpoint scanning',
   'Offline scan queue',
-  'Clock-in on a checkpoint',
+  'GPS-checked clock-in and clock-out',
   'Roster: templates, recurrence, conflicts',
   'Draft → publish with calendar invites',
   'Open-shift claiming, race-safe',
@@ -238,7 +238,7 @@ const INCLUDED = [
 const QUESTIONS = [
   {
     q: 'How does a scan actually get verified?',
-    a: 'Each checkpoint is a physical NFC tag or printed QR label, and its coordinates are recorded when you install it. When a guard taps it, the device position is checked against those coordinates — outside roughly 20 metres the pass does not count, and the guard is told why rather than left guessing.',
+    a: 'Each checkpoint is a physical NFC tag or printed QR label bolted to a real spot in the building. The tap is the proof: to log a pass the guard has to be standing there with a phone against the tag, and there is no button anywhere that says "I was here". Location does not come into it — GPS is used at clock-in and clock-out to confirm the guard is on site for the shift, which is a separate check from the round.',
   },
   {
     q: 'What happens in a basement with no signal?',
@@ -569,7 +569,7 @@ export default function Home() {
       </header>
 
       {/* ================= HERO ============================================= */}
-      <section className="relative overflow-hidden border-b border-[var(--kr-edge)]">
+      <section className="relative overflow-hidden">
         {/* One warm pool of light on the ground, as if the sheet were lit on a desk. */}
         <div
           aria-hidden="true"
@@ -610,7 +610,8 @@ export default function Home() {
             >
               Kronus is AI-powered workforce management for security companies —
               scheduling, patrol verification and payroll, all on immutable records.
-              Guards tap NFC checkpoints. GPS validates every clock-in and clock-out. AI
+              Guards tap NFC checkpoints — the tap is the proof a round was walked. GPS
+              confirms every clock-in and clock-out. AI
               monitors each site every ten minutes, so a missed round surfaces immediately.
               Reports build themselves, and billing follows automatically: direct
               QuickBooks, Xero and Sage integration means no manual entry and no
@@ -654,12 +655,12 @@ export default function Home() {
             >
               {[
                 { l: 'Watches', v: 'every 10 min', icon: Radio },
-                { l: 'Verifies', v: 'NFC · QR · GPS', icon: Nfc },
+                { l: 'Verifies', v: 'NFC · QR tap', icon: Nfc },
                 { l: 'Files', v: 'nobody types it', icon: QrCode },
                 { l: 'Reports', v: 'AI-generated', icon: FileText },
                 { l: 'Detects', v: 'missed rounds', icon: Siren },
                 { l: 'Locks', v: 'raw punches', icon: Lock },
-                { l: 'Schedules', v: 'draft → publish', icon: CalendarDays },
+                { l: 'Clocks', v: 'GPS in · out', icon: CalendarDays },
                 { l: 'Syncs', v: 'QuickBooks · Xero', icon: RefreshCw },
                 { l: 'Exports', v: 'PDF · CSV', icon: FileDown },
               ].map((s) => (
@@ -1217,7 +1218,7 @@ export default function Home() {
             <p className="mt-4 max-w-[52rem] text-[0.9375rem] leading-relaxed text-[var(--kr-ink-2)]">
               A per-seat licence charges you for growing. These do not: the plan covers your
               company, so taking on a new contract in March costs you the contract, not the
-              software. Every plan is the whole record — scanning, GPS validation, incidents
+              software. Every plan is the whole record — scanning, clock-in, incidents
               and the client portal are in the base tier, because a company with one building
               needs a late-shift alert exactly as much as one with thirty.
             </p>

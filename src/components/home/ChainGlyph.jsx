@@ -101,8 +101,8 @@ function Exception() {
 const GLYPHS = {
   sticker: Sticker,
   scan: Scan,
-  gps: Radius,
-  punch: Punch,
+  log: Punch,
+  clock: Radius,
   hours: Sum,
   incident: Exception,
   report: Filed,

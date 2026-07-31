@@ -69,7 +69,7 @@ export function paintReport(ctx, progress = 1) {
 
   const meta = [
     ['Site', REPORT.site, REPORT.address],
-    ['Period', REPORT.period, `GPS radius ${REPORT.radius}`],
+    ['Period', REPORT.period, `Clock-in radius ${REPORT.clockRadius}`],
   ]
   meta.forEach(([l, v, sub], i) => {
     const x = i === 0 ? M : col2
@@ -109,7 +109,7 @@ export function paintReport(ctx, progress = 1) {
   label(ctx, REPORT.excerpt, cTime, y - 26, 13, 1.1)
   label(ctx, 'Time', cTime, y)
   label(ctx, 'Checkpoint', cPoint, y)
-  label(ctx, 'GPS', cGps, y)
+  label(ctx, 'Method', cGps, y)
   ctx.textAlign = 'right'
   label(ctx, 'Status', cStatus, y)
   ctx.textAlign = 'left'
@@ -139,7 +139,7 @@ export function paintReport(ctx, progress = 1) {
 
     ctx.font = `400 20px ${MONO}`
     ctx.fillStyle = isAlert ? ALERT : INK_2
-    ctx.fillText(r.gps, cGps, ry)
+    ctx.fillText(r.via, cGps, ry)
 
     ctx.textAlign = 'right'
     ctx.font = `600 15px ${DISPLAY}`
