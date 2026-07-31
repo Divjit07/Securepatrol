@@ -510,13 +510,13 @@ export default function Home() {
           <div className="flex items-center gap-1.5">
             <Link
               to="/login"
-              className="rounded px-3 py-2 text-sm text-[var(--kr-ink-2)] transition-colors duration-200 hover:text-[var(--kr-ink)]"
+              className="hidden rounded px-3 py-2 text-sm whitespace-nowrap text-[var(--kr-ink-2)] transition-colors duration-200 hover:text-[var(--kr-ink)] sm:block"
             >
               Sign in
             </Link>
             <a
               href={DEMO_HREF}
-              className="rounded-[3px] bg-[var(--kr-lime)] px-4 py-2 text-sm font-semibold text-[#0f1209] transition-all duration-300 hover:bg-[color-mix(in_srgb,#96ee60_82%,white)] hover:shadow-[0_10px_28px_-10px_color-mix(in_srgb,#96ee60_70%,transparent)]"
+              className="rounded-[3px] bg-[var(--kr-lime)] px-3 py-2 text-[13px] font-semibold whitespace-nowrap text-[#0f1209] transition-all duration-300 hover:bg-[color-mix(in_srgb,#96ee60_82%,white)] hover:shadow-[0_10px_28px_-10px_color-mix(in_srgb,#96ee60_70%,transparent)] sm:px-4 sm:text-sm"
             >
               Book a demo
             </a>
@@ -548,6 +548,14 @@ export default function Home() {
                       </a>
                     </li>
                   ))}
+                  <li className="mt-1 border-t border-[var(--kr-edge)] pt-1">
+                    <Link
+                      to="/login"
+                      className="block rounded-[2px] px-3 py-2.5 text-sm text-[var(--kr-ink)] transition-colors duration-200 hover:bg-[color-mix(in_srgb,#96ee60_10%,transparent)]"
+                    >
+                      Sign in
+                    </Link>
+                  </li>
                 </ul>
               </nav>
             </details>
