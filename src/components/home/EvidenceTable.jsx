@@ -2,7 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useRef, useSta
 import { Canvas } from '@react-three/fiber'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { Pause, Play } from 'lucide-react'
+import { ArrowRight, Pause, Play } from 'lucide-react'
 import {
   PHONE_SEQUENCE,
   STATIONS,
@@ -577,22 +577,69 @@ export default function EvidenceTable({ enhanced = false }) {
 
   return (
     <section id="operations" className="border-b border-[var(--kr-edge)]">
-      <div className="mx-auto max-w-[84rem] px-5 pt-20 pb-14 sm:px-8 sm:pt-28">
-        <div className="kr-rise max-w-[46rem]">
-          <p className="kr-doc-label mb-5 text-[11px] text-[var(--kr-lime)]">
+      <div className="mx-auto grid max-w-[84rem] gap-y-12 px-5 pt-20 pb-14 sm:px-8 sm:pt-28 lg:grid-cols-[minmax(0,1fr)_minmax(0,19rem)] lg:gap-x-16">
+        <div className="kr-rise">
+          <p className="kr-doc-label mb-6 flex items-center gap-3 text-[11px] text-[var(--kr-lime)]">
             The evidence table
+            <span
+              aria-hidden="true"
+              className="h-px flex-1 bg-[linear-gradient(90deg,var(--kr-edge-strong),transparent)]"
+            />
           </p>
-          <h2 className="kr-display text-[2.25rem] sm:text-[3.1rem]">
-            One night, laid out end to end.
+          {/* The section is the demo. The headline should say so and remove the
+              reason a buyer stalls — that seeing it costs them a sales call. */}
+          <h2 className="kr-display text-[2.6rem] leading-[0.98] sm:text-[4rem] lg:text-[4.6rem]">
+            Eight screens. One night.{' '}
+            <span className="text-[var(--kr-lime)]">No mockups.</span>
           </h2>
-          <p className="mt-6 max-w-[38rem] text-[1.0625rem] leading-relaxed text-[var(--kr-ink-2)]">
-            The tag on the wall, the phone that tapped it, the incident written in front of it
-            and the report that left for the client that night, the console that caught what was
-            missing, the verified page on the desk the next morning, and the portal your client
-            opens to read it. Actual product screens and actual documents — scroll down the
-            table, or press play and let it walk itself.
+          <p className="mt-8 max-w-[38rem] text-[1.0625rem] leading-relaxed text-[var(--kr-ink-2)]">
+            This is the product running a real shift, not a feature list. The tag on the
+            wall, the phone that tapped it, the incident written in front of it, the report
+            that left for the client that night, the console that caught what was missing,
+            and the portal your client opens in the morning. Scroll the table, or press
+            play and let it walk itself.
           </p>
         </div>
+
+        {/* The empty column earns its place by closing: a reader convinced by
+            the walkthrough should not have to scroll back up to act on it. */}
+        <aside className="kr-rise lg:pt-2">
+          <div className="rounded-[5px] border border-[var(--kr-edge)] bg-[var(--kr-ground)] p-6 shadow-[var(--kr-lift)]">
+            <p className="kr-doc-label text-[10px] text-[var(--kr-ink-3)]">
+              What you are looking at
+            </p>
+            <ul className="mt-4 space-y-3 border-b border-[var(--kr-edge)] pb-5">
+              {[
+                ['Real product screens', 'the same pages your team signs into'],
+                ['Eight stations, one shift', 'tag on a wall through to the client'],
+                ['Synthetic data throughout', 'never a customer’s record'],
+              ].map(([t, d]) => (
+                <li key={t}>
+                  <p className="text-[0.875rem] leading-snug font-medium text-[var(--kr-ink)]">
+                    {t}
+                  </p>
+                  <p className="kr-meas mt-1 text-[11px] leading-relaxed text-[var(--kr-ink-3)]">
+                    {d}
+                  </p>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-5 text-[0.875rem] leading-relaxed text-[var(--kr-ink-2)]">
+              Want it walked through against your own sites?
+            </p>
+            <a
+              href="mailto:hello@prodsec.ca?subject=Kronus%20demo"
+              className="group mt-4 inline-flex w-full items-center justify-center gap-2 rounded-[3px] bg-[var(--kr-lime)] px-5 py-3 text-[0.9375rem] font-semibold text-[#0f1209] transition-all duration-200 hover:bg-[color-mix(in_srgb,#96ee60_80%,white)]"
+            >
+              Book a demo
+              <ArrowRight
+                className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                strokeWidth={2.5}
+                aria-hidden="true"
+              />
+            </a>
+          </div>
+        </aside>
       </div>
 
       {enhanced && (
