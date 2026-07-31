@@ -29,6 +29,11 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import {
   ArrowRight,
   Building2,
+  FileDown,
+  FileText,
+  Lock,
+  RefreshCw,
+  Siren,
   Calculator,
   CalendarDays,
   Check,
@@ -601,13 +606,22 @@ export default function Home() {
 
             <p
               data-hero-line
-              className="mt-7 max-w-[33rem] text-[1.0625rem] leading-relaxed text-[var(--kr-ink-2)] sm:text-lg"
+              className="mt-7 max-w-[35rem] text-[1.0625rem] leading-relaxed text-[var(--kr-ink-2)] sm:text-[1.09375rem]"
             >
-              Kronus watches the night so you can hand over the proof. It runs scheduling,
-              patrol verification and payroll for security companies — checking every site
-              every ten minutes, raising the missed round before your client notices it,
-              and filing the morning report on its own from GPS-verified scans that nothing
-              downstream can type over.
+              Kronus is AI-powered workforce management for security companies —
+              scheduling, patrol verification and payroll, all on immutable records.
+              Guards tap NFC checkpoints. GPS validates every clock-in and clock-out. AI
+              monitors each site every ten minutes, so a missed round surfaces immediately.
+              Reports build themselves, and billing follows automatically: direct
+              QuickBooks, Xero and Sage integration means no manual entry and no
+              reconciliation disputes. Your client audits the exact record you billed from.
+            </p>
+            <p
+              data-hero-line
+              className="mt-5 max-w-[35rem] text-[1.0625rem] leading-relaxed font-medium text-[var(--kr-ink)]"
+            >
+              Bill faster. Retain clients longer. Cut accounting overhead. Lower operating
+              costs, higher margins, and room to scale.
             </p>
 
             <div data-hero-line className="mt-9 flex flex-wrap items-center gap-3">
@@ -631,14 +645,23 @@ export default function Home() {
               </a>
             </div>
 
+            {/* Nine, in three rows of three. Every label is a third-person verb
+                with the system as its subject — Kronus watches, verifies, files —
+                so the strip reads as one sentence list rather than nine labels. */}
             <dl
               data-hero-line
-              className="mt-11 flex flex-wrap gap-x-9 gap-y-5 border-t border-[var(--kr-edge)] pt-7"
+              className="mt-11 grid grid-cols-2 gap-x-7 gap-y-6 border-t border-[var(--kr-edge)] pt-7 sm:grid-cols-3"
             >
               {[
                 { l: 'Watches', v: 'every 10 min', icon: Radio },
                 { l: 'Verifies', v: 'NFC · QR · GPS', icon: Nfc },
                 { l: 'Files', v: 'nobody types it', icon: QrCode },
+                { l: 'Reports', v: 'AI-generated', icon: FileText },
+                { l: 'Detects', v: 'missed rounds', icon: Siren },
+                { l: 'Locks', v: 'raw punches', icon: Lock },
+                { l: 'Schedules', v: 'draft → publish', icon: CalendarDays },
+                { l: 'Syncs', v: 'QuickBooks · Xero', icon: RefreshCw },
+                { l: 'Exports', v: 'PDF · CSV', icon: FileDown },
               ].map((s) => (
                 <div key={s.l} className="flex items-start gap-2.5">
                   <s.icon
