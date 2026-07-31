@@ -707,21 +707,62 @@ export default function Home() {
 
       {/* ================= THE CHAIN ======================================== */}
       <section id="record" className="border-b border-[var(--kr-edge)]">
-        <div className="mx-auto max-w-[84rem] px-5 pt-20 pb-12 sm:px-8 sm:pt-28">
-          <div className="kr-rise max-w-[46rem]">
-            <p className="kr-doc-label mb-5 text-[11px] text-[var(--kr-lime)]">
+        <div className="mx-auto grid max-w-[84rem] gap-y-12 px-5 pt-20 pb-12 sm:px-8 sm:pt-28 lg:grid-cols-[minmax(0,1fr)_minmax(0,19rem)] lg:gap-x-16">
+          <div className="kr-rise">
+            <p className="kr-doc-label mb-6 flex items-center gap-3 text-[11px] text-[var(--kr-lime)]">
               Chain of custody
+              <span
+                aria-hidden="true"
+                className="h-px flex-1 bg-[linear-gradient(90deg,var(--kr-edge-strong),transparent)]"
+              />
             </p>
-            <h2 className="kr-display text-[2.25rem] sm:text-[3.1rem]">
-              Every number starts on a wall.
+            {/* Set at display scale with the last phrase carried in lime: the
+                sentence is the section's whole claim, and at 3.1rem it was
+                reading as another paragraph rather than as a heading. */}
+            <h2 className="kr-display text-[2.6rem] leading-[0.98] sm:text-[4rem] lg:text-[4.6rem]">
+              Every number starts{' '}
+              <span className="text-[var(--kr-lime)]">on a wall.</span>
             </h2>
-            <p className="mt-6 max-w-[38rem] text-[1.0625rem] leading-relaxed text-[var(--kr-ink-2)]">
+            <p className="mt-8 max-w-[38rem] text-[1.0625rem] leading-relaxed text-[var(--kr-ink-2)]">
               Most guard software starts with a form. Kronus starts with a physical object
               in a building, and follows it all the way to the invoice line and the page
               your client audits. Seven links, no gap where a number could be entered by
               hand.
             </p>
           </div>
+
+          {/* The section's own contents page. It fills the right column with
+              something load-bearing — the reader can see the whole run before
+              committing to the scroll, and it names the document it describes. */}
+          <aside className="kr-rise lg:pt-2">
+            <div className="rounded-[5px] border border-[var(--kr-edge)] bg-[var(--kr-ground)] p-6 shadow-[var(--kr-lift)]">
+              <p className="kr-meas text-[11px] text-[var(--kr-ink-3)]">
+                PVR-2026-0724-NGT
+              </p>
+              <p className="kr-display mt-5 text-[3.4rem] leading-none text-[var(--kr-lime)]">
+                {String(CHAIN.length).padStart(2, '0')}
+              </p>
+              <p className="kr-doc-label mt-1 text-[10px] text-[var(--kr-ink-3)]">
+                links · no gap
+              </p>
+
+              <ol className="mt-6 border-t border-[var(--kr-edge)] pt-4">
+                {CHAIN.map((link, i) => (
+                  <li key={link.id}>
+                    <a
+                      href={`#chain-${link.id}`}
+                      className="kr-meas group flex items-baseline gap-3 rounded-[2px] py-[0.4rem] text-[12px] text-[var(--kr-ink-3)] transition-colors duration-200 hover:text-[var(--kr-ink)]"
+                    >
+                      <span className="text-[var(--kr-lime)] opacity-70 transition-opacity duration-200 group-hover:opacity-100">
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
+                      {link.step}
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </aside>
         </div>
 
         {/* One vertical run, and from lg up the links alternate across it: the
@@ -747,6 +788,7 @@ export default function Home() {
             return (
               <li
                 key={link.id}
+                id={`chain-${link.id}`}
                 data-chain-link
                 className="kr-chain-link kr-rise relative pb-16 pl-12 last:pb-0 sm:pb-24 sm:pl-16 lg:grid lg:grid-cols-2 lg:items-center lg:gap-x-20 lg:pb-28 lg:pl-0"
               >
