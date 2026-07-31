@@ -21,21 +21,20 @@ export const SHEET_W_UNITS = SHEET_H_UNITS * (SHEET_W / SHEET_H)
 
 const clamp01 = (n) => (n < 0 ? 0 : n > 1 ? 1 : n)
 
+/** Backing-store density for the document texture, over its 1000x1414 grid. */
+const TEXTURE_SCALE = 1.7
+
 /** One desk lamp in a dark room, with the operator's screens off to the right. */
 export function PaperLights() {
   return (
     <>
-      <ambientLight intensity={1.05} color="#dfe6d6" />
+      <ambientLight intensity={0.55} color="#cfd8c4" />
       {/* Key light, upper left, slightly warm — the lamp. */}
-      <directionalLight position={[-3.4, 4.2, 5.2]} intensity={3.4} color="#fffdf6" />
-      {/* Straight-on fill. Without it the stock falls away toward its own
-          centre and the body copy sits in half-shadow, which is what made the
-          document read as dim rather than as paper under a lamp. */}
-      <directionalLight position={[0.4, 0.6, 7]} intensity={1.5} color="#fffaf0" />
+      <directionalLight position={[-3.4, 4.2, 5.2]} intensity={2.3} color="#fffaf0" />
       {/* Lime rim from the screens. */}
-      <pointLight position={[4.6, -1.4, 2.6]} intensity={10} distance={14} color="#96ee60" />
+      <pointLight position={[4.6, -1.4, 2.6]} intensity={9} distance={14} color="#96ee60" />
       {/* Cool bounce so the shaded side never goes muddy. */}
-      <pointLight position={[-2.2, -3.2, 3.4]} intensity={4.2} distance={12} color="#8fb0d8" />
+      <pointLight position={[-2.2, -3.2, 3.4]} intensity={3.2} distance={12} color="#8fb0d8" />
     </>
   )
 }
@@ -79,12 +78,19 @@ export function PaperMesh({
 
   const { texture, ctx } = useMemo(() => {
     const c = document.createElement('canvas')
-    c.width = SHEET_W
-    c.height = SHEET_H
+    c.width = SHEET_W * TEXTURE_SCALE
+    c.height = SHEET_H * TEXTURE_SCALE
     const context = c.getContext('2d')
+    // Set once, never reset: the painters all use balanced save/restore, so
+    // they go on addressing a 1000x1414 page while the pixels underneath are
+    // 1.7x denser. Small print is where a document either looks real or looks
+    // like a picture of one.
+    context.scale(TEXTURE_SCALE, TEXTURE_SCALE)
     const t = new THREE.CanvasTexture(c)
     t.colorSpace = THREE.SRGBColorSpace
-    t.anisotropy = 8
+    t.anisotropy = 16
+    t.generateMipmaps = true
+    t.minFilter = THREE.LinearMipmapLinearFilter
     return { texture: t, ctx: context }
   }, [])
 
@@ -114,7 +120,7 @@ export function PaperMesh({
 
   // Flat plane, displaced on the CPU so the sheet can hold a curl and settle.
   const geometry = useMemo(
-    () => new THREE.PlaneGeometry(SHEET_W_UNITS, SHEET_H_UNITS, 40, 56),
+    () => new THREE.PlaneGeometry(SHEET_W_UNITS, SHEET_H_UNITS, 56, 78),
     [],
   )
   useEffect(() => () => geometry.dispose(), [geometry])
@@ -193,7 +199,7 @@ export function PaperMesh({
         <meshStandardMaterial
           ref={matRef}
           map={texture}
-          roughness={0.72}
+          roughness={0.82}
           metalness={0}
           side={THREE.DoubleSide}
           transparent={opacityRef != null}
