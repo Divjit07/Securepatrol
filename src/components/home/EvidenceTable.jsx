@@ -590,7 +590,7 @@ export default function EvidenceTable({ enhanced = false }) {
               left holding — the trade the whole page is selling. The proof
               claim moves to the first line of the body so it still lands. */}
           <h2 className="kr-display text-[2.6rem] leading-[0.98] sm:text-[4rem] lg:text-[4.6rem]">
-            AI runs the night.{' '}
+            AI watches over every shift.{' '}
             <span className="text-[var(--kr-lime)]">You just read the record.</span>
           </h2>
           <p className="mt-8 max-w-[38rem] text-[1.0625rem] leading-relaxed text-[var(--kr-ink-2)]">

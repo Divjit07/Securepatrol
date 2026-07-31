@@ -148,7 +148,7 @@ export default function PaperCanvas({ progressRef }) {
       }`}
     >
       <Canvas
-        dpr={[1, 2]}
+        dpr={[1, 2.5]}
         camera={{ position: [0, 0, 6.4], fov: 42 }}
         gl={{ antialias: true, alpha: true }}
         onCreated={() => setReady(true)}

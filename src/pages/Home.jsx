@@ -681,7 +681,11 @@ export default function Home() {
 
           {/* The sheet. WebGL where it can run, the real document where it cannot. */}
           <div className="relative">
-            <div className="relative min-h-[26rem] sm:min-h-[32rem] lg:min-h-[40rem]">
+            {/* Full-bleed on a phone: the camera's field of view is vertical, so the
+                sheet is sized by this box. Cancelling the page gutter and giving it
+                height is what lets the document actually fill the screen instead of
+                sitting in a postage stamp with margins on every side. */}
+            <div className="relative -mx-5 min-h-[33rem] sm:mx-0 sm:min-h-[32rem] lg:min-h-[40rem]">
               {enhanced ? (
                 <Suspense fallback={null}>
                   <PaperCanvas progressRef={progressRef} />
