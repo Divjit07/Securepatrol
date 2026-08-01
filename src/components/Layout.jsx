@@ -28,6 +28,7 @@ import { useAuth } from '../hooks/useAuth.jsx'
 import { useGuardClockStatus } from '../hooks/useGuardClockStatus.js'
 import SyncIndicator from './SyncIndicator.jsx'
 import ThemeSwitcher from './ThemeSwitcher.jsx'
+import AdminCursorEffect from './effects/AdminCursorEffect.jsx'
 import { BRAND } from '../lib/brand.js'
 
 // Exported for the DEV-only /dev/sidebar visual harness.
@@ -179,7 +180,7 @@ const COLLAPSE_KEY = 'sp-sidebar-collapsed'
 
 /** Enterprise sidebar shell (admin + client portals): 260px white sidebar on
  *  gray-50, collapsible on desktop, slide-over on mobile. */
-function SidebarLayout({ children, groups, roleLabel, homeTo }) {
+function SidebarLayout({ children, groups, roleLabel, homeTo, overlay = null }) {
   const { profile, signOut } = useAuth()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -331,7 +332,10 @@ function SidebarLayout({ children, groups, roleLabel, homeTo }) {
           collapsed ? 'lg:pl-14' : 'lg:pl-[268px]'
         }`}
       >
-        <div className="app-main px-4 py-6 sm:px-6 lg:px-10 lg:py-8">{children}</div>
+        {/* Inside <main> on purpose — GhostCursor binds pointer listeners to its
+            parent, so it has to sit in an element that actually gets events. */}
+        {overlay}
+        <div className="app-main relative z-[1] px-4 py-6 sm:px-6 lg:px-10 lg:py-8">{children}</div>
       </main>
     </div>
   )
@@ -344,7 +348,12 @@ function AdminLayout({ children }) {
     [canApproveScans, canManageShiftClock, isSuperAdmin],
   )
   return (
-    <SidebarLayout groups={groups} roleLabel="Administrator" homeTo="/admin">
+    <SidebarLayout
+      groups={groups}
+      roleLabel="Administrator"
+      homeTo="/admin"
+      overlay={<AdminCursorEffect />}
+    >
       {children}
     </SidebarLayout>
   )
