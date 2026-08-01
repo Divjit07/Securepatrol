@@ -23,7 +23,6 @@ import {
 } from 'lucide-react'
 import { Sparkles } from 'lucide-react'
 import Logo from './Logo.jsx'
-import AppBackdrop from './backdrop/AppBackdrop.jsx'
 import { useMemo, useState } from 'react'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { useGuardClockStatus } from '../hooks/useGuardClockStatus.js'
@@ -119,30 +118,53 @@ function initialsOf(name) {
     .toUpperCase()
 }
 
-const sidebarItemClass = ({ isActive }) =>
-  `flex items-center gap-2.5 rounded-lg px-3 py-1 text-sm leading-5 transition ${
-    isActive
-      ? 'sidebar-nav-active'
-      : 'text-ink-2 hover:bg-white/5 hover:text-ink'
-  }`
+/** Icon-tile tints, drawn from the same bento swatches the dashboards use, at
+ *  the alpha the dark rail needs. Cycled per item so a long nav still reads as
+ *  a set rather than a stripe. */
+const RAIL_TONES = [
+  { tint: 'rgba(217, 240, 255, 0.17)', ink: '#D9F0FF' }, // sky
+  { tint: 'rgba(236, 238, 254, 0.17)', ink: '#ECEEFE' }, // lavender
+  { tint: 'rgba(127, 208, 159, 0.20)', ink: '#8FDCAC' }, // moss
+  { tint: 'rgba(236, 250, 181, 0.17)', ink: '#ECFAB5' }, // meadow
+  { tint: 'rgba(251, 228, 227, 0.17)', ink: '#FBE4E3' }, // blossom
+]
+
+const railLinkClass = ({ isActive }) => `rail-link ${isActive ? 'rail-link-active' : ''}`
 
 export function SidebarNav({ groups, onNavigate }) {
+  let seq = 0
   return (
-    <nav className="flex-1 space-y-2 overflow-y-auto px-3 py-2">
+    <nav className="rail-scroll flex-1 overflow-y-auto px-3 pb-2">
       {groups.map((group) => (
         <div key={group.label || 'home'}>
-          {group.label && (
-            <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-3">
-              {group.label}
-            </p>
-          )}
+          {group.label && <p className="rail-group-label">{group.label}</p>}
           <div className="space-y-0.5">
             {group.items.map((link) => {
               const Icon = link.icon
+              const tone = RAIL_TONES[seq++ % RAIL_TONES.length]
               return (
-                <NavLink key={link.to} to={link.to} end={link.end} className={sidebarItemClass} onClick={onNavigate}>
-                  <Icon className="h-4 w-4 shrink-0" strokeWidth={2} />
-                  {link.label}
+                <NavLink
+                  key={link.to}
+                  to={link.to}
+                  end={link.end}
+                  className={railLinkClass}
+                  onClick={onNavigate}
+                >
+                  {({ isActive }) => (
+                    <>
+                      <span
+                        className="rail-tile"
+                        style={
+                          isActive
+                            ? { background: '#96EE60', color: '#12290d' }
+                            : { background: tone.tint, color: tone.ink }
+                        }
+                      >
+                        <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
+                      </span>
+                      <span className="min-w-0 flex-1 truncate">{link.label}</span>
+                    </>
+                  )}
                 </NavLink>
               )
             })}
@@ -157,7 +179,7 @@ const COLLAPSE_KEY = 'sp-sidebar-collapsed'
 
 /** Enterprise sidebar shell (admin + client portals): 260px white sidebar on
  *  gray-50, collapsible on desktop, slide-over on mobile. */
-function SidebarLayout({ children, groups, roleLabel, homeTo, backdrop = false }) {
+function SidebarLayout({ children, groups, roleLabel, homeTo }) {
   const { profile, signOut } = useAuth()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -187,18 +209,20 @@ function SidebarLayout({ children, groups, roleLabel, homeTo, backdrop = false }
 
   const sidebarInner = (
     <>
-      <div className="flex items-center gap-3 px-5 py-2.5">
+      <div className="app-rail-head">
         <Logo size="sm" showText={false} />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-base font-bold tracking-tight text-ink">{BRAND.name}</p>
-          <p className="truncate text-[10px] font-semibold uppercase tracking-tight text-accent-orange">
+          <p className="truncate font-display text-[1.05rem] font-bold tracking-tight text-white">
+            {BRAND.name}
+          </p>
+          <p className="truncate text-[9px] font-bold uppercase tracking-[0.12em] text-accent-orange">
             Workforce platform
           </p>
         </div>
         <button
           type="button"
           onClick={toggleCollapsed}
-          className="hidden rounded-lg p-1.5 text-ink-3 transition hover:bg-white/10 hover:text-ink lg:block"
+          className="hidden shrink-0 rounded-xl p-2 text-[#8d9785] transition hover:bg-white/10 hover:text-white lg:block"
           aria-label="Collapse sidebar"
           title="Collapse sidebar"
         >
@@ -208,26 +232,28 @@ function SidebarLayout({ children, groups, roleLabel, homeTo, backdrop = false }
 
       <SidebarNav groups={groups} onNavigate={() => setMenuOpen(false)} />
 
-      <div className="border-t border-white/5 p-2">
+      <div className="app-rail-foot">
         <ThemeSwitcher primary="day" />
-        <div className="px-2">
+        <div className="px-1 py-1">
           <SyncIndicator />
         </div>
-        <div className="flex items-center gap-3 rounded-lg px-2 py-1">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-orange/15 text-xs font-bold text-accent-orange">
+        <div className="mt-1 flex items-center gap-3 rounded-2xl px-1.5 py-1.5">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-orange/20 text-xs font-bold text-accent-orange">
             {initialsOf(profile?.name)}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-ink">{profile?.name || '—'}</p>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-3">{roleLabel}</p>
+            <p className="truncate text-sm font-semibold text-white">{profile?.name || '—'}</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8d9785]">
+              {roleLabel}
+            </p>
           </div>
           <button
             type="button"
             onClick={handleSignOut}
-            className="rounded-lg p-2 text-ink-3 transition hover:bg-white/10 hover:text-ink"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[#8d9785] transition hover:bg-white/10 hover:text-white"
             aria-label="Sign out"
           >
-            <LogOut className="h-4 w-4" />
+            <LogOut className="h-[18px] w-[18px]" />
           </button>
         </div>
       </div>
@@ -236,11 +262,9 @@ function SidebarLayout({ children, groups, roleLabel, homeTo, backdrop = false }
 
   return (
     <div className="app-shell">
-      {backdrop && <AppBackdrop />}
-
       {/* Desktop sidebar */}
       <aside
-        className={`app-sidebar fixed inset-y-0 left-0 z-40 hidden w-[260px] flex-col transition-transform duration-200 lg:flex ${
+        className={`app-rail fixed inset-y-0 left-0 z-40 hidden w-[268px] flex-col transition-transform duration-200 lg:flex ${
           collapsed ? '-translate-x-full' : 'translate-x-0'
         }`}
       >
@@ -261,20 +285,22 @@ function SidebarLayout({ children, groups, roleLabel, homeTo, backdrop = false }
       )}
 
       {/* Mobile top bar */}
-      <header className="app-header sticky top-0 z-40 flex items-center gap-3 px-4 py-2.5 lg:hidden">
+      <header className="app-header-rail sticky top-0 z-40 flex items-center gap-2 px-3 py-2 lg:hidden">
         <button
           type="button"
           onClick={() => setMenuOpen(true)}
-          className="rounded-lg p-2 text-ink-2"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[#a9b2a0] transition hover:bg-white/10 hover:text-white"
           aria-label="Menu"
         >
-          <Menu className="h-5 w-5" />
+          <Menu className="h-[22px] w-[22px]" />
         </button>
-        <Link to={homeTo} className="flex items-center gap-2">
+        <Link to={homeTo} className="flex min-w-0 items-center gap-2.5">
           <Logo size="sm" showText={false} />
-          <span className="text-base font-bold tracking-tight text-ink">{BRAND.name}</span>
+          <span className="truncate font-display text-[1.05rem] font-bold tracking-tight text-white">
+            {BRAND.name}
+          </span>
         </Link>
-        <div className="ml-auto">
+        <div className="ml-auto pr-1">
           <SyncIndicator />
         </div>
       </header>
@@ -284,13 +310,13 @@ function SidebarLayout({ children, groups, roleLabel, homeTo, backdrop = false }
         <div className="fixed inset-0 z-50 lg:hidden" onClick={() => setMenuOpen(false)}>
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
           <div
-            className="absolute inset-y-0 left-0 flex w-[260px] flex-col app-sidebar shadow-2xl"
+            className="app-rail absolute inset-y-0 left-0 flex w-[290px] max-w-[86vw] flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               type="button"
               onClick={() => setMenuOpen(false)}
-              className="absolute right-2 top-3 rounded-lg p-2 text-ink-3"
+              className="absolute right-2 top-[max(0.75rem,env(safe-area-inset-top))] z-10 flex h-11 w-11 items-center justify-center rounded-xl text-[#8d9785] transition hover:bg-white/10 hover:text-white"
               aria-label="Close menu"
             >
               <X className="h-5 w-5" />
@@ -302,7 +328,7 @@ function SidebarLayout({ children, groups, roleLabel, homeTo, backdrop = false }
 
       <main
         className={`app-content transition-[padding] duration-200 ${
-          collapsed ? 'lg:pl-14' : 'lg:pl-[260px]'
+          collapsed ? 'lg:pl-14' : 'lg:pl-[268px]'
         }`}
       >
         <div className="app-main px-4 py-6 sm:px-6 lg:px-10 lg:py-8">{children}</div>
@@ -326,7 +352,7 @@ function AdminLayout({ children }) {
 
 function ClientLayout({ children }) {
   return (
-    <SidebarLayout groups={clientNavGroups} roleLabel="Client" homeTo="/client" backdrop>
+    <SidebarLayout groups={clientNavGroups} roleLabel="Client" homeTo="/client">
       {children}
     </SidebarLayout>
   )

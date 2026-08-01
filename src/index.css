@@ -246,6 +246,116 @@
     border-right: 1px solid var(--hairline);
   }
 
+  /* ---- Command rail (admin + client shell) ----
+     The rail holds Dark Ops in BOTH themes. Dark is the operator's side of the
+     record, so the navigation reads as the instrument and the page reads as the
+     work — and against the light `day` page the mark, the lime signal and the
+     active row all land at a glance. Values come from the marketing surface's
+     olive family so app chrome and homepage stay one world. */
+  .app-rail {
+    --rail-ground: #171c11;
+    --rail-void: #0f1209;
+    --rail-raise: rgba(255, 255, 255, 0.055);
+    --rail-raise-strong: rgba(255, 255, 255, 0.11);
+    --rail-ink: #f4f6f1;
+    --rail-ink-2: #a9b2a0;
+    --rail-ink-3: #8d9785;
+    --rail-edge: rgba(150, 238, 96, 0.16);
+    background: linear-gradient(180deg, var(--rail-ground) 0%, var(--rail-void) 100%);
+    border-right: 1px solid var(--rail-edge);
+    color: var(--rail-ink);
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .app-rail-head {
+    @apply flex items-center gap-3 px-4 pb-3 pt-4;
+  }
+
+  .app-rail-foot {
+    @apply px-3 pb-3 pt-2;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+  }
+
+  /* Group heading: more room above than below, so the label belongs to what
+     follows it rather than floating between two runs. */
+  .rail-group-label {
+    @apply px-3 pb-1 pt-4 text-[11px] font-bold uppercase tracking-[0.14em];
+    color: var(--rail-ink-3);
+  }
+
+  /* Long navs (a super-admin sees 17 rows) scroll; fade the cut so the last
+     visible row reads as "more below" rather than as a clipped row. */
+  .rail-scroll {
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent 100%);
+  }
+
+  /* 48px on touch, where a guard works one-handed at night; desktop has a
+     cursor and a long admin nav, so it tightens to 42. */
+  .rail-link {
+    @apply relative flex items-center gap-3 rounded-2xl px-2.5 text-[0.95rem] font-semibold;
+    min-height: 48px;
+    color: var(--rail-ink);
+    transition:
+      background-color 200ms cubic-bezier(0.22, 1, 0.36, 1),
+      color 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .rail-link:hover {
+    background: var(--rail-raise);
+    color: var(--rail-ink);
+  }
+
+  .rail-link:focus-visible {
+    outline: 2px solid var(--color-accent-orange);
+    outline-offset: 2px;
+  }
+
+  /* Labels are already white and semibold, so the active row separates on the
+     lime tile and the raised fill, plus one weight step — not on colour. */
+  .rail-link-active {
+    background: var(--rail-raise-strong);
+    color: #ffffff;
+    font-weight: 700;
+  }
+
+  @media (min-width: 1024px) and (pointer: fine) {
+    .rail-link {
+      min-height: 42px;
+    }
+  }
+
+  .rail-tile {
+    @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-xl;
+    transition:
+      background-color 200ms cubic-bezier(0.22, 1, 0.36, 1),
+      color 200ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .rail-link:hover .rail-tile {
+    transform: translateY(-1px);
+  }
+
+  /* Mobile top bar wears the rail so the phone reads as one dark instrument. */
+  .app-header-rail {
+    background: linear-gradient(180deg, #171c11 0%, #10140c 100%);
+    border-bottom: 1px solid rgba(150, 238, 96, 0.16);
+    padding-top: env(safe-area-inset-top);
+    color: #f4f6f1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rail-link,
+    .rail-tile {
+      transition: none;
+    }
+    .rail-link:hover .rail-tile {
+      transform: none;
+    }
+  }
+
   /* ---- Command-deck backdrop (client portal) ----
      Fixed behind the content: perspective floor + horizon wash. Every layer is
      inert; the veil is what keeps text contrast identical to a flat canvas. */
