@@ -629,7 +629,7 @@ export default function EvidenceTable({ enhanced = false }) {
               Want it walked through against your own sites?
             </p>
             <a
-              href="mailto:hello@prodsec.ca?subject=Kronus%20demo"
+              href="mailto:hello@kronus.space?subject=Kronus%20demo"
               className="group mt-4 inline-flex w-full items-center justify-center gap-2 rounded-[3px] bg-[var(--kr-lime)] px-5 py-3 text-[0.9375rem] font-semibold text-[#0f1209] transition-all duration-200 hover:bg-[color-mix(in_srgb,#96ee60_80%,white)]"
             >
               Book a demo

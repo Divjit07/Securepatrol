@@ -7,8 +7,8 @@ const corsHeaders = {
 
 const MAX_DESCRIPTION = 5000
 const MAX_ATTACHMENTS = 5
-const ADMIN_EMAIL = Deno.env.get('INCIDENT_REPORT_TO') || 'admin@prodsec.ca'
-const FROM_EMAIL = Deno.env.get('INCIDENT_REPORT_FROM') || 'SecurePatrol <onboarding@resend.dev>'
+const ADMIN_EMAIL = Deno.env.get('INCIDENT_REPORT_TO') || 'admin@kronus.space'
+const FROM_EMAIL = Deno.env.get('INCIDENT_REPORT_FROM') || 'Kronus <onboarding@resend.dev>'
 
 type AttachmentMeta = {
   path: string

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { SHEET_H, SHEET_W } from './paperInk.js'
+import { onRiderReady } from './riderStamp.js'
 
 /**
  * A Kronus document as an actual sheet of paper.
@@ -97,6 +98,8 @@ export function PaperMesh({
   const paintedAt = useRef(-1)
 
   // Repaint once webfonts land, otherwise the first paint uses fallback metrics.
+  // The masthead mark is a raster stamp and arrives on its own schedule, so it
+  // gets the same treatment — without this the first documents paint headerless.
   useEffect(() => {
     let alive = true
     const repaint = () => {
@@ -105,8 +108,10 @@ export function PaperMesh({
       invalidate()
     }
     if (document.fonts?.ready) document.fonts.ready.then(repaint)
+    const offRider = onRiderReady(repaint)
     return () => {
       alive = false
+      offRider()
     }
   }, [invalidate])
 

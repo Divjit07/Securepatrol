@@ -346,7 +346,7 @@ export function AlertsTile({ alerts, typeLabels = {}, onAcknowledge, busyId, del
 /** Quick actions — dark tile, app-widget style (search pill + two buttons). */
 export function ActionsTile({ initial = 'A', onNewSite, delay = 0 }) {
   return (
-    <Tile label="SecurePatrol" sub="Quick admin actions" span={2} delay={delay} className="border border-white/5 bg-surface">
+    <Tile label="Kronus" sub="Quick admin actions" span={2} delay={delay} className="border border-white/5 bg-surface">
       <div className="flex h-full flex-col">
         <div className="flex items-center gap-3 rounded-2xl bg-white/5 px-4 py-3">
           <Search className="h-4 w-4 text-ink-3" />

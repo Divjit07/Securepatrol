@@ -432,7 +432,7 @@ export default function AdminPayroll() {
       // approvals table not migrated yet — export without the column data
     }
     downloadCsv(
-      `securepatrol-payroll-${filters.fromDate}-${filters.toDate}.csv`,
+      `kronus-payroll-${filters.fromDate}-${filters.toDate}.csv`,
       buildAccountingCsv(weeklyPayroll, approvals),
     )
   }
@@ -452,7 +452,7 @@ export default function AdminPayroll() {
       ['Guard', 'Days worked', 'Total hours'],
       ...Object.values(hoursReport.totalByGuard).map((g) => [g.name, g.days, g.hoursLabel]),
     ]
-    downloadCsv(`securepatrol-hours-${filters.fromDate}-${filters.toDate}.csv`, [headers, ...rows, ...summaryRows])
+    downloadCsv(`kronus-hours-${filters.fromDate}-${filters.toDate}.csv`, [headers, ...rows, ...summaryRows])
   }
 
   const exportHoursPdf = () => {
@@ -488,7 +488,7 @@ export default function AdminPayroll() {
       body: Object.values(hoursReport.totalByGuard).map((g) => [g.name, g.days, g.hoursLabel]),
     })
 
-    doc.save(`securepatrol-hours-${filters.fromDate}-${filters.toDate}.pdf`)
+    doc.save(`kronus-hours-${filters.fromDate}-${filters.toDate}.pdf`)
   }
 
   return (

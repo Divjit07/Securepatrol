@@ -1,6 +1,9 @@
 import { supabase } from './supabase.js'
 import { getBestPosition, getOptionalPosition, validateScanProximity, defaultRadiusForFloor } from './gps.js'
 
+// Storage key, NOT branding — do not rename to match the Kronus name. Guards
+// carry unsynced scans in this key on their own devices; renaming it orphans
+// every queued scan that has not reached the server yet.
 const QUEUE_KEY = 'securepatrol_offline_scans'
 
 export function getOfflineQueue() {

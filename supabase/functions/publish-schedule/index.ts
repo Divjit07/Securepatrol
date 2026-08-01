@@ -7,7 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const FROM_EMAIL = Deno.env.get('SCHEDULE_FROM') || Deno.env.get('INCIDENT_REPORT_FROM') || 'SecurePatrol <onboarding@resend.dev>'
+const FROM_EMAIL = Deno.env.get('SCHEDULE_FROM') || Deno.env.get('INCIDENT_REPORT_FROM') || 'Kronus <onboarding@resend.dev>'
 
 type Shift = {
   id: string
@@ -32,13 +32,17 @@ function escapeIcs(text: string) {
 function buildIcs(shifts: Shift[], siteName: string) {
   const events = shifts
     .map(
+      // The UID domain is an identity, NOT branding — do not rename it to
+      // kronus. Calendars match a re-published shift to the invite already in
+      // the guard's calendar by this UID; changing it turns every future update
+      // into a duplicate event instead of an edit.
       (s) => `BEGIN:VEVENT
 UID:shift-${s.id}@securepatrol
 DTSTAMP:${icsDate(new Date().toISOString())}
 DTSTART:${icsDate(s.starts_at)}
 DTEND:${icsDate(s.ends_at)}
 SUMMARY:${escapeIcs(`Shift — ${siteName}`)}
-DESCRIPTION:${escapeIcs(s.notes || 'SecurePatrol scheduled shift')}
+DESCRIPTION:${escapeIcs(s.notes || 'Kronus scheduled shift')}
 LOCATION:${escapeIcs(siteName)}
 END:VEVENT`,
     )
@@ -46,7 +50,7 @@ END:VEVENT`,
 
   return `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//SecurePatrol//Roster//EN
+PRODID:-//Kronus//Roster//EN
 CALSCALE:GREGORIAN
 METHOD:PUBLISH
 ${events}
@@ -173,8 +177,8 @@ Deno.serve(async (req) => {
             <p style="color:#64748b;font-size:13px">A calendar file is attached — open it to add these shifts to your phone's calendar.</p>` : ''}
             ${openRows ? `<h3 style="color:#0a1628">Open shifts available</h3>
             <table style="border-collapse:collapse;width:100%;background:#fffbeb;border-radius:12px">${openRows}</table>
-            <p style="color:#64748b;font-size:13px">First come, first served — claim in the SecurePatrol app.</p>` : ''}
-            <p style="color:#94a3b8;font-size:12px">SecurePatrol · Productive Security Inc.</p>
+            <p style="color:#64748b;font-size:13px">First come, first served — claim in the Kronus app.</p>` : ''}
+            <p style="color:#94a3b8;font-size:12px">Kronus</p>
           </div>`
 
         const attachments = guardShifts.length

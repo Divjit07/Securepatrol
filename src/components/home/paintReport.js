@@ -1,5 +1,5 @@
 import { REPORT } from './reportData.js'
-import { paintEagle } from './eagleShape.js'
+import { paintRider } from './riderStamp.js'
 import {
   ALERT,
   BODY,
@@ -43,7 +43,7 @@ export function paintReport(ctx, progress = 1) {
   ctx.textBaseline = 'alphabetic'
 
   // ---- Masthead -----------------------------------------------------------
-  paintEagle(ctx, M, M + 6, 34, INK)
+  paintRider(ctx, M, M + 6, 34, INK)
   ctx.font = `800 34px ${DISPLAY}`
   ctx.fillStyle = INK
   ctx.letterSpacing = '1px'
@@ -202,7 +202,7 @@ export function paintReport(ctx, progress = 1) {
     ctx.stroke()
 
     // The eagle signs the record.
-    paintEagle(ctx, -34, -46, 68, VERIFIED)
+    paintRider(ctx, -34, -46, 68, VERIFIED)
 
     ctx.fillStyle = VERIFIED
     ctx.textAlign = 'center'

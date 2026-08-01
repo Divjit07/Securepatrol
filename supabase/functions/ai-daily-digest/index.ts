@@ -21,9 +21,9 @@ const json = (body: unknown, status = 200) =>
 const RUN_COOLDOWN_MS = 60 * 60_000
 let lastRunAt = 0
 
-const ADMIN_TO = Deno.env.get('ROSTER_ALERTS_TO') || Deno.env.get('INCIDENT_REPORT_TO') || 'admin@prodsec.ca'
+const ADMIN_TO = Deno.env.get('ROSTER_ALERTS_TO') || Deno.env.get('INCIDENT_REPORT_TO') || 'admin@kronus.space'
 const CLIENT_TO = Deno.env.get('CLIENT_DIGEST_TO') || ADMIN_TO // sandbox: owner only
-const FROM_EMAIL = Deno.env.get('SCHEDULE_FROM') || Deno.env.get('INCIDENT_REPORT_FROM') || 'SecurePatrol <onboarding@resend.dev>'
+const FROM_EMAIL = Deno.env.get('SCHEDULE_FROM') || Deno.env.get('INCIDENT_REPORT_FROM') || 'Kronus <onboarding@resend.dev>'
 
 const esc = (s: unknown) =>
   String(s ?? '').replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c] as string))
@@ -167,8 +167,8 @@ Deno.serve(async (req) => {
     const results: Record<string, boolean> = {}
     const adminRes = await send(
       ADMIN_TO,
-      `SecurePatrol ops digest — ${dateLabel}`,
-      wrap('Daily ops digest', adminSections, 'Every figure is computed directly from your patrol records. SecurePatrol automated digest.'),
+      `Kronus ops digest — ${dateLabel}`,
+      wrap('Daily ops digest', adminSections, 'Every figure is computed directly from your patrol records. Kronus automated digest.'),
     )
     results.admin = adminRes.ok
 
@@ -176,7 +176,7 @@ Deno.serve(async (req) => {
       const clientRes = await send(
         CLIENT_TO,
         `Your security coverage update — ${dateLabel}`,
-        wrap('Coverage update', clientSections, 'Prepared automatically from verified patrol records. Productive Security Inc.'),
+        wrap('Coverage update', clientSections, 'Prepared automatically from verified patrol records. Kronus.'),
       )
       results.client = clientRes.ok
     }

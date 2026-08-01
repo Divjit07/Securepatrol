@@ -1,6 +1,6 @@
 import { Component, lazy, Suspense, useLayoutEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { Shield } from 'lucide-react'
+import RiderMark from './home/RiderMark.jsx'
 import { gsap } from 'gsap'
 import { BRAND } from '../lib/brand.js'
 import AuthBackground from './AuthBackground.jsx'
@@ -63,7 +63,7 @@ export default function AuthShell({ children, mode = 'signin' }) {
         <section className="kratos-auth-hero-panel" data-auth-reveal>
           <div className="kratos-auth-brand">
             <span className="kratos-auth-brand-mark" aria-hidden>
-              <Shield className="h-6 w-6" strokeWidth={2} fill="currentColor" fillOpacity={0.15} />
+              <RiderMark className="h-6 w-6" />
             </span>
             <p className="kratos-auth-brand-name">{BRAND.nameUpper}</p>
           </div>
@@ -81,7 +81,7 @@ export default function AuthShell({ children, mode = 'signin' }) {
             </Suspense>
           </PedestalGate>
           <img
-            src="/brand/kratos-guard-mascot.png"
+            src="/brand/kronus-rider-tall.png"
             alt=""
             className="kratos-auth-mascot-img"
             draggable={false}

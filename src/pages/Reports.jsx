@@ -110,7 +110,7 @@ export default function Reports() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `securepatrol-scans-${scanFilters.fromDate}-${scanFilters.toDate}.csv`
+    a.download = `kronus-scans-${scanFilters.fromDate}-${scanFilters.toDate}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -139,7 +139,7 @@ export default function Reports() {
       ]),
     })
 
-    doc.save(`securepatrol-scans-${scanFilters.fromDate}.pdf`)
+    doc.save(`kronus-scans-${scanFilters.fromDate}.pdf`)
   }
 
   const passed = scans.filter((s) => s.status === 'pass').length

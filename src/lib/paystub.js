@@ -29,8 +29,8 @@ export function applyPeriodOtThreshold(totals, thresholdHours) {
 }
 
 export const EMPLOYER = {
-  name: 'PRODUCTIVE SECURITY INC.',
-  web: 'prodsec.ca',
+  name: 'KRONUS',
+  web: 'kronus.space',
 }
 
 // Statutory deductions are PERCENTAGES computed off gross, not typed amounts:
@@ -121,7 +121,7 @@ let logoPromise = null
 export function loadLogoDataUrl() {
   if (typeof window === 'undefined') return Promise.resolve(null)
   if (!logoPromise) {
-    logoPromise = fetch('/logo.png')
+    logoPromise = fetch('/brand/kronus-mark.png')
       .then((res) => (res.ok ? res.blob() : null))
       .then(
         (blob) =>

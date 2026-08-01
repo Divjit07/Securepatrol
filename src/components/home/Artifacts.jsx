@@ -1,5 +1,5 @@
 import { Camera, Check, Nfc, TriangleAlert } from 'lucide-react'
-import { EagleMark } from './EagleMark.jsx'
+import { RiderMark } from './RiderMark.jsx'
 import {
   ROSTER,
   TIMESHEET,
@@ -29,7 +29,7 @@ function Sheet({ title, docRef, children, className = '', tint }) {
       <div className="p-5 sm:p-6">
         <header className="flex items-baseline justify-between gap-4 border-b-2 border-[color-mix(in_srgb,#171a12_45%,transparent)] pb-2.5">
           <p className="flex items-center gap-2">
-            <EagleMark className="h-4 w-4 text-[var(--kr-paper-ink)]" withEye={false} />
+            <RiderMark className="h-4 w-4 text-[var(--kr-paper-ink)]" />
             <span
               className="kr-display text-[0.95rem]"
               style={{ fontVariationSettings: '"wdth" 108' }}
@@ -422,7 +422,7 @@ export function CheckpointLabel({ className = '' }) {
       <div className="p-5">
         <header className="flex items-center justify-between gap-3 border-b-2 border-[var(--kr-paper-ink)] pb-2">
           <p className="flex items-center gap-2">
-            <EagleMark className="h-5 w-5 text-[var(--kr-paper-ink)]" withEye={false} />
+            <RiderMark className="h-5 w-5 text-[var(--kr-paper-ink)]" />
             <span
               className="kr-display text-[1.05rem]"
               style={{ fontVariationSettings: '"wdth" 108' }}

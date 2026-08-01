@@ -1,8 +1,12 @@
-# SecurePatrol
+# Kronus
 
-Security-workforce management app (guard patrol verification, scheduling, payroll) for
-Productive Security Inc. Three role-gated portals in one React app: **admin** (sidebar
-shell), **client** (sidebar shell, read-only), **guard** (dark mobile top bar).
+Security-workforce management app (guard patrol verification, scheduling, payroll).
+Three role-gated portals in one React app: **admin** (sidebar shell), **client**
+(sidebar shell, read-only), **guard** (dark mobile top bar).
+
+The product is **Kronus** (kronus.space) and carries no other company's branding.
+Productive Security Inc. is a **client**, not the owner — their name, logo, or
+`prodsec.ca` addresses must never appear in the UI, PDFs, exports, or emails.
 
 **Read `docs/PROJECT_GUIDE.md` before non-trivial work** — it documents every page,
 button, data table, edge function, the design system tokens, and the roadmap.
@@ -20,7 +24,8 @@ Resend email · jsPDF · lucide-react. Routes lazy-loaded in `src/App.jsx`.
 - ⚠️ **NEVER `supabase db push`** — remote migration history is empty (002–024 applied
   manually); it would re-run every migration. New migrations = numbered file in
   `supabase/migrations/` + owner runs it in the Supabase SQL editor.
-- Don't touch `prodsec.ca` nameservers/MX (company email lives at Bell Canada Hosting).
+- Don't touch `prodsec.ca` DNS at all — it belongs to a client. Kronus mail must send
+  from a `kronus.space` identity (Resend domain + Supabase env vars), never theirs.
 - Emails: senders/recipients from env vars only; resend.dev sandbox only delivers to owner.
 - Keep raw clock punches immutable — payroll rounding/overtime are derived, never stored over raw.
 - ALL portals use the **Dark Ops** design system (canvas #1A1A1E, surface cards,

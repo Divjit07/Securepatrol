@@ -1,12 +1,11 @@
-import { Shield } from 'lucide-react'
 import { BRAND } from '../lib/brand.js'
 
 const sizes = {
-  sm: { box: 'h-10 w-10', icon: 'h-5 w-5' },
-  md: { box: 'h-12 w-12', icon: 'h-6 w-6' },
-  lg: { box: 'h-14 w-14', icon: 'h-7 w-7' },
-  xl: { box: 'h-16 w-16', icon: 'h-8 w-8' },
-  hero: { box: 'h-20 w-20', icon: 'h-10 w-10' },
+  sm: 'h-10 w-10',
+  md: 'h-12 w-12',
+  lg: 'h-14 w-14',
+  xl: 'h-16 w-16',
+  hero: 'h-20 w-20',
 }
 
 export default function Logo({
@@ -15,16 +14,20 @@ export default function Logo({
   variant = 'default',
   className = '',
 }) {
-  const s = sizes[size] || sizes.md
+  const box = sizes[size] || sizes.md
   const textClass = variant === 'light' ? 'text-white' : 'text-ink'
 
   return (
     <div className={`flex items-center gap-3 sm:gap-3.5 ${className}`}>
-      <div
-        className={`flex shrink-0 items-center justify-center rounded-xl border border-[#96ee60]/35 bg-[#96ee60]/15 ${s.box}`}
-      >
-        <Shield className={`${s.icon} text-[#96ee60]`} strokeWidth={1.75} fill="currentColor" fillOpacity={0.15} />
-      </div>
+      {/* The plated PNG carries its own dark ground, so the white horse holds
+          contrast on the light client sidebar and the dark guard bar alike. */}
+      <img
+        src="/brand/kronus-mark.png"
+        alt={showText ? '' : BRAND.name}
+        width="96"
+        height="96"
+        className={`shrink-0 rounded-xl object-cover ring-1 ring-white/12 ${box}`}
+      />
 
       {showText && (
         <p className={`font-display text-base font-bold tracking-tight sm:text-lg ${textClass}`}>

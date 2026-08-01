@@ -37,7 +37,7 @@ export default function Signup() {
       const result = await signUp(email, password, name)
       if (result.needsEmailConfirmation) {
         setSuccess(
-          'Account created. Confirm your email if prompted, install Kratos to your home screen, then sign in once an admin assigns your site.',
+          'Account created. Confirm your email if prompted, install Kronus to your home screen, then sign in once an admin assigns your site.',
         )
         return
       }

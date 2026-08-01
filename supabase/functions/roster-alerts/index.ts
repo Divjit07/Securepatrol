@@ -13,8 +13,8 @@ const corsHeaders = {
 
 const LATE_MINUTES = 10
 const NO_SHOW_MINUTES = 30
-const ALERTS_TO = Deno.env.get('ROSTER_ALERTS_TO') || Deno.env.get('INCIDENT_REPORT_TO') || 'admin@prodsec.ca'
-const FROM_EMAIL = Deno.env.get('SCHEDULE_FROM') || Deno.env.get('INCIDENT_REPORT_FROM') || 'SecurePatrol <onboarding@resend.dev>'
+const ALERTS_TO = Deno.env.get('ROSTER_ALERTS_TO') || Deno.env.get('INCIDENT_REPORT_TO') || 'admin@kronus.space'
+const FROM_EMAIL = Deno.env.get('SCHEDULE_FROM') || Deno.env.get('INCIDENT_REPORT_FROM') || 'Kronus <onboarding@resend.dev>'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -165,11 +165,11 @@ Deno.serve(async (req) => {
           body: JSON.stringify({
             from: FROM_EMAIL,
             to: ALERTS_TO,
-            subject: `SecurePatrol alerts: ${newEvents.length} issue${newEvents.length > 1 ? 's' : ''} need attention`,
+            subject: `Kronus alerts: ${newEvents.length} issue${newEvents.length > 1 ? 's' : ''} need attention`,
             html: `<div style="font-family:system-ui,sans-serif;max-width:560px">
               <h2 style="color:#0a1628">Roster alerts</h2>
               <ul style="padding-left:18px">${items}</ul>
-              <p style="color:#94a3b8;font-size:12px">SecurePatrol automated monitoring · every 10 minutes</p>
+              <p style="color:#94a3b8;font-size:12px">Kronus automated monitoring · every 10 minutes</p>
             </div>`,
           }),
         })

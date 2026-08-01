@@ -1,5 +1,5 @@
 import { INCIDENT } from './artifactData.js'
-import { paintEagle } from './eagleShape.js'
+import { paintRider } from './riderStamp.js'
 import {
   ALERT,
   BODY,
@@ -95,7 +95,7 @@ export function paintIncident(ctx, progress = 1) {
   ctx.textAlign = 'left'
 
   // ---- Masthead -----------------------------------------------------------
-  paintEagle(ctx, M, M + 6, 34, INK)
+  paintRider(ctx, M, M + 6, 34, INK)
   ctx.font = `800 34px ${DISPLAY}`
   ctx.fillStyle = INK
   ctx.letterSpacing = '1px'

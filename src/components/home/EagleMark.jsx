@@ -70,9 +70,15 @@ export function EagleSeal({ className = '', label = 'Verified record', ref: docR
         </textPath>
       </text>
 
-      <g transform="translate(38 34) scale(0.68)">
-        <path d={eaglePathData(EAGLE_POLYGONS)} fill="currentColor" />
-      </g>
+      {/* Raster silhouette, so it must be a luminance mask over a filled rect
+          rather than a path. The mask PNG is white-on-transparent for exactly
+          this reason — a black silhouette would mask to nothing here. */}
+      <defs>
+        <mask id="kr-seal-rider">
+          <image href="/brand/kronus-rider-mask-tight.png" x="38" y="32" width="44" height="44" preserveAspectRatio="xMidYMid meet" />
+        </mask>
+      </defs>
+      <rect x="38" y="32" width="44" height="44" fill="currentColor" mask="url(#kr-seal-rider)" />
 
       {docRef && (
         <text

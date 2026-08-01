@@ -51,7 +51,7 @@ import {
 import ReportSheet from '../components/home/ReportSheet.jsx'
 import EvidenceTable from '../components/home/EvidenceTable.jsx'
 import ChainGlyph from '../components/home/ChainGlyph.jsx'
-import { EagleMark } from '../components/home/EagleMark.jsx'
+import { RiderMark } from '../components/home/RiderMark.jsx'
 import {
   RosterSheet,
   TimesheetSheet,
@@ -67,7 +67,7 @@ gsap.registerPlugin(ScrollTrigger)
 
 /* TODO(owner): replace with the real demo destination — a scheduling link or a
    monitored inbox. This placeholder address is not wired to anything. */
-const DEMO_HREF = 'mailto:hello@prodsec.ca?subject=Kronus%20demo'
+const DEMO_HREF = 'mailto:hello@kronus.space?subject=Kronus%20demo'
 
 const NAV = [
   { label: 'The record', href: '#record' },
@@ -475,7 +475,7 @@ export default function Home() {
                     'radial-gradient(circle, color-mix(in srgb, #96ee60 26%, transparent) 0%, transparent 70%)',
                 }}
               />
-              <EagleMark className="relative h-[1.35rem] w-[1.35rem] text-[var(--kr-lime)]" />
+              <RiderMark className="relative h-[1.5rem] w-[1.5rem] text-[var(--kr-lime)]" />
             </span>
             <span
               className="kr-display text-lg"
@@ -1366,7 +1366,7 @@ export default function Home() {
           <div className="flex flex-wrap items-start justify-between gap-10">
             <div>
               <p className="flex items-center gap-2.5">
-                <EagleMark className="h-[1.35rem] w-[1.35rem] text-[var(--kr-lime)]" />
+                <RiderMark className="h-[1.5rem] w-[1.5rem] text-[var(--kr-lime)]" />
                 <span
                   className="kr-display text-lg"
                   style={{ fontVariationSettings: '"wdth" 110' }}
@@ -1375,8 +1375,7 @@ export default function Home() {
                 </span>
               </p>
               <p className="mt-4 max-w-[22rem] text-sm leading-relaxed text-[var(--kr-ink-3)]">
-                Security workforce operations — schedule, patrol, prove, pay. Built and run
-                by Productive Security Inc.
+                Security workforce operations — schedule, patrol, prove, pay.
               </p>
             </div>
 
@@ -1418,7 +1417,7 @@ export default function Home() {
           </div>
 
           <div className="kr-meas mt-12 flex flex-wrap justify-between gap-4 border-t border-[var(--kr-edge)] pt-6 text-[11px] text-[var(--kr-ink-3)]">
-            <span>© {new Date().getFullYear()} Productive Security Inc.</span>
+            <span>© {new Date().getFullYear()} Kronus</span>
             <span>All sample records on this page are synthetic.</span>
           </div>
         </div>

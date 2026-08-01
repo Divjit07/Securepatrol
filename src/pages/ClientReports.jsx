@@ -285,7 +285,7 @@ export default function ClientReports({ demo = null }) {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `securepatrol-scans-${scanFilters.fromDate}-${scanFilters.toDate}.csv`
+    a.download = `kronus-scans-${scanFilters.fromDate}-${scanFilters.toDate}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -313,7 +313,7 @@ export default function ClientReports({ demo = null }) {
       ]),
     })
 
-    doc.save(`securepatrol-scans-${scanFilters.fromDate}.pdf`)
+    doc.save(`kronus-scans-${scanFilters.fromDate}.pdf`)
   }
 
   const scanStats = useMemo(
@@ -374,7 +374,7 @@ export default function ClientReports({ demo = null }) {
       ]),
     })
 
-    doc.save(`securepatrol-hours-${hoursFilters.fromDate}-${hoursFilters.toDate}.pdf`)
+    doc.save(`kronus-hours-${hoursFilters.fromDate}-${hoursFilters.toDate}.pdf`)
   }
 
   const hoursTotals = Object.values(hoursReport.totalByGuard)

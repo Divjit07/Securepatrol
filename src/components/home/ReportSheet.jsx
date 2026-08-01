@@ -1,5 +1,6 @@
 import { Check, TriangleAlert } from 'lucide-react'
-import { EagleMark, EagleSeal } from './EagleMark.jsx'
+import { EagleSeal } from './EagleMark.jsx'
+import { RiderMark } from './RiderMark.jsx'
 import { REPORT } from './reportData.js'
 
 /**
@@ -19,7 +20,7 @@ export default function ReportSheet({ className = '', compact = false }) {
         {/* Masthead */}
         <header className="flex items-baseline justify-between gap-4 border-b-2 border-[color-mix(in_srgb,#171a12_45%,transparent)] pb-3">
           <p className="flex items-center gap-2.5">
-            <EagleMark className="h-5 w-5 text-[var(--kr-paper-ink)]" withEye={false} />
+            <RiderMark className="h-5 w-5 text-[var(--kr-paper-ink)]" />
             <span className="kr-display text-xl" style={{ fontVariationSettings: '"wdth" 108' }}>
               KRONUS
             </span>

@@ -1,5 +1,5 @@
 import { TIMESHEET } from './artifactData.js'
-import { paintEagle } from './eagleShape.js'
+import { paintRider } from './riderStamp.js'
 import {
   BODY,
   DISPLAY,
@@ -43,7 +43,7 @@ export function paintTimesheet(ctx, progress = 1) {
   ctx.textBaseline = 'alphabetic'
 
   // ---- Masthead -----------------------------------------------------------
-  paintEagle(ctx, M, M + 6, 34, INK)
+  paintRider(ctx, M, M + 6, 34, INK)
   ctx.font = `800 34px ${DISPLAY}`
   ctx.fillStyle = INK
   ctx.letterSpacing = '1px'
