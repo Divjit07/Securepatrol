@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
-import { shiftBounds, shiftScanBounds } from './useClientShift.js'
+import { dayActivityBounds } from './useClientShift.js'
 import { countPatrolRounds, computeGuardShiftForDay, formatShiftDuration, getPatrolCheckpoints } from '../lib/clientStats.js'
 import { fetchShiftAdjustmentsForDate, mapShiftAdjustments, shiftAdjustmentKey } from '../lib/shiftAdjustments.js'
 
@@ -52,8 +52,11 @@ export function useClientSiteData(siteId, date, shift, guardId = null) {
     setCheckpoints(checkpointList)
     checkpointIdsRef.current = new Set(checkpointList.map((cp) => cp.id))
 
-    if (cps?.length && !shift.isClosed) {
-      const { start, end } = shiftScanBounds(date, shift.start, shift.end)
+    // Load the day's activity regardless of the site's operating hours: a guard
+    // may be rostered on a "closed" day, or patrol past the scheduled end, and
+    // the client must still see it.
+    if (cps?.length) {
+      const { start, end } = dayActivityBounds(date, shift.start, shift.end)
       // Published roster shifts overlapping this day — the source of truth for
       // each guard's shift window (a new site follows its schedule, not the
       // company-default template).
@@ -98,7 +101,7 @@ export function useClientSiteData(siteId, date, shift, guardId = null) {
     }
 
     setLoading(false)
-  }, [siteId, date, shift.start, shift.end, shift.isClosed, guardId])
+  }, [siteId, date, shift.start, shift.end, guardId])
 
   useEffect(() => {
     loadData()
@@ -112,7 +115,7 @@ export function useClientSiteData(siteId, date, shift, guardId = null) {
   }, [siteId, loadData])
 
   useEffect(() => {
-    if (!siteId || shift.isClosed) return undefined
+    if (!siteId) return undefined
 
     const channel = supabase
       .channel(`client-site_${siteId}`)
@@ -122,7 +125,7 @@ export function useClientSiteData(siteId, date, shift, guardId = null) {
         if (payload.new.status !== 'pass') return
         if (guardId && payload.new.guard_id !== guardId) return
 
-        const { start, end } = shiftScanBounds(date, shift.start, shift.end)
+        const { start, end } = dayActivityBounds(date, shift.start, shift.end)
         const scannedAt = new Date(payload.new.scanned_at)
         if (scannedAt < start || scannedAt > end) return
 
@@ -141,7 +144,7 @@ export function useClientSiteData(siteId, date, shift, guardId = null) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [siteId, date, shift.start, shift.end, shift.isClosed, guardId])
+  }, [siteId, date, shift.start, shift.end, guardId])
 
   const scansByCheckpoint = scans.reduce((acc, scan) => {
     if (!acc[scan.checkpoint_id] || new Date(scan.scanned_at) > new Date(acc[scan.checkpoint_id].scanned_at)) {

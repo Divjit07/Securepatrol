@@ -115,6 +115,28 @@ export function shiftScanBounds(dateStr, startTime, endTime) {
   return { start, end }
 }
 
+/**
+ * The window for everything the guards ACTUALLY did on a date: midnight through
+ * end of the calendar day, extended 6h past the scheduled end for overnight
+ * shifts. Deliberately wider than the building's operating hours — a guard who
+ * arrives early, stays late, or works a day the site is marked closed still did
+ * the work, and a schedule must never be able to hide a real punch or scan.
+ * Operating hours drive labels, coverage targets and the clock-in gate; they
+ * never decide which recorded activity is allowed to be counted or displayed.
+ */
+export function dayActivityBounds(dateStr, startTime = '00:00', endTime = '23:59') {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const start = new Date(y, m - 1, d, 0, 0, 0, 0)
+  const calendarEnd = new Date(y, m - 1, d, 23, 59, 59, 999)
+  const { end: scheduledEnd } = shiftBounds(dateStr, startTime, endTime)
+  // Normal day shift → exactly the calendar day, so a late scan can't be counted
+  // on two dates. Only a shift that genuinely crosses midnight reaches into the
+  // next day, and then just far enough to catch its own clock-out (+2h grace).
+  const overnight = scheduledEnd > calendarEnd
+  const end = overnight ? new Date(scheduledEnd.getTime() + 2 * 3600000) : calendarEnd
+  return { start, end }
+}
+
 export function scheduledShiftBounds(dateStr, operatingHours) {
   const schedule = getScheduledShiftForDate(dateStr, operatingHours)
   if (schedule.isClosed) return null

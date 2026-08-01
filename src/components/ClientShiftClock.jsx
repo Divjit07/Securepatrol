@@ -20,7 +20,9 @@ function TimeCell({ icon: Icon, tone, label, time, sub }) {
 }
 
 export default function ClientShiftClock({ guardShifts, scheduled, loading }) {
-  if (scheduled?.isClosed) return null
+  // Hide only when the site is closed AND nobody actually clocked in — a real
+  // punch on a closed day is exactly what the client needs to see.
+  if (scheduled?.isClosed && !guardShifts?.length) return null
 
   if (loading) {
     return (
@@ -36,7 +38,8 @@ export default function ClientShiftClock({ guardShifts, scheduled, loading }) {
         <div>
           <h2 className="font-display text-base font-bold text-ink">Shift clock</h2>
           <p className="mt-0.5 text-xs text-ink-3">
-            Clock-in via GPS geofence · NFC fallback · Shift ends {scheduled?.endLabel || '8:00 PM'}
+            Clock-in via GPS geofence · NFC fallback ·{' '}
+            {scheduled?.endLabel ? `Shift ends ${scheduled.endLabel}` : 'Outside scheduled hours'}
           </p>
         </div>
         <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-accent-cyan/15 px-2.5 py-1 text-[11px] font-semibold text-accent-cyan-line">

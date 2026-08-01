@@ -8,7 +8,7 @@ import { useAuth } from '../hooks/useAuth.jsx'
 import { supabase } from '../lib/supabase.js'
 import { fetchSitesForAdmin } from '../lib/scans.js'
 import { fetchGuardsWithSites } from '../lib/guards.js'
-import { getScheduledShiftForDate, shiftScanBounds } from '../hooks/useClientShift.js'
+import { getScheduledShiftForDate, dayActivityBounds } from '../hooks/useClientShift.js'
 import { computeGuardSessionsForDay, formatDurationFromMinutes, formatShiftTime } from '../lib/clientStats.js'
 import {
   combineDateAndTime,
@@ -25,7 +25,7 @@ function findClockInScan(guardScans, checkpoints, dateStr, shift) {
   const clockInIds = new Set(
     checkpoints.filter((cp) => cp.checkpoint_role === 'shift_clock_in').map((cp) => cp.id),
   )
-  const { start, end } = shiftScanBounds(dateStr, shift.start, shift.end)
+  const { start, end } = dayActivityBounds(dateStr, shift.start, shift.end)
 
   return [...guardScans]
     .filter((s) => s.status === 'pass')
@@ -69,8 +69,11 @@ export default function AdminShiftClock() {
     [guards, selectedSite],
   )
 
+  // Punches are loaded for any date, including days the site is marked closed —
+  // a guard rostered on a closed day still clocked in, and payroll/audit must
+  // see it. Operating hours only label the day here.
   const loadSiteData = async () => {
-    if (!selectedSite || scheduled.isClosed) {
+    if (!selectedSite) {
       setCheckpoints([])
       setScans([])
       setAdjustments({})
@@ -204,6 +207,9 @@ export default function AdminShiftClock() {
     }
   })
 
+  // A "closed" day that nonetheless has punches must still render the table.
+  const hasRecordedActivity = rows.some((r) => r.day || r.adjustment) || scans.length > 0
+
   const startEdit = (row) => {
     // Edit collapses the day to one manual correction: first clock-in → last
     // clock-out across all of the guard's sessions.
@@ -299,15 +305,17 @@ export default function AdminShiftClock() {
         />
       </div>
 
-      {scheduled.isClosed ? (
+      {scheduled.isClosed && !hasRecordedActivity ? (
         <div className="dk-card p-8 text-center text-ink-2">
           {scheduled.scheduleLabel}
         </div>
       ) : (
         <>
           <p className="mb-4 text-sm text-ink-2">
-            {scheduled.scheduleLabel}. Use <strong>Edit times</strong> to correct a guard's clock-in
-            or clock-out — the change shows on payroll and the client portal.
+            {scheduled.scheduleLabel}
+            {scheduled.isClosed && ' — punches recorded anyway, shown below'}. Use{' '}
+            <strong>Edit times</strong> to correct a guard's clock-in or clock-out — the change
+            shows on payroll and the client portal.
           </p>
 
           {message && (

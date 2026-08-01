@@ -72,7 +72,12 @@ export default function ClientShiftBar({ date, setDate, scheduled, stats, hoursL
       ? Math.round((stats.scannedCount / stats.totalCheckpoints) * 100)
       : 0
 
-  const renderStats = showStats && stats && (!scheduled?.isClosed || hoursLabel)
+  // Real activity always wins over the schedule: a guard who worked a "closed"
+  // day still gets counted rather than hidden behind the closed banner.
+  const hasActivity = Boolean(
+    stats && (stats.patrolScanCount > 0 || stats.scannedCount > 0 || onDutyGuard),
+  )
+  const renderStats = showStats && stats && (!scheduled?.isClosed || hoursLabel || hasActivity)
   const gridRef = useReveal({ deps: [date, coverage, showStats] })
 
   return (
@@ -96,7 +101,7 @@ export default function ClientShiftBar({ date, setDate, scheduled, stats, hoursL
         )}
       </div>
 
-      {scheduled?.isClosed && !hoursLabel && (
+      {scheduled?.isClosed && !hoursLabel && !hasActivity && (
         <div className="mb-6 rounded-2xl border border-accent-orange/30 bg-accent-orange/10 px-4 py-3 text-sm text-accent-orange">
           The building is closed on Sundays. No patrol shift or hours are recorded for this date.
         </div>

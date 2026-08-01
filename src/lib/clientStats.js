@@ -1,4 +1,4 @@
-import { shiftBounds, shiftScanBounds } from '../hooks/useClientShift.js'
+import { shiftBounds, shiftScanBounds, dayActivityBounds } from '../hooks/useClientShift.js'
 import { isStatutoryHolidayAdjustment, isExcludedAdjustment, clientStatutoryHolidayLabel } from './shiftAdjustments.js'
 
 // Patrol coverage counts ONLY patrol-role checkpoints. The dedicated clock-in /
@@ -16,8 +16,13 @@ export function countPatrolRounds(scans = [], checkpoints = [], { date, shiftSta
   const roundIds = new Set(roundCps.map((cp) => cp.id))
   let roundScans = scans.filter((s) => s.status === 'pass' && roundIds.has(s.checkpoint_id))
 
+  // Same window the scans were fetched with (the whole day, not the building's
+  // open hours): a guard who clocks in early, patrols before the scheduled
+  // start, or runs a round past the scheduled end still walked those rounds.
+  // Gating on operating hours silently zeroed rounds/scans while checkpoint
+  // coverage — which never filtered — showed 9/9.
   if (date && shiftStart && shiftEnd) {
-    const { start, end } = shiftBounds(date, shiftStart, shiftEnd)
+    const { start, end } = dayActivityBounds(date, shiftStart, shiftEnd)
     roundScans = roundScans.filter((s) => {
       const t = new Date(s.scanned_at)
       return t >= start && t <= end
