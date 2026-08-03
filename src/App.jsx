@@ -38,6 +38,7 @@ function lazyRetry(importer) {
 }
 
 const Home = lazyRetry(() => import('./pages/Home.jsx'))
+const Shop = lazyRetry(() => import('./pages/Shop.jsx'))
 const GuardDashboard = lazyRetry(() => import('./pages/GuardDashboard.jsx'))
 const ScanScreen = lazyRetry(() => import('./pages/ScanScreen.jsx'))
 const ScanResult = lazyRetry(() => import('./pages/ScanResult.jsx'))
@@ -107,6 +108,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/" element={<HomeRedirect />} />
+        <Route path="/shop" element={<Shop />} />
 
         <Route
           path="/guard"

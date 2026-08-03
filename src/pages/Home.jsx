@@ -510,6 +510,20 @@ export default function Home() {
                 </a>
               )
             })}
+            {/* The one nav item that leaves this page — a route, not an anchor. */}
+            <Link
+              to="/shop"
+              className="group relative px-3 py-2 text-sm transition-colors duration-300"
+              style={{ color: 'var(--kr-ink-2)' }}
+            >
+              <span className="transition-colors duration-300 group-hover:text-[var(--kr-ink)]">
+                Shop
+              </span>
+              <span
+                aria-hidden="true"
+                className="absolute inset-x-2.5 bottom-1 h-px origin-center scale-x-0 bg-[var(--kr-lime)] transition-transform duration-300 ease-out group-hover:scale-x-100"
+              />
+            </Link>
           </nav>
 
           <div className="flex items-center gap-1.5">
