@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Building2, ArrowUpRight, MapPin, Plus, Search, ShieldCheck, X } from 'lucide-react'
+import { Building2, MapPin, Plus, Search, ShieldCheck, X } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import { useReveal } from '../lib/motion.js'
@@ -10,8 +10,8 @@ import { fetchGuardsWithSites } from '../lib/guards.js'
 import { supabase } from '../lib/supabase.js'
 
 /** Site directory — search across all sites, GPS/geofence status at a glance.
- *  Click a site → Live Map geofence panel for that site (type address, no visit).
- *  Chevron → site dashboard. */
+ *  Click a site → its overview. Geofencing lives on an explicit control per card.
+ */
 export default function AdminSites() {
   const { user, isSuperAdmin } = useAuth()
   const [sites, setSites] = useState([])
@@ -107,7 +107,7 @@ export default function AdminSites() {
     <Layout variant="admin">
       <PageHeader
         title="Sites"
-        description={`${sites.length} site${sites.length === 1 ? '' : 's'} under management. Click a site to set its address geofence on Live Map.`}
+        description={`${sites.length} site${sites.length === 1 ? '' : 's'} under management. Click a site to open its overview.`}
         action={
           <>
             <button type="button" onClick={() => setShowNewSite(true)} className="dk-cta">
@@ -226,12 +226,14 @@ export default function AdminSites() {
             const guardCount = guardCountBySite[site.id] || 0
             return (
               <div key={site.id} data-reveal className="group relative bento bento-interactive">
-                {/* Full-card primary action → geofence on Live Map. */}
+                {/* Full-card primary action → the site's overview. Geofencing is
+                    a setup step, not what you want on every visit, so it moved to
+                    an explicit control below. */}
                 <Link
-                  to={`/admin/map?geofence=${site.id}`}
+                  to={`/admin/site/${site.id}`}
                   className="absolute inset-0 rounded-[28px]"
-                  title="Set or update geofence on Live Map"
-                  aria-label={`Set geofence for ${site.name}`}
+                  title="Open site overview"
+                  aria-label={`Open ${site.name} overview`}
                 />
                 <div className="pointer-events-none flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-3">
@@ -240,7 +242,7 @@ export default function AdminSites() {
                     </div>
                     <div className="min-w-0">
                       <p className="truncate text-[15px] font-semibold text-ink">{site.name}</p>
-                      <p className="truncate text-xs text-ink-3">{site.address || 'No address — tap to geofence'}</p>
+                      <p className="truncate text-xs text-ink-3">{site.address || 'No address set'}</p>
                     </div>
                   </div>
                   <span
@@ -259,12 +261,13 @@ export default function AdminSites() {
                     <span className="tabular-nums">{guardCount}</span> guard{guardCount === 1 ? '' : 's'}
                   </span>
                   <Link
-                    to={`/admin/site/${site.id}`}
+                    to={`/admin/map?geofence=${site.id}`}
                     className="relative z-10 flex items-center gap-1 rounded-full bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-ink-2 transition hover:bg-white/10 hover:text-ink"
-                    title="Open site dashboard"
-                    aria-label={`Open ${site.name} dashboard`}
+                    title="Set or update the address geofence on Live Map"
+                    aria-label={`${geofenced ? 'Update' : 'Set'} geofence for ${site.name}`}
                   >
-                    Dashboard <ArrowUpRight className="h-3.5 w-3.5" />
+                    <MapPin className="h-3.5 w-3.5" />
+                    {geofenced ? 'Geofence' : 'Set GPS'}
                   </Link>
                 </div>
               </div>
