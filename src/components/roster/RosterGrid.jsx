@@ -3,7 +3,7 @@ import { Plus, AlertTriangle, Check, Inbox } from 'lucide-react'
 import {
   sameDay,
   shiftHours,
-  formatTimeRange,
+  formatTimeRangeCompact,
   CONFLICT_LABELS,
 } from '../../lib/schedule.js'
 import { SHIFT_CHIP_STYLES } from '../../lib/brandPalette.js'
@@ -38,7 +38,7 @@ export function ShiftChip({ shift, conflicts, onClick, draggable = true }) {
     >
       <span className="flex items-center gap-1">
         <span className="truncate text-[11px] font-bold">
-          {formatTimeRange(shift)}
+          {formatTimeRangeCompact(shift)}
         </span>
         {types && <AlertTriangle className="h-3 w-3 shrink-0 text-accent-red" />}
       </span>
@@ -79,16 +79,22 @@ function DayCell({ date, guardId, shifts, conflicts, isToday, onCellClick, onShi
         const shiftId = e.dataTransfer.getData('text/shift-id')
         if (shiftId) onShiftDrop?.(shiftId, guardId, date)
       }}
-      className={`group min-h-[64px] cursor-pointer space-y-1 border-b border-l border-ink/10 p-1 transition ${
+      className={`group min-h-[104px] cursor-pointer space-y-1.5 border-b border-l border-ink/10 p-1.5 transition ${
         isToday ? 'bg-accent-cyan/5' : ''
       } ${shifts.length === 0 ? 'hatch-empty' : ''} ${dragOver ? 'bg-accent-cyan/10 ring-2 ring-inset ring-accent-cyan-line/60' : 'hover:bg-ink/5'}`}
     >
       {shifts.map((s) => (
         <ShiftChip key={s.id} shift={s} conflicts={conflicts} onClick={onShiftClick} />
       ))}
-      <span className="pointer-events-none flex items-center justify-center rounded-lg py-1 text-ink-3 opacity-0 transition group-hover:opacity-100">
-        <Plus className="h-3.5 w-3.5" />
-      </span>
+      {/* Clicking an empty cell is how a shift gets created, so the affordance
+          has to be visible at rest — a hover-only "+" makes the whole grid read
+          as a static report. */}
+      {shifts.length === 0 && (
+        <span className="pointer-events-none flex h-full min-h-[68px] flex-col items-center justify-center gap-1 rounded-xl text-ink-3 opacity-45 transition group-hover:bg-ink/5 group-hover:opacity-100">
+          <Plus className="h-4 w-4" />
+          <span className="text-[10px] font-semibold uppercase tracking-wider">Add shift</span>
+        </span>
+      )}
     </div>
   )
 }
@@ -108,7 +114,11 @@ export default function RosterGrid({
   onShiftDrop,
 }) {
   const today = new Date()
-  const gridTemplate = { gridTemplateColumns: `170px repeat(${days.length}, minmax(140px, 1fr))` }
+  // The whole week must be reachable without horizontal scrolling. On a 1408px
+  // window the content area is ~1060px after the rail and page padding, so the
+  // week is budgeted to 144 + 7×128 = 1040. Biweekly (14 days) still scrolls,
+  // by necessity.
+  const gridTemplate = { gridTemplateColumns: `144px repeat(${days.length}, minmax(128px, 1fr))` }
 
   const headBase =
     'sticky top-0 z-10 border-b border-ink/10 bg-surface/95 px-2 py-2.5 backdrop-blur'

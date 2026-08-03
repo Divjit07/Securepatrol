@@ -43,6 +43,27 @@ export function formatTimeRange(shift) {
   return `${formatTime(shift.starts_at)} – ${formatTime(shift.ends_at)}`
 }
 
+/**
+ * Compact range for the roster grid, where a chip is ~110px wide and the full
+ * form ("12:00 AM – 8:00 AM") truncates. Drops the minutes when they are zero —
+ * which is most shifts — and the meridiem on the start when both halves share
+ * it: "9 AM – 5 PM", "12 AM – 8 AM", "9:30 AM – 5 PM".
+ */
+export function formatTimeRangeCompact(shift) {
+  const compact = (iso) => {
+    const d = new Date(iso)
+    const time = d.getMinutes() === 0
+      ? d.toLocaleTimeString([], { hour: 'numeric' })
+      : d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+    return time.replace(/\s+/g, ' ').trim()
+  }
+  const a = compact(shift.starts_at)
+  const b = compact(shift.ends_at)
+  const meridiem = /(AM|PM)$/i.exec(a)?.[1]
+  const shareMeridiem = meridiem && new RegExp(`${meridiem}$`, 'i').test(b)
+  return `${shareMeridiem ? a.replace(/\s*(AM|PM)$/i, '') : a} – ${b}`
+}
+
 export function formatDayLabel(date) {
   return date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
 }

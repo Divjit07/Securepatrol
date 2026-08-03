@@ -407,7 +407,29 @@ export default function AdminRoster() {
 
         <span className="text-sm font-semibold text-ink">{weekLabel}</span>
 
+        {/* Coverage and scheduled hours read as status on the toolbar, where they
+            sit beside the range they describe instead of holding a column open. */}
+        <div className="flex items-center gap-2 border-l border-ink/10 pl-3">
+          <span className="inline-flex items-baseline gap-1.5 rounded-full bg-ink/5 px-3 py-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-ink-3">Coverage</span>
+            <span className="text-sm font-bold tabular-nums text-ink">{coveragePct}%</span>
+          </span>
+          <span className="inline-flex items-baseline gap-1.5 rounded-full bg-ink/5 px-3 py-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-ink-3">Scheduled</span>
+            <span className="text-sm font-bold tabular-nums text-ink">{Math.round(totalHours)}h</span>
+          </span>
+        </div>
+
         <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleCopyWeek}
+            disabled={isAllSites}
+            title={isAllSites ? 'Pick a single site to copy last week' : undefined}
+            className="rounded-full border border-ink/10 bg-ink/5 px-3.5 py-1.5 text-xs font-semibold text-ink transition hover:bg-ink/10 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Copy Last Week
+          </button>
           <div className="flex rounded-full border border-ink/10 bg-ink/5 p-1">
             {[
               { id: 'grid', label: 'Grid', icon: LayoutGrid },
@@ -447,8 +469,12 @@ export default function AdminRoster() {
         </div>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-12">
-        <div className="xl:col-span-9">
+      {/* The grid is the task, so it gets the full width. Coverage/Scheduled and
+          Copy Last Week moved into the toolbar above; conflicts and open shifts
+          sit below. Boxing the week into 9 of 12 columns was clipping Sat/Sun
+          off the right edge, which is what made scheduling feel walled in. */}
+      <div className="space-y-5">
+        <div>
           {loading && !shifts.length ? (
             <div className="sp-card flex items-center justify-center gap-3 px-6 py-16 text-sm text-ink-3">
               <CalendarDays className="h-5 w-5 animate-pulse" /> Loading roster…
@@ -474,36 +500,8 @@ export default function AdminRoster() {
           )}
         </div>
 
-        {/* Right rail */}
-        <div className="space-y-4 xl:col-span-3">
-          <div>
-            <h2 className="mb-3 text-sm font-semibold text-ink">Roster Insights</h2>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-2xl border border-ink/10 bg-ink/5 p-3">
-                <div className="inline-flex rounded-full bg-[#FFFFFF] px-3 py-1 text-[11px] font-semibold text-black shadow-sm ring-1 ring-black/10">
-                  Coverage
-                </div>
-                <p className="mt-3 text-3xl font-light tracking-tight text-ink">{coveragePct}%</p>
-              </div>
-              <div className="rounded-2xl border border-ink/10 bg-ink/5 p-3">
-                <div className="inline-flex rounded-full bg-[#FFFFFF] px-3 py-1 text-[11px] font-semibold text-black shadow-sm ring-1 ring-black/10">
-                  Scheduled
-                </div>
-                <p className="mt-3 text-3xl font-light tracking-tight text-ink">{Math.round(totalHours)}h</p>
-              </div>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleCopyWeek}
-            disabled={isAllSites}
-            title={isAllSites ? 'Pick a single site to copy last week' : undefined}
-            className="w-full rounded-full border border-black/10 bg-[#FFFFFF] py-3 text-sm font-semibold text-black transition hover:bg-zinc-100 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Copy Last Week
-          </button>
-
+        {/* Supporting detail, below the week rather than beside it */}
+        <div className="grid gap-4 lg:grid-cols-2">
           <div>
             <h3 className="mb-2 text-sm font-semibold text-ink">Optimizations</h3>
             {conflictList.length === 0 ? (
