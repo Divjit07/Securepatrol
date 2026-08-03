@@ -784,6 +784,20 @@
     color: var(--auth-ink);
   }
 
+  /* Sign-in must have a way out. Quiet, but present above the fold. */
+  .kratos-auth-back {
+    @apply mt-3 inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3 text-[13px] font-medium transition;
+    color: color-mix(in srgb, #f4f7ee 62%, transparent);
+    border: 1px solid color-mix(in srgb, #96ee60 22%, transparent);
+    width: fit-content;
+  }
+
+  .kratos-auth-back:hover {
+    color: #f4f7ee;
+    border-color: color-mix(in srgb, #96ee60 45%, transparent);
+    background: color-mix(in srgb, #96ee60 8%, transparent);
+  }
+
   .kratos-auth-headline {
     @apply font-display max-w-lg font-semibold tracking-tight;
     font-size: clamp(1.85rem, 4.2vw, 2.85rem);
@@ -812,10 +826,33 @@
     }
   }
 
+  /* Backlight, not a puddle. A composite reads as a cutout when nothing behind
+     it separates the silhouette from the ground; a halo *behind* the subject is
+     what makes it sit in the scene instead of on top of it. */
   .kratos-auth-mascot-glow {
-    @apply absolute bottom-[6%] left-1/2 h-28 w-48 -translate-x-1/2 rounded-full;
-    background: radial-gradient(ellipse at center, color-mix(in srgb, var(--auth-lime) 42%, transparent), transparent 70%);
-    filter: blur(16px);
+    @apply absolute left-1/2 top-[42%] h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full;
+    background: radial-gradient(
+      circle at center,
+      color-mix(in srgb, var(--auth-lime) 24%, transparent),
+      transparent 66%
+    );
+    filter: blur(42px);
+  }
+
+  /* Contact shadow — the thing that actually grounds it. Tight and directly
+     under the hooves, because a wide soft shadow reads as fog, not weight. */
+  .kratos-auth-mascot::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 5%;
+    z-index: 1;
+    width: 54%;
+    height: 22px;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.8), transparent 72%);
+    filter: blur(9px);
   }
 
   .kratos-holo-pedestal {
@@ -826,7 +863,13 @@
 
   .kratos-auth-mascot-img {
     @apply relative z-[2] h-auto w-full max-h-[min(58vh,460px)] object-contain select-none;
-    filter: drop-shadow(0 24px 40px rgba(0, 0, 0, 0.55));
+    /* Two shadows doing different jobs: a tight dark one that reads as the edge
+       catching the ground, and a deep cast in the surface's own green-black so
+       it registers against this canvas — pure black on near-black renders
+       nothing, which is what left the rider floating. */
+    filter:
+      drop-shadow(0 3px 2px rgba(0, 0, 0, 0.55))
+      drop-shadow(0 20px 30px rgba(3, 9, 2, 0.9));
     animation: kratos-mascot-float 5.5s ease-in-out infinite;
   }
 

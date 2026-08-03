@@ -1,5 +1,6 @@
-import { Component, lazy, Suspense, useLayoutEffect, useRef } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
+import { ArrowLeft } from 'lucide-react'
 import RiderMark from './home/RiderMark.jsx'
 import { gsap } from 'gsap'
 import { BRAND } from '../lib/brand.js'
@@ -8,24 +9,6 @@ import ShineBorder from './auth/ShineBorder.jsx'
 import Spotlight from './auth/Spotlight.jsx'
 import DecryptedText from './auth/DecryptedText.jsx'
 
-const HoloPedestal = lazy(() =>
-  import('./auth/HoloPedestal.jsx').catch(() => ({
-    default: () => null,
-  })),
-)
-
-/** Isolates Three.js failures so auth still signs in. */
-class PedestalGate extends Component {
-  state = { ok: true }
-  static getDerivedStateFromError() {
-    return { ok: false }
-  }
-  componentDidCatch() {}
-  render() {
-    return this.state.ok ? this.props.children : null
-  }
-}
-
 function prefersReduced() {
   return (
     typeof window !== 'undefined' &&
@@ -33,7 +16,13 @@ function prefersReduced() {
   )
 }
 
-/** Dark Ops auth shell — Holo Command Gate (mascot + 3D pedestal + shine card). */
+/** Dark Ops auth shell.
+ *
+ * The 3D holo pedestal was removed: a self-lit lime slab under a painted oil
+ * portrait is what made the hero read as a cheap cutout. The artwork is now
+ * grounded by a contact shadow and separated by a backlight, both in CSS, and
+ * it is the brightest thing on the panel. HoloPedestal.jsx is still in the tree
+ * if the plinth is ever wanted back. */
 export default function AuthShell({ children, mode = 'signin' }) {
   const rootRef = useRef(null)
 
@@ -61,12 +50,19 @@ export default function AuthShell({ children, mode = 'signin' }) {
 
       <div className="kratos-auth-layout">
         <section className="kratos-auth-hero-panel" data-auth-reveal>
-          <div className="kratos-auth-brand">
+          {/* The lockup is the way back out. Sign-in was a dead end — a visitor
+              who landed here from the marketing page had no route home. */}
+          <Link to="/" className="kratos-auth-brand" aria-label={`${BRAND.nameUpper} — back to site`}>
             <span className="kratos-auth-brand-mark" aria-hidden>
               <RiderMark className="h-6 w-6" />
             </span>
             <p className="kratos-auth-brand-name">{BRAND.nameUpper}</p>
-          </div>
+          </Link>
+
+          <Link to="/" className="kratos-auth-back">
+            <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
+            Back to kronus.space
+          </Link>
 
           <DecryptedText text={BRAND.heroLine} className="kratos-auth-headline" />
           <p className="kratos-auth-lead">{BRAND.tagline}</p>
@@ -75,13 +71,8 @@ export default function AuthShell({ children, mode = 'signin' }) {
 
         <div className="kratos-auth-mascot" aria-hidden data-auth-reveal>
           <div className="kratos-auth-mascot-glow" />
-          <PedestalGate>
-            <Suspense fallback={null}>
-              <HoloPedestal />
-            </Suspense>
-          </PedestalGate>
           <img
-            src="/brand/kronus-rider-tall.png"
+            src="/brand/kronus-rider-tall.webp"
             alt=""
             className="kratos-auth-mascot-img"
             draggable={false}

@@ -42,12 +42,16 @@ function HexRing({ radius = 1.35, y = -0.95 }) {
 
   return (
     <mesh ref={ref} position={[0, y, 0]} rotation={[-Math.PI / 2, 0, 0]} geometry={geo}>
+      {/* Barely emissive on purpose. At 1.15 this was a self-lit neon slab, and a
+          glowing platform under a painted oil portrait is what made the hero read
+          as a cheap cutout on a sticker. Now it is a dark machined plinth that
+          only catches the rim light, so the artwork is the brightest thing. */}
       <meshStandardMaterial
-        color="#152015"
+        color="#101a10"
         emissive="#96ee60"
-        emissiveIntensity={1.15}
-        metalness={0.65}
-        roughness={0.28}
+        emissiveIntensity={0.14}
+        metalness={0.72}
+        roughness={0.35}
       />
     </mesh>
   )
@@ -61,7 +65,7 @@ function OuterHalo({ radius = 1.7, y = -0.98 }) {
   return (
     <mesh ref={ref} position={[0, y, 0]} rotation={[-Math.PI / 2, 0, 0]}>
       <ringGeometry args={[radius * 0.92, radius, 64]} />
-      <meshBasicMaterial color="#96ee60" transparent opacity={0.22} side={THREE.DoubleSide} />
+      <meshBasicMaterial color="#96ee60" transparent opacity={0.07} side={THREE.DoubleSide} />
     </mesh>
   )
 }
@@ -94,7 +98,7 @@ function OrbitSparks({ count = 36 }) {
           itemSize={3}
         />
       </bufferGeometry>
-      <pointsMaterial color="#96ee60" size={0.045} sizeAttenuation transparent opacity={0.85} />
+      <pointsMaterial color="#96ee60" size={0.038} sizeAttenuation transparent opacity={0.45} />
     </points>
   )
 }
@@ -103,7 +107,7 @@ function Beam() {
   return (
     <mesh position={[0, 0.15, 0]}>
       <cylinderGeometry args={[0.08, 0.55, 2.2, 24, 1, true]} />
-      <meshBasicMaterial color="#96ee60" transparent opacity={0.08} side={THREE.DoubleSide} />
+      <meshBasicMaterial color="#96ee60" transparent opacity={0.04} side={THREE.DoubleSide} />
     </mesh>
   )
 }
@@ -112,8 +116,8 @@ function Scene({ reduced }) {
   return (
     <>
       <ambientLight intensity={0.4} />
-      <pointLight position={[2.2, 2.8, 2]} intensity={1.4} color="#96ee60" />
-      <pointLight position={[-2, 1.2, -1]} intensity={0.55} color="#7fd09f" />
+      <pointLight position={[2.2, 2.8, 2]} intensity={0.8} color="#e6efdc" />
+      <pointLight position={[-2, 1.2, -1]} intensity={0.35} color="#7fd09f" />
       <Beam />
       {!reduced ? (
         <Float speed={1.15} rotationIntensity={0.12} floatIntensity={0.3}>
@@ -126,7 +130,7 @@ function Scene({ reduced }) {
       {!reduced && <OrbitSparks />}
       <mesh position={[0, -1.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[1.15, 48]} />
-        <meshBasicMaterial color="#96ee60" transparent opacity={0.16} />
+        <meshBasicMaterial color="#96ee60" transparent opacity={0.03} />
       </mesh>
     </>
   )
@@ -149,7 +153,7 @@ export default function HoloPedestal({ className = '' }) {
   return (
     <div className={`kratos-holo-pedestal ${className}`} aria-hidden>
       <Canvas
-        dpr={[1, 1.5]}
+        dpr={[1, 2]}
         camera={{ position: [0, 1.55, 3.4], fov: 36 }}
         gl={{ alpha: true, antialias: true, powerPreference: 'high-performance' }}
         style={{ width: '100%', height: '100%' }}

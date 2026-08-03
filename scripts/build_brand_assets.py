@@ -163,10 +163,16 @@ def main():
     # Master: transparent, no plate, so it can sit on any surface.
     master = badge(art, 1024, pad_ratio=0.04, ring=False, bg=False)
     save(master, PUBLIC / "brand" / "kronus-rider.png")
-    # Un-squared master too: the marketing lockup wants the true portrait ratio.
-    tall = art.copy()
-    tall.thumbnail((1024, 1024), Image.LANCZOS)
-    save(tall, PUBLIC / "brand" / "kronus-rider-tall.png")
+    # Un-squared master, at the matte's NATIVE resolution. The auth hero renders
+    # it up to 460px tall, which is ~1380px on a 3x phone — downscaling this to
+    # 1024 was throwing away real detail and the upscale is what made it read as
+    # a flat cutout.
+    save(art.copy(), PUBLIC / "brand" / "kronus-rider-tall.png")
+    # ...and a WebP of the same pixels. Full-res RGBA PNG of a painting is ~2MB,
+    # which is not something to put in front of a login form.
+    webp = PUBLIC / "brand" / "kronus-rider-tall.webp"
+    art.save(webp, "WEBP", quality=90, method=6)
+    print(f"  {webp.relative_to(ROOT)}  {art.width}x{art.height}  {webp.stat().st_size // 1024}KB")
 
     plated = badge(art, 1024, ring=False)
     save(plated, PUBLIC / "logo.png", 512)
