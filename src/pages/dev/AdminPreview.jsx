@@ -35,6 +35,7 @@ export default function AdminPreview() {
   return (
     <Layout variant="admin">
       <PageHeader
+        eyebrow="Admin console"
         title="Overview"
         description="Who's on duty, who needs attention, and today's coverage."
         action={
