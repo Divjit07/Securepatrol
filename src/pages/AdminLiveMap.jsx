@@ -15,8 +15,12 @@ import {
   Search,
   Pencil,
   Trash2,
+  Route,
+  Flame,
 } from 'lucide-react'
 import Layout from '../components/Layout.jsx'
+import { heatLayer, scansToHeatPoints } from '../lib/map/heatLayer.js'
+import { buildTracks, renderTracks } from '../lib/map/trails.js'
 import PageHeader from '../components/PageHeader.jsx'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { fetchSitesForAdmin } from '../lib/scans.js'
@@ -70,6 +74,12 @@ export default function AdminLiveMap() {
   const previewRef = useRef(null)
   const containerRef = useRef(null)
   const guardMarkersRef = useRef({})
+  const heatRef = useRef(null)
+  const trailRef = useRef(null)
+  // God's Eye layers. Pins alone say a guard was somewhere; trails say in what
+  // ORDER, and heat says where the building actually gets walked.
+  const [showHeat, setShowHeat] = useState(false)
+  const [showTrails, setShowTrails] = useState(true)
   const panelOpenRef = useRef(false)
   const formRef = useRef(null)
 
@@ -354,6 +364,29 @@ export default function AdminLiveMap() {
   const siteById = useMemo(() => Object.fromEntries(sites.map((s) => [s.id, s])), [sites])
   const geocodedSites = sites.filter((s) => s.latitude != null && s.longitude != null)
 
+  // God's Eye layers, driven by the same scan feed the pins use.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+
+    if (trailRef.current) {
+      if (showTrails) {
+        renderTracks(trailRef.current, buildTracks(scans))
+        if (!map.hasLayer(trailRef.current)) trailRef.current.addTo(map)
+      } else {
+        trailRef.current.clearLayers()
+      }
+    }
+
+    if (heatRef.current) {
+      heatRef.current.setPoints(showHeat ? scansToHeatPoints(scans) : [])
+      const on = map.hasLayer(heatRef.current)
+      if (showHeat && !on) heatRef.current.addTo(map)
+      if (!showHeat && on) map.removeLayer(heatRef.current)
+    }
+  }, [scans, showHeat, showTrails])
+
+
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return undefined
     const map = L.map(containerRef.current, { zoomControl: true, attributionControl: true })
@@ -365,11 +398,15 @@ export default function AdminLiveMap() {
     mapRef.current = map
     layerRef.current = L.layerGroup().addTo(map)
     previewRef.current = L.layerGroup().addTo(map)
+    trailRef.current = L.layerGroup().addTo(map)
+    heatRef.current = heatLayer([], { radius: 24, blur: 20 })
     return () => {
       map.remove()
       mapRef.current = null
       layerRef.current = null
       previewRef.current = null
+      trailRef.current = null
+      heatRef.current = null
     }
   }, [])
 
@@ -471,6 +508,30 @@ export default function AdminLiveMap() {
         description="Site geofences, today's clock-ins, and each guard's last known phone position (from scan GPS)."
         action={
           <div className="flex flex-wrap gap-2">
+            {/* God's Eye layers. Segmented rather than a Leaflet layer control:
+                these are the two questions an operator asks, not map plumbing. */}
+            <div className="flex items-center gap-1 rounded-full p-1 ring-1 ring-[color:var(--hairline-strong)]">
+              <button
+                type="button"
+                onClick={() => setShowTrails((v) => !v)}
+                aria-pressed={showTrails}
+                className={`inline-flex min-h-[38px] items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition ${
+                  showTrails ? 'bg-accent-orange text-[#12290d]' : 'text-ink-2 hover:text-ink'
+                }`}
+              >
+                <Route className="h-4 w-4" /> Trails
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowHeat((v) => !v)}
+                aria-pressed={showHeat}
+                className={`inline-flex min-h-[38px] items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition ${
+                  showHeat ? 'bg-accent-orange text-[#12290d]' : 'text-ink-2 hover:text-ink'
+                }`}
+              >
+                <Flame className="h-4 w-4" /> Heat
+              </button>
+            </div>
             <button type="button" onClick={() => openPanel('update')} className="dk-btn-2">
               <Pencil className="h-4 w-4" /> Set geofence
             </button>
