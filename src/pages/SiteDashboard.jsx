@@ -5,13 +5,16 @@ import Layout from '../components/Layout.jsx'
 import ClientShiftBar from '../components/ClientShiftBar.jsx'
 import ClockActivity from '../components/overview/ClockActivity.jsx'
 import LiveFeed from '../components/LiveFeed.jsx'
+import { useAuth } from '../hooks/useAuth.jsx'
 import { useClientShift } from '../hooks/useClientShift.js'
 import { useSiteHours } from '../hooks/useSiteHours.js'
 import { useClientSiteData } from '../hooks/useClientSiteData.js'
 import { fetchRecentClockEvents } from '../lib/scans.js'
+import MessageBoard from '../components/MessageBoard.jsx'
 
 export default function SiteDashboard() {
   const { id } = useParams()
+  const { profile } = useAuth()
   const operatingHours = useSiteHours(id)
   const { date, setDate, shift, scheduled } = useClientShift(operatingHours)
   const { site, guards, scans, checkpoints, loading, rounds, patrolScanCount, patrolCheckpointCount, scannedCount, rosterHoursLabel } =
@@ -143,6 +146,15 @@ export default function SiteDashboard() {
           <div className="space-y-6">
             <ClockActivity events={clockEvents} showSite={false} />
             <LiveFeed siteId={id} limit={20} passesOnly />
+
+            <MessageBoard
+              className="mt-6"
+              siteId={id}
+              mode="post"
+              currentUserId={profile?.id}
+              currentUserRole={profile?.role === 'super_admin' ? 'super_admin' : 'admin'}
+              title="Message board"
+            />
           </div>
         </div>
       )}

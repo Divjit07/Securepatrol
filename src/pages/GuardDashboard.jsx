@@ -17,6 +17,7 @@ import { getCheckpointStatus } from '../lib/scans.js'
 import { flushOfflineQueue } from '../lib/offlineQueue.js'
 import { useGuardPublishedShift } from '../hooks/useGuardPublishedShift.js'
 import { fetchNextShift, formatTimeRange } from '../lib/schedule.js'
+import MessageBoard from '../components/MessageBoard.jsx'
 
 /** Build the { start, end, isClosed } shape useClientSiteData expects from a published shift. */
 function shiftFromPublished(publishedShift) {
@@ -318,6 +319,17 @@ export default function GuardDashboard() {
             </>
           )}
         </>
+      )}
+
+      {siteId && (
+        <MessageBoard
+          className="mt-6"
+          siteId={siteId}
+          mode="read"
+          currentUserId={user?.id}
+          currentUserRole="guard"
+          title="Standing orders"
+        />
       )}
     </Layout>
   )

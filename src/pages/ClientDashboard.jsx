@@ -19,6 +19,7 @@ import { useAuth } from '../hooks/useAuth.jsx'
 import { useClientShift } from '../hooks/useClientShift.js'
 import { useSiteHours } from '../hooks/useSiteHours.js'
 import { useClientSiteData } from '../hooks/useClientSiteData.js'
+import MessageBoard from '../components/MessageBoard.jsx'
 
 export default function ClientDashboard() {
   const { profile } = useAuth()
@@ -223,6 +224,15 @@ export default function ClientDashboard() {
 
           <div>
             <LiveFeed siteId={siteId} limit={20} passesOnly patrolOnly />
+
+            <MessageBoard
+              className="mt-6"
+              siteId={siteId}
+              mode="post"
+              currentUserId={profile?.id}
+              currentUserRole="client"
+              title="Message board"
+            />
           </div>
         </div>
       )}
