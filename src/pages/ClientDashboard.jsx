@@ -25,7 +25,7 @@ export default function ClientDashboard() {
   const siteId = profile?.site_id
   const operatingHours = useSiteHours(siteId)
   const { date, setDate, shift, scheduled } = useClientShift(operatingHours)
-  const { site, guards, scans, checkpoints, loading, rounds, patrolScanCount, patrolCheckpointCount, scannedCount, guardShifts } =
+  const { site, guards, scans, checkpoints, loading, rounds, patrolScanCount, patrolCheckpointCount, scannedCount, guardShifts, rosterHoursLabel } =
     useClientSiteData(siteId, date, shift)
 
   // On-site activity timeline (Live Summary): clock-ins + completed patrol tours,
@@ -104,6 +104,7 @@ export default function ClientDashboard() {
         date={date}
         setDate={setDate}
         scheduled={scheduled}
+        hoursLabel={rosterHoursLabel}
         onDutyGuard={onDutyGuard}
         stats={{
           rounds,
@@ -221,7 +222,7 @@ export default function ClientDashboard() {
           </div>
 
           <div>
-            <LiveFeed siteId={siteId} limit={20} passesOnly />
+            <LiveFeed siteId={siteId} limit={20} passesOnly patrolOnly />
           </div>
         </div>
       )}

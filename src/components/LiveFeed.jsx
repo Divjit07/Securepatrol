@@ -31,7 +31,7 @@ async function checkpointBelongsToSite(checkpointId, siteId) {
   return Boolean(data)
 }
 
-export default function LiveFeed({ siteId, limit = 20, passesOnly = false }) {
+export default function LiveFeed({ siteId, limit = 20, passesOnly = false, patrolOnly = false }) {
   const [scans, setScans] = useState([])
   const [connected, setConnected] = useState(false)
   const [selected, setSelected] = useState(null)
@@ -45,11 +45,19 @@ export default function LiveFeed({ siteId, limit = 20, passesOnly = false }) {
       return
     }
 
-    const { data: checkpoints } = await supabase
+    const { data: allCheckpoints } = await supabase
       .from('checkpoints')
-      .select('id')
+      .select('id, checkpoint_role')
       .in('floor_id', floors.map((f) => f.id))
       .eq('active', true)
+
+    // patrolOnly drops the shift_clock_in / shift_clock_out tags. Those punches
+    // are attendance, not patrol evidence, and the client already sees them in
+    // "Guard clock-ins" — listing them here shows the same event twice, and a
+    // clock-in the admin has since corrected still shows its raw punch time.
+    const checkpoints = patrolOnly
+      ? (allCheckpoints || []).filter((c) => (c.checkpoint_role || 'patrol') === 'patrol')
+      : allCheckpoints
 
     if (!checkpoints?.length) {
       setScans([])
@@ -74,7 +82,7 @@ export default function LiveFeed({ siteId, limit = 20, passesOnly = false }) {
     const { data } = await query
 
     setScans(data || [])
-  }, [siteId, limit, passesOnly])
+  }, [siteId, limit, passesOnly, patrolOnly])
 
   useEffect(() => {
     if (!siteId) return undefined
@@ -87,6 +95,9 @@ export default function LiveFeed({ siteId, limit = 20, passesOnly = false }) {
 
         const checkpointId = payload.new.checkpoint_id
         if (!checkpointIdsRef.current.has(checkpointId)) {
+          // Under patrolOnly the ref holds patrol checkpoints only, so an
+          // unknown id is either off-site or a clock tag — never adopt it here.
+          if (patrolOnly) return
           const belongs = await checkpointBelongsToSite(checkpointId, siteId)
           if (!belongs) return
           checkpointIdsRef.current.add(checkpointId)
@@ -102,7 +113,7 @@ export default function LiveFeed({ siteId, limit = 20, passesOnly = false }) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [siteId, limit, passesOnly, loadRecent])
+  }, [siteId, limit, passesOnly, patrolOnly, loadRecent])
 
   return (
     <div className="dk-card overflow-hidden p-0">

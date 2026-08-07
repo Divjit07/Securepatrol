@@ -14,7 +14,7 @@ export default function SiteDashboard() {
   const { id } = useParams()
   const operatingHours = useSiteHours(id)
   const { date, setDate, shift, scheduled } = useClientShift(operatingHours)
-  const { site, guards, scans, checkpoints, loading, rounds, patrolScanCount, patrolCheckpointCount, scannedCount } =
+  const { site, guards, scans, checkpoints, loading, rounds, patrolScanCount, patrolCheckpointCount, scannedCount, rosterHoursLabel } =
     useClientSiteData(id, date, shift)
 
   const [clockEvents, setClockEvents] = useState([])
@@ -57,6 +57,7 @@ export default function SiteDashboard() {
         date={date}
         setDate={setDate}
         scheduled={scheduled}
+        hoursLabel={rosterHoursLabel}
         stats={{
           rounds,
           patrolScanCount,

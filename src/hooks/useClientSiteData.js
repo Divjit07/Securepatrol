@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
-import { dayActivityBounds } from './useClientShift.js'
+import { dayActivityBounds, formatTimeLabel } from './useClientShift.js'
 import { countPatrolRounds, computeGuardShiftForDay, formatShiftDuration, getPatrolCheckpoints } from '../lib/clientStats.js'
 import { fetchShiftAdjustmentsForDate, mapShiftAdjustments, shiftAdjustmentKey } from '../lib/shiftAdjustments.js'
 
@@ -191,6 +191,24 @@ export function useClientSiteData(siteId, date, shift, guardId = null) {
     })
     .filter(Boolean)
 
+  // The header pill must read the ROSTER, not the building's opening hours. A
+  // guard rostered 07:00-20:00 on a site that "opens" at 11:00 is working a
+  // 07:00 shift, and labelling it 11:00 misreports the day to the client.
+  // Operating hours stay the fallback only when nothing is published.
+  const publishedToday = Object.values(dayShiftsByGuard).filter((s) => s?.starts_at && s?.ends_at)
+  const rosterHoursLabel = publishedToday.length
+    ? (() => {
+        const starts = publishedToday.map((s) => new Date(s.starts_at))
+        const ends = publishedToday.map((s) => new Date(s.ends_at))
+        const from = new Date(Math.min(...starts))
+        const to = new Date(Math.max(...ends))
+        const hhmm = (d) =>
+          `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+        const day = from.toLocaleDateString([], { weekday: 'long' })
+        return `${day} · ${formatTimeLabel(hhmm(from))} – ${formatTimeLabel(hhmm(to))}`
+      })()
+    : null
+
   const groupedByFloor = floors.map((floor) => ({
     floor,
     checkpoints: checkpoints.filter((cp) => cp.floor_id === floor.id),
@@ -209,6 +227,7 @@ export function useClientSiteData(siteId, date, shift, guardId = null) {
     patrolScanCount,
     patrolCheckpointCount,
     guardShifts,
+    rosterHoursLabel,
     groupedByFloor,
     reload: loadData,
   }

@@ -15,7 +15,7 @@ export default function ClientCheckpoints() {
   const siteId = profile?.site_id
   const operatingHours = useSiteHours(siteId)
   const { date, setDate, shift, scheduled } = useClientShift(operatingHours)
-  const { site, guards, loading, scans, checkpoints, rounds, patrolScanCount, patrolCheckpointCount, scannedCount, guardShifts } =
+  const { site, guards, loading, scans, checkpoints, rounds, patrolScanCount, patrolCheckpointCount, scannedCount, guardShifts, rosterHoursLabel } =
     useClientSiteData(siteId, date, shift)
 
   if (!siteId) {
@@ -67,7 +67,7 @@ export default function ClientCheckpoints() {
         })()}
       </div>
 
-      <ClientShiftBar date={date} setDate={setDate} scheduled={scheduled} showStats={false} />
+      <ClientShiftBar date={date} setDate={setDate} scheduled={scheduled} hoursLabel={rosterHoursLabel} showStats={false} />
 
       <ClientShiftClock guardShifts={guardShifts} scheduled={scheduled} loading={loading} />
 
