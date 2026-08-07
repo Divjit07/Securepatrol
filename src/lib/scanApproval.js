@@ -30,6 +30,28 @@ export async function approveCheckpointScan(checkpointId, guardId, note) {
   return data
 }
 
+/**
+ * Record a whole round in one action: one scan per checkpoint, spread evenly
+ * across the window. Defaults to the 15 minutes ending now — a round is roughly
+ * a quarter hour on foot.
+ *
+ * Every row is still written as sync_method='admin_override' with approved_by
+ * set (migration 048), which is what separates these from device-verified
+ * scans in the record.
+ */
+export async function approveScanWave(checkpointIds, guardId, { startedAt, endedAt, note } = {}) {
+  const { data, error } = await supabase.rpc('approve_scan_wave', {
+    p_checkpoint_ids: checkpointIds,
+    p_guard_id: guardId,
+    p_started_at: startedAt ? new Date(startedAt).toISOString() : null,
+    p_ended_at: endedAt ? new Date(endedAt).toISOString() : null,
+    p_note: note || null,
+  })
+
+  if (error) throw error
+  return data || []
+}
+
 export async function fetchRecentAdminApprovals(limit = 25) {
   const { data, error } = await supabase
     .from('scans')
