@@ -16,6 +16,41 @@ const NO_SHOW_MINUTES = 30
 const ALERTS_TO = Deno.env.get('ROSTER_ALERTS_TO') || Deno.env.get('INCIDENT_REPORT_TO') || 'admin@kronus.space'
 const FROM_EMAIL = Deno.env.get('SCHEDULE_FROM') || Deno.env.get('INCIDENT_REPORT_FROM') || 'Kronus <onboarding@resend.dev>'
 
+/**
+ * Alert wording is editable from Athena (migration 050). Templates are loaded
+ * once per run and rendered with tokens; when a row is missing — or the table
+ * does not exist yet — the built-in string is used, so this function behaves
+ * exactly as before against a database that has not been migrated.
+ */
+type Templates = Record<string, { subject: string | null; body: string }>
+
+async function loadTemplates(db: ReturnType<typeof createClient>): Promise<Templates> {
+  try {
+    const { data, error } = await db.from('alert_templates').select('key, subject, body')
+    if (error || !data) return {}
+    return Object.fromEntries(data.map((r: any) => [r.key, { subject: r.subject, body: r.body }]))
+  } catch {
+    return {}
+  }
+}
+
+function render(text: string, values: Record<string, string | number>) {
+  return String(text).replace(/\{(\w+)\}/g, (m, token) =>
+    values[token] != null ? String(values[token]) : m,
+  )
+}
+
+/** Template body if present, else the caller's built-in fallback. */
+function say(
+  templates: Templates,
+  key: string,
+  fallback: string,
+  values: Record<string, string | number>,
+) {
+  const tpl = templates[key]?.body
+  return tpl ? render(tpl, values) : fallback
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
@@ -24,6 +59,7 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     )
+    const templates = await loadTemplates(db)
     const now = new Date()
     const nowMs = now.getTime()
 
@@ -118,13 +154,17 @@ Deno.serve(async (req) => {
           newEvents.push({
             site_id: shift.site_id, shift_id: shift.id, guard_id: shift.guard_id!,
             event_type: 'no_show',
-            message: `${guardName} has NOT clocked in — shift at ${site?.name} started ${startLabel} (${minutesLate} min ago).`,
+            message: say(templates, 'alert_no_show',
+              `${guardName} has NOT clocked in — shift at ${site?.name} started ${startLabel} (${minutesLate} min ago).`,
+              { guard: guardName, site: site?.name ?? '', time: startLabel, minutes: minutesLate }),
           })
         } else if (minutesLate >= LATE_MINUTES && minutesLate < NO_SHOW_MINUTES && !hasEvent(shift.id, 'late')) {
           newEvents.push({
             site_id: shift.site_id, shift_id: shift.id, guard_id: shift.guard_id!,
             event_type: 'late',
-            message: `${guardName} is running late — shift at ${site?.name} started ${startLabel}, no clock-in yet.`,
+            message: say(templates, 'alert_late',
+              `${guardName} is running late — shift at ${site?.name} started ${startLabel}, no clock-in yet.`,
+              { guard: guardName, site: site?.name ?? '', time: startLabel }),
           })
         }
         continue
@@ -141,7 +181,9 @@ Deno.serve(async (req) => {
           newEvents.push({
             site_id: shift.site_id, shift_id: shift.id, guard_id: shift.guard_id!,
             event_type: 'stale_patrol',
-            message: `${guardName} at ${site?.name}: no checkpoint scan for ${Math.floor(gapMs / 60000)} minutes (site limit ${site?.patrol_interval_minutes ?? 120}).`,
+            message: say(templates, 'alert_stale_patrol',
+              `${guardName} at ${site?.name}: no checkpoint scan for ${Math.floor(gapMs / 60000)} minutes (site limit ${site?.patrol_interval_minutes ?? 120}).`,
+              { guard: guardName, site: site?.name ?? '', minutes: Math.floor(gapMs / 60000), limit: site?.patrol_interval_minutes ?? 120 }),
           })
         }
       }
@@ -165,11 +207,15 @@ Deno.serve(async (req) => {
           body: JSON.stringify({
             from: FROM_EMAIL,
             to: ALERTS_TO,
-            subject: `Kronus alerts: ${newEvents.length} issue${newEvents.length > 1 ? 's' : ''} need attention`,
+            subject: templates['alert_email']?.subject
+              ? render(templates['alert_email'].subject!, {
+                  count: `${newEvents.length} issue${newEvents.length > 1 ? 's' : ''}`,
+                })
+              : `Kronus alerts: ${newEvents.length} issue${newEvents.length > 1 ? 's' : ''} need attention`,
             html: `<div style="font-family:system-ui,sans-serif;max-width:560px">
               <h2 style="color:#0a1628">Roster alerts</h2>
               <ul style="padding-left:18px">${items}</ul>
-              <p style="color:#94a3b8;font-size:12px">Kronus automated monitoring · every 10 minutes</p>
+              <p style="color:#94a3b8;font-size:12px">${say(templates, 'alert_email', 'Kronus automated monitoring · every 10 minutes', { count: newEvents.length })}</p>
             </div>`,
           }),
         })

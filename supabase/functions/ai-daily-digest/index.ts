@@ -81,6 +81,26 @@ function renderClientNarrative(d: any): string {
   return lines.join('<br>')
 }
 
+/** Digest wording is editable from Athena (migration 050); missing rows fall
+ *  back to the built-in copy, so an unmigrated database behaves as before. */
+type Templates = Record<string, { subject: string | null; body: string }>
+
+async function loadTemplates(db: any): Promise<Templates> {
+  try {
+    const { data, error } = await db.from('alert_templates').select('key, subject, body')
+    if (error || !data) return {}
+    return Object.fromEntries(data.map((r: any) => [r.key, { subject: r.subject, body: r.body }]))
+  } catch {
+    return {}
+  }
+}
+
+function render(text: string, values: Record<string, string | number>) {
+  return String(text).replace(/\{(\w+)\}/g, (m, token) =>
+    values[token] != null ? String(values[token]) : m,
+  )
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
@@ -110,6 +130,7 @@ Deno.serve(async (req) => {
     lastRunAt = Date.now()
 
     const db = createClient(supabaseUrl, serviceKey)
+    const templates = await loadTemplates(db)
     const end = new Date()
     const start = new Date(end.getTime() - 24 * 3600000)
 
@@ -167,16 +188,32 @@ Deno.serve(async (req) => {
     const results: Record<string, boolean> = {}
     const adminRes = await send(
       ADMIN_TO,
-      `Kronus ops digest — ${dateLabel}`,
-      wrap('Daily ops digest', adminSections, 'Every figure is computed directly from your patrol records. Kronus automated digest.'),
+      templates['digest_admin']?.subject
+        ? render(templates['digest_admin'].subject!, { date: dateLabel })
+        : `Kronus ops digest — ${dateLabel}`,
+      wrap(
+        'Daily ops digest',
+        adminSections,
+        templates['digest_admin']?.body
+          ? render(templates['digest_admin'].body, { date: dateLabel })
+          : 'Every figure is computed directly from your patrol records. Kronus automated digest.',
+      ),
     )
     results.admin = adminRes.ok
 
     if (clientSections.length) {
       const clientRes = await send(
         CLIENT_TO,
-        `Your security coverage update — ${dateLabel}`,
-        wrap('Coverage update', clientSections, 'Prepared automatically from verified patrol records. Kronus.'),
+        templates['digest_client']?.subject
+          ? render(templates['digest_client'].subject!, { date: dateLabel, site: '' })
+          : `Your security coverage update — ${dateLabel}`,
+        wrap(
+          'Coverage update',
+          clientSections,
+          templates['digest_client']?.body
+            ? render(templates['digest_client'].body, { date: dateLabel, site: '' })
+            : 'Prepared automatically from verified patrol records. Kronus.',
+        ),
       )
       results.client = clientRes.ok
     }
