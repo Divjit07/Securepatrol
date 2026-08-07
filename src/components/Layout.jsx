@@ -20,6 +20,7 @@ import {
   Lock,
   Wallet,
   ScrollText,
+  Radio,
 } from 'lucide-react'
 import { Sparkles } from 'lucide-react'
 import Logo from './Logo.jsx'
@@ -49,6 +50,7 @@ export function buildAdminNavGroups({ canApproveScans, canManageShiftClock, isSu
         { to: '/admin/ops', label: 'Ops Board', icon: Activity },
         { to: '/admin/roster', label: 'Roster', icon: CalendarDays },
         { to: '/admin/assistant', label: 'Assistant', icon: Sparkles },
+        { to: '/admin/athena', label: 'Athena', icon: Radio },
       ],
     },
     {

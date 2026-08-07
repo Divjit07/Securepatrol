@@ -58,6 +58,7 @@ const ScanApproval = lazyRetry(() => import('./pages/ScanApproval.jsx'))
 const AdminShiftClock = lazyRetry(() => import('./pages/AdminShiftClock.jsx'))
 const AdminLiveClock = lazyRetry(() => import('./pages/AdminLiveClock.jsx'))
 const AdminAssistant = lazyRetry(() => import('./pages/AdminAssistant.jsx'))
+const AdminAthena = lazyRetry(() => import('./pages/AdminAthena.jsx'))
 const AdminIncidents = lazyRetry(() => import('./pages/AdminIncidents.jsx'))
 const ClientDashboard = lazyRetry(() => import('./pages/ClientDashboard.jsx'))
 const ClientCheckpoints = lazyRetry(() => import('./pages/ClientCheckpoints.jsx'))
@@ -280,6 +281,14 @@ export default function App() {
           element={
             <ProtectedRoute requireAdmin>
               <AdminAssistant />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/athena"
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminAthena />
             </ProtectedRoute>
           }
         />
