@@ -25,12 +25,19 @@ function fmtTime(d) {
  *  (Exported for the /dev/scale logic tests.) */
 export function shiftWindow(publishedShift, scheduled, date) {
   if (publishedShift?.starts_at && publishedShift?.ends_at) {
-    return { start: new Date(publishedShift.starts_at), end: new Date(publishedShift.ends_at) }
+    return {
+      start: new Date(publishedShift.starts_at),
+      end: new Date(publishedShift.ends_at),
+      source: 'roster',
+    }
   }
   if (scheduled && date) {
     if (scheduled.isClosed) return { closed: true }
     const { start, end } = shiftBounds(date, scheduled.start, scheduled.end)
-    return { start, end }
+    // `source: 'hours'` matters downstream: the building's opening hours can
+    // gate clock-IN, but they are NOT a shift the guard was rostered for, so
+    // nothing may treat leaving before them as "leaving early".
+    return { start, end, source: 'hours' }
   }
   return null
 }
@@ -207,10 +214,16 @@ export default function ClockInCard({ guardId, siteId, clockedIn, onPunched, pub
         : TONE_CARD[cardTone].label,
   }
 
-  // Early clock-out: anytime before the published shift end needs a reason.
-  // Last few minutes of the shift (and after end) = normal clock-out, no note.
+  // Early clock-out: before the end of a shift the guard was actually ROSTERED
+  // for. Last few minutes (and after the end) = normal clock-out, no note.
+  //
+  // Gated on source === 'roster' deliberately. With no published shift the
+  // window falls back to the site's operating hours, which routinely run later
+  // than the guard's actual shift — that made the app demand a "why are you
+  // leaving early?" note from someone whose shift had already finished.
   const earlyOut =
     clockedIn &&
+    window_?.source === 'roster' &&
     window_?.end &&
     Date.now() < window_.end.getTime() - EARLY_OUT_GRACE_MIN * 60_000
 
