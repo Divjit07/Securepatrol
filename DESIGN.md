@@ -45,61 +45,76 @@ un-migrated screens. Do not use them for new work.
 - Measurement: the mono stack (`--font-mono`, SF Mono → JetBrains → Menlo). Reserved for
   data, timestamps, coordinates, IDs, and money — never as a "technical" costume.
 
-## Marketing surface — extension
+## Marketing surface — extension (paper world, Nov 2026)
 
-The public homepage (`/`, `src/pages/Home.jsx`) is the one **Persuade** surface. It
-inherits Dark Ops and adds three things the app does not need:
+The public homepage (`/`, `src/pages/Home.jsx`) is the one **Persuade** surface. By the
+owner's call (Nov 2026) it is a **light paper world**, benchmarked against
+guardowlco.com's clarity: plain words for non-technical guard-company owners, real
+interaction, no metaphor to decode. It does not read the app's `data-theme` tokens; it owns
+its palette in `src/marketing/marketing.css`, scoped to `.mk` (plain CSS, not Tailwind, so the
+prerendered static page and the React render are identical).
 
-**1. Its own fixed palette, independent of `data-theme`.** The theme boot script in
-`index.html` sets `data-theme="day"` (light) for every non-`/guard` path, so a marketing
-page built on `canvas`/`surface` tokens would render light and lose the world. The
-homepage therefore owns `--kr-*` variables scoped to its root and never reads the theme
-tokens. Values are the deep end of the same olive family:
+| Role | Token | Value |
+|---|---|---|
+| Page ground | `--paper` | `#f4f3ec` |
+| Alternate band | `--paper-2` | `#ebe9df` |
+| Sheets, cards, frames | `--sheet` | `#ffffff` |
+| Ink (headings, primary button, device frames) | `--ink` | `#141810` |
+| Body / muted text | `--ink-2` / `--ink-3` | `#3e4535` / `#5d6453` (both ≥4.5:1 on paper) |
+| Live signal, highlighter, featured CTA | `--lime` | `#96ee60` |
+| Lime as text on paper | `--lime-deep` | `#2f6a0c` |
+| Closing band (demo + footer), featured plan | `--night` | `#10150c` |
+| Late alert | `--amber` / `--amber-wash` | `#8f4705` / `#fdf0d8` |
 
-| Role | Value |
-|---|---|
-| `--kr-void` (page ground) | `#0f1209` |
-| `--kr-ground` | `#151a10` |
-| `--kr-raise` | `#1d2417` |
-| `--kr-edge` / `--kr-edge-strong` | olive-tinted hairlines |
-| `--kr-lime` | `#96ee60` |
-| `--kr-paper` / `--kr-paper-ink` | `#f7f6f2` / `#171a12` |
-
-**2. A display face with a point of view: Archivo.** Instrument Sans is the app's UI
-voice; it has no register for an *official document*. Archivo's lineage is print and
-archival document setting, and its width axis gives the stamped, filed-record voice the
-page's thesis depends on. It is used for display and document headers only — DM Sans keeps
-the body, and the mono stack keeps all measurement. Loaded in `index.html` beside the
-existing faces.
-
-**3. Color strategy: Committed.** Warm paper is not an accent here — it owns 30–50% of
-several viewports as a real material field, lit in 3D. Lime stays a signal: verification,
-the primary action, live state. Alert red appears only where the product actually raises
-an alert.
+- **Color strategy: day and night.** The page alternates paper (what the office and client
+  see) with night (`.mk-dark`: what the guard lives through) — night photo strip, the
+  flashlight patrol, the demo close. The GPS map stays on paper (owner's call). The old-way/Kronus section is night until
+  Kronus is switched on, then turns to paper. `.mk-dark` only remaps tokens, so every
+  component works in both. Lime is a signal and owns two paper fields: the headline
+  highlighter and the calculator answer. Never lime text on paper — use `--lime-deep`.
+- **Imagery:** illustrative night-shift photography in `public/marketing/night-*.webp` /
+  `day-*.webp` (labelled illustrative). Never a guard wearing "Kronus" branding — Kronus is
+  software, not a guard company.
+- **Type:** Archivo for display (h1 ≤3.75rem, tracking ≥ -0.038em), DM Sans for body (17px).
+  Both are the incumbent brand faces.
+- **Primary action:** ink pill with a lime arrow ("Book a free demo"). Secondary: outlined
+  pill. On the dark band and featured plan: lime pill.
+- **Depth:** hairlines (`--line`) for structure; offset soft shadows (`--device`) only on
+  things that are objects — phones, browser frames, sheets, alerts.
+- **No:** eyebrows on every section (only the hero eyebrow pill), numbered section labels,
+  gradient text, glass, "AI" anywhere.
 
 ## Motion
 
-One authored moment, not scattered effects: **the record assembling itself.** A scan
-lands, GPS resolves, the stamp sets, the chain draws. GSAP ScrollTrigger with `scrub`
-drives it.
+Motion explains the product; nothing animates just because it scrolled into view.
 
-Everything on the page moves in the direction the reader is already moving — down. The
-chain of custody is a vertical run whose line draws as you descend it, and the evidence
-table's stations rise out of frame as the next comes up from below. Nothing travels
-sideways under a vertical gesture, and only the evidence table is sticky: a section that
-holds the viewport has to earn it with content that changes, which is why the chain gave
-its pin up.
-
-Content is visible by default and never depends on JS to be readable. Easing is
-exponential ease-out. Everything collapses to a static, fully-legible page under
-`prefers-reduced-motion`.
+- **Signature interactions:** the hero live shift; the night scroll story (pinned; scroll is
+  the clock 22:02 → Friday, photos cross-fade, each moment shows what the office/client sees,
+  clickable time rail, and at 08:40 the section turns from night to day); the guard tour
+  simulator (drag/tap tags onto a building cutaway → tap them to walk the guard round →
+  the client report builds from your scans → send stamps it); the flashlight patrol (cursor/finger is the
+  torch, tap tags, the client's screen fills, the lights come on at 5/5); the client-asks
+  chat (bubble → typing → answer with proof, plays when on screen).
+- **Focal moment — the live shift (hero):** a guard's phone reads an NFC tag (rings
+  ripple), the scan lands at the top of the client portal feed, the checkpoint count and bar
+  advance, and every few scans a late-guard alert rises and then clears. Pausable; stops
+  off-screen, on hidden tabs, and entirely under reduced motion.
+- **State changes:** old-way/Kronus switch (blur-crossfade, staggered 70ms per row, flips
+  once by itself if untouched), step tabs (auto-advance with a 6s progress line until the
+  reader picks one), tour tabs, GPS replay (trail draws stop by stop; slider + play),
+  calculator (live numbers). Panels enter with a 0.5s fade-rise-unblur.
+- Easing `cubic-bezier(0.16, 1, 0.3, 1)`. Content is complete and visible with JS off.
 
 ## Truth rules for this surface
 
 - No customer names, logos, testimonials, user counts, or performance benchmarks. None
-  exist; none may be authored.
-- No prices. Pricing is scoped-on-contact.
-- Demonstration data (sites, guards, timestamps, coordinates) is authored at full fidelity
-  and **labeled synthetic on the surface itself**.
-- Never imply face recognition, push notifications, or a native app — removed or roadmap.
-- The product name on this surface is **Kronus**; `src/lib/brand.js` stays `Kratos`.
+  exist; none may be authored. The savings calculator is the visitor's own numbers with
+  editable assumptions, labelled an estimate.
+- Prices are the owner's rate card (see the surface brief); keep annual = 12 × monthly − 20%.
+- Demonstration data (sites, guards, times, map) is labelled sample data on the surface.
+- Allowed buzzwords only when true: guard tour, GPS tracking, live/real-time, smart alerts,
+  automated reports, all-in-one. Never "AI" (none exists). A patrol is proven by the TAP on
+  the tag — never "GPS-validated scan" and no "GPS ✓" on a scan row. GPS verifies clock-in/out
+  (geofence) and positions check-ins on the live map; never claim continuous in-vehicle
+  tracking between stops.
+- Never imply face recognition or push notifications. Brand on this surface: **Kronus**.

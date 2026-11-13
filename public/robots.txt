@@ -1,0 +1,10 @@
+# kronus.space — the marketing site is public; the portals are not.
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /client
+Disallow: /guard
+Disallow: /app
+Disallow: /dev
+
+Sitemap: https://kronus.space/sitemap.xml

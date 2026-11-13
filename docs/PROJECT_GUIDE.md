@@ -289,6 +289,34 @@ SECURITY DEFINER RPCs, never direct UPDATE policies.
 ## 9. Page-by-page reference
 
 ### Public
+**`/` — Home.jsx (marketing homepage, prerendered).** Light "paper" sales page for
+non-technical Canadian guard-company owners (benchmark: guardowlco.com): hero with a **live
+shift demo** (guard phone scans → client portal feed fills → late alert rises and clears;
+pausable) → module strip → **one night** pinned scroll story (scroll = clock; night turns to
+day at 08:40; clickable time rail; plain list without JS / reduced motion) → **how it works**
+simulator (put tags on a building cutaway, walk the round, send the client report) → **old way vs Kronus** switch (dark
+until switched, then paper) → **walk the round** flashlight patrol (dark; tap 5 tags, client
+feed fills, lights come on) → **product tour** tabs → **your client asks** chat → **GPS
+tracking** replay map (light; geofence on clock-in/out only, tap proves the patrol) →
+**savings calculator** → industries → pricing → FAQ → dark demo form + footer.
+- **All copy lives in `src/marketing/content.js`** (also feeds the JSON-LD, incl. FAQPage). Rule:
+  only claim what the code does — no accounting sync, deductions CPP + EI only, no "AI" (use
+  "smart"/"automated"), GPS = per-scan/clock-in only (no continuous vehicle tracking).
+- **Styles:** `src/marketing/marketing.css` (plain CSS scoped to `.mk`, not Tailwind) so the same
+  page renders identically as static HTML and inside the React app.
+- **Interactivity:** `src/marketing/enhance.js` (vanilla, no React state) — live demo loop, switch,
+  tabs, map replay, calculator, nav state, billing toggle, demo form. Loops stop off-screen and
+  under reduced motion. Form inserts into `demo_requests` (migration 051) via PostgREST with
+  the anon key; on failure it opens a pre-filled `mailto:` so no lead is lost.
+- **Build:** `npm run build` = SPA build + `vite build --ssr src/marketing/entry-server.jsx` +
+  `scripts/prerender.mjs` → `dist/index.html` is real HTML (meta, OG, canonical, JSON-LD),
+  `dist/app.html` is the SPA shell (noindex), plus `sitemap.xml`. `vercel.json` rewrites every
+  non-file route to `/app.html`. Signed-in visitors hop to `/app` (PortalRedirect).
+  **Capacitor uses `npm run build:app`** (no prerender) so the native app's index stays the SPA,
+  and `HomeRedirect` never shows marketing inside the native shell.
+- Screenshots in `public/marketing/` come from the `/dev/*` harnesses with sample names swapped
+  in; `public/og-image.png` is the 1200×630 share card. `public/robots.txt` blocks the portals.
+
 **`/login` — Login.jsx.** Split screen: left navy panel (hero logo, product pitch, three
 feature bullets, gold "PRODUCTIVE SECURITY INC." accent), right form card — EMAIL/PASSWORD
 (`sp-label`+`sp-input`), full-width `sp-btn-primary` **"Sign in to SecurePatrol"**. On auth →
@@ -509,6 +537,9 @@ accounting CSV) · timesheet sign-offs · client coverage view · per-site opera
 collapsible) · lazy-loaded routes.
 
 ### Built, awaiting a one-time step
+- **Homepage demo leads** → run `supabase/migrations/051_demo_requests.sql` in the SQL editor.
+  Until then the form falls back to the visitor's email app. Leads are read in Table Editor →
+  `demo_requests` (admin-only RLS). Confirm `hello@kronus.space` actually receives mail.
 - **Real guard email delivery** → verify `send.prodsec.ca` in Resend (records at Bell DNS),
   then set `SCHEDULE_FROM` / `INCIDENT_REPORT_FROM` secrets to `@send.prodsec.ca` senders.
 - Custom domain for the app (`app.prodsec.ca` CNAME → Vercel).

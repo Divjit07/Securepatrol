@@ -72,18 +72,20 @@ linter — changes are verified with `npm run build` plus browser screenshots.
 clock-in was designed and then removed from the product entirely. Web push notifications
 and the native iOS wrap are roadmap, not shipped.
 
-**Undecided:** commercial pricing has never been set; the public name is unsettled
-(see Brand Commitments).
+**Pricing (set by the owner):** Standard / Premium / Max at $99.99 / $149.99 / $199.99 CAD
+a month, 20% off yearly, 7-day free trial with no card — priced per company, not per guard.
 
 ## Brand Commitments
 
-- **Public product name on the marketing homepage: "Kronus."** The in-app name in
-  `src/lib/brand.js` remains "Kratos" by the user's decision — the two deliberately
-  diverge for now, and `brand.js` must not be changed.
-- Operating company: Productive Security Inc. (prodsec.ca). The iOS bundle is
-  `space.kronus.app`.
-- Existing mark: a lucide `Shield`, lime `#96ee60`, in a rounded tile with a lime-tinted
-  border and fill (`src/components/Logo.jsx`).
+- **Marketing voice (owner, Nov 2026):** the homepage speaks to non-technical guard-company
+  owners in the plainest words, benchmarked on guardowlco.com's clarity, on a light paper
+  page with real interactive demos. "Smart" and "automated" are allowed; "AI" is not (the
+  product has none). Buzzwords only when the feature exists.
+- **Kronus is the only brand** (kronus.space), in the app (`src/lib/brand.js`) and on every
+  public surface. Productive Security Inc. is a *client*: its name, logo and `prodsec.ca`
+  never appear in UI, PDFs, exports or email. The iOS bundle is `space.kronus.app`.
+- Mark: the Kronus rider (`src/components/home/RiderMark.jsx`, a CSS mask over
+  `currentColor`), ink on paper and lime on dark.
 - Incumbent app visual world ("Dark Ops"): dark olive-black canvas `#1c1f1a`, raised
   surfaces `#272b25`, lime primary accent `#96ee60`, secondary greens/pastels, no drop
   shadows. Tokens live in `src/index.css`.
@@ -95,11 +97,11 @@ and the native iOS wrap are roadmap, not shipped.
   interface at work is the only first-party proof available, and it is strong.
 - **Deliberately absent, must not be fabricated:** no customer names, no client logos, no
   testimonials, no user counts, no hours-saved or accuracy benchmarks, no press, no case
-  studies, no published pricing. The user confirmed the homepage ships with product
-  demonstration only.
+  studies. The homepage ships with product demonstration only; its savings calculator uses
+  the visitor's own numbers with editable assumptions.
 - Demonstration data on marketing surfaces is authored by design and labeled synthetic;
   commercial claims are never authored.
-- Pricing is presented as custom/contact-scoped with no dollar figures invented.
+- Prices shown are the owner's rate card above; never invent other figures.
 
 ## Product Principles
 

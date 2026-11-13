@@ -88,17 +88,44 @@ function PageLoader() {
   )
 }
 
-/**
- * `/` is the public marketing homepage for visitors; signed-in users go straight to
- * their portal. Standard SaaS behaviour — the landing page never shadows the app.
- */
-function HomeRedirect() {
+const isNativeShell = () =>
+  typeof window !== 'undefined' &&
+  (window.Capacitor?.isNativePlatform?.() === true || /^capacitor:/.test(window.location.protocol))
+
+/** Supabase persists the session as `sb-<ref>-auth-token`; no key = signed out for sure. */
+function hasStoredSession() {
+  try {
+    return Object.keys(localStorage).some((k) => /^sb-.+-auth-token$/.test(k))
+  } catch {
+    return false
+  }
+}
+
+/** Signed-in users land in their portal; everyone else at sign-in. */
+function PortalRedirect() {
   const { user, isAdmin, isClient, loading } = useAuth()
   if (loading) return null
-  if (!user) return <Home />
+  if (!user) return <Navigate to="/login" replace />
   if (isAdmin) return <Navigate to="/admin" replace />
   if (isClient) return <Navigate to="/client" replace />
   return <Navigate to="/guard" replace />
+}
+
+/**
+ * `/` is the public marketing homepage for visitors; signed-in users go straight to
+ * their portal. On kronus.space "/" is normally the prerendered static page
+ * (scripts/prerender.mjs) — this route covers the dev server and in-app
+ * navigation. A visitor with no stored session gets the page immediately rather
+ * than a blank frame while auth resolves. The native app never shows marketing
+ * (App Review, and a guard opening the app wants to sign in).
+ */
+function HomeRedirect() {
+  const { user, loading } = useAuth()
+  if (isNativeShell()) return <PortalRedirect />
+  if (!hasStoredSession()) return <Home />
+  if (loading) return null
+  if (!user) return <Home />
+  return <PortalRedirect />
 }
 
 export default function App() {
@@ -109,6 +136,8 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/" element={<HomeRedirect />} />
+        {/* PWA start_url + the static homepage's signed-in hop land here. */}
+        <Route path="/app" element={<PortalRedirect />} />
         <Route path="/shop" element={<Shop />} />
 
         <Route

@@ -2,55 +2,54 @@
 version: 1
 slug: "src-pages-home-jsx"
 primary_target: "src/pages/Home.jsx"
-related_targets: ["src/components/home/ReportSheet.jsx","src/components/home/PaperCanvas.jsx"]
+related_targets: ["src/marketing/content.js","src/marketing/marketing.css","src/marketing/enhance.js"]
 ---
 
 ## Scope
 
-Public marketing homepage at `/` (`src/pages/Home.jsx`), served to unauthenticated
-visitors only — signed-in users still redirect to their portal from `HomeRedirect`.
+Public marketing homepage at `/` (`src/pages/Home.jsx`, copy in `src/marketing/content.js`,
+styles in `src/marketing/marketing.css`, behaviour in `src/marketing/enhance.js`). Prerendered
+to static HTML for SEO by `scripts/prerender.mjs`. Signed-in visitors hop to `/app`.
 Visitor mode: **Persuade**.
 
 ## Audience and job
 
-Owner-operators and ops managers of small-to-mid security guard companies (~10–300
-guards), evaluating software while running a live operation. Their job: win and keep
-contracts without adding office headcount. Direct competitor studied: guardowlco.com.
+Owners and ops managers of Toronto / Canadian guard companies (5–150 guards) who are not
+technical. Job: keep contracts by proving patrols, stop payroll-by-text. Benchmark the owner
+pinned: guardowlco.com (plain promise, one-line features, pains they already have).
 
-Action: book a demo. Secondary: sign in.
+Action: book a free demo (form → `demo_requests`, migration 051; mailto fallback).
+Secondary: sign in, shop.
 
 ## Proof and content constraints
 
-Product demonstration only, by the owner's decision. No customer names, logos,
-testimonials, user counts, or benchmarks — none exist and none may be authored.
-
-**Pricing reversed 30 Jul 2026 by the owner.** The surface previously carried no dollar
-figures because no rate card existed. There is one now: Standard / Premium / Max at
-$99.99 / $149.99 / $199.99 CAD monthly, annual at 20% off, seven-day free trial with no
-card. Every annual total is 12 x monthly less 20% and every stated saving is that
-difference — if one figure changes, all four on that plan change together. Demonstration records are authored at full
-fidelity and labeled synthetic on the surface. Face recognition must never appear (removed
-from the product); push and the native app are roadmap, not shipped.
+Product demonstration only — no customers, logos, testimonials, counts or benchmarks.
+Pricing is the owner's rate card: Standard / Premium / Max at $99.99 / $149.99 / $199.99 CAD
+monthly, yearly 20% off, 7-day free trial, no card; annual total = 12 × monthly − 20% and the
+saving is that difference. Demos labelled sample data. Calculator = visitor's own numbers,
+assumptions editable, labelled an estimate. Patrol proof = the tap; GPS claims limited to
+geofenced clock-in/out, the live map of check-ins, breadcrumb trails, heat map — never
+"GPS-validated scan", no continuous vehicle tracking.
 
 ## Chosen direction
 
-**The Client Report** — the page is the proof document a guard company hands its client.
-Surface seed key `d8a7b9a7`, assigned index 6 of the ordered grounded list, staged in the
-inherited Dark Ops world. The rut it refuses: the category page (navy hero, gradient pill,
-logo wall, `/01` feature strip, floating phone mockup).
+**The live shift, on paper** (Nov 2026, owner-pinned; replaces the dark "Client Report"
+direction). Category canon at full fidelity: light paper page, ink type, lime as signal and
+highlighter, one dark closing band. Memorable moment: the hero's live demo — a guard's phone
+reads a tag, the scan lands in the client's portal, a late alert rises and clears.
 
-Memorable moment: a real sheet of warm client stock standing in the operator's dark room,
-lit in WebGL with a genuine curl, writing itself one GPS-verified scan at a time until the
-VERIFIED stamp sets. Paired later by the "one record, two sides" section, where the dark
-console and the light report show the same event — including the same raised alert.
+Owner feedback (Nov 2026): "all light feels soulless" → day/night rhythm + real
+night-shift photography + more hands-on interaction.
 
-The alert row is a deliberate content decision: the sample report shows a late round, so
-the page proves the record is evidence rather than a rubber stamp.
+Section order (L = paper, D = night): hero live shift (L) → module strip → one night at 800
+Bay Street pinned scroll story (D → L at 08:40) → how it works hands-on simulator (L) → old way vs Kronus (D→L on
+switch) → walk the round flashlight patrol (D) → product tour tabs (L) → your client asks
+chat (L) → GPS replay map (L, owner: keep light) → savings calculator (L) → industries (L) → pricing (L) →
+FAQ (L) → demo form + footer (D).
 
 ## Unresolved
 
-- `DEMO_HREF` in `Home.jsx` is a placeholder `mailto:` and needs the real demo destination.
-- No Privacy / Terms / Cookie pages exist; the footer deliberately omits legal links until
-  they do.
-- Brand name diverges on purpose: this surface says "Kronus", `src/lib/brand.js` says
-  "Kratos".
+- `hello@kronus.space` must be confirmed as a monitored inbox.
+- Migration 051 must be run for leads to save (fallback is email).
+- No Privacy / Terms pages yet; footer omits legal links until they exist.
+- Keyword landing pages (guard tour app, GPS tracking, scheduling) not built yet.

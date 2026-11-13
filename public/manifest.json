@@ -1,8 +1,8 @@
 {
   "name": "Kronus",
   "short_name": "Kronus",
-  "description": "Global workforce command for security patrol, scheduling, and compliance.",
-  "start_url": "/",
+  "description": "Security guard management: patrol scanning, scheduling, incidents and payroll.",
+  "start_url": "/app",
   "display": "standalone",
   "background_color": "#0e110e",
   "theme_color": "#141a14",

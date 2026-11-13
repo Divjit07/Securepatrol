@@ -6,13 +6,16 @@
 // Rules now:
 //  - Cross-origin (Supabase, fonts) is never intercepted — straight to network.
 //  - Hashed build assets (/assets/*) are cache-first: immutable by filename.
-//  - Page navigations are network-first with a cached index.html offline fallback.
+//  - Page navigations are network-first with a cached shell offline fallback:
+//    "/" is the prerendered marketing page (index.html); every other route is
+//    the SPA shell (app.html, see scripts/prerender.mjs + vercel.json).
 //  - Everything else same-origin is network-first, cache fallback, and a failed
 //    non-navigation request NEVER falls back to index.html.
-const CACHE_NAME = 'securepatrol-v20'
+const CACHE_NAME = 'securepatrol-v21'
 const SHELL_URLS = [
   '/',
   '/index.html',
+  '/app.html',
   '/manifest.json',
   '/logo.png',
   '/favicon.svg',
@@ -21,7 +24,13 @@ const SHELL_URLS = [
 ]
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_URLS)))
+  // One at a time and forgiving: a build without app.html (e.g. build:app)
+  // must not fail the whole install.
+  event.waitUntil(
+    caches
+      .open(CACHE_NAME)
+      .then((cache) => Promise.all(SHELL_URLS.map((u) => cache.add(u).catch(() => {})))),
+  )
   self.skipWaiting()
 })
 
@@ -59,16 +68,21 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // App navigations — fresh index.html when online, cached shell offline.
+  // Navigations — fresh page when online, the matching cached shell offline.
   if (request.mode === 'navigate') {
+    const shellKey = url.pathname === '/' ? '/index.html' : '/app.html'
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const clone = response.clone()
-          caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', clone))
+          if (response.ok) {
+            const clone = response.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put(shellKey, clone))
+          }
           return response
         })
-        .catch(() => caches.match('/index.html')),
+        .catch(() =>
+          caches.match(shellKey).then((hit) => hit || caches.match('/index.html')),
+        ),
     )
     return
   }
