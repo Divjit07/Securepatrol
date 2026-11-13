@@ -21,6 +21,7 @@
 
 export const SITE = {
   name: 'Kronus',
+  owner: 'Divjit Singh',
   url: 'https://kronus.space',
   // TODO(owner): confirm this inbox receives mail before launch.
   email: 'hello@kronus.space',
@@ -492,6 +493,7 @@ export function structuredData() {
       addressCountry: SITE.country,
     },
     areaServed: { '@type': 'Country', name: 'Canada' },
+    founder: { '@type': 'Person', name: SITE.owner },
   }
   const app = {
     '@type': 'SoftwareApplication',
@@ -529,6 +531,8 @@ export function structuredData() {
     name: SITE.name,
     inLanguage: 'en-CA',
     publisher: { '@id': `${SITE.url}/#org` },
+    copyrightHolder: { '@type': 'Person', name: SITE.owner },
+    copyrightYear: new Date().getFullYear(),
   }
   const faq = {
     '@type': 'FAQPage',

@@ -1425,7 +1425,9 @@ export default function Home() {
             </nav>
           </div>
           <div className="mk-footer-base">
-            <span>© {new Date().getFullYear()} Kronus. All rights reserved.</span>
+            <span>
+              © {new Date().getFullYear()} Kronus. Built by {SITE.owner}. All rights reserved.
+            </span>
             <span>Screenshots and demos show sample data.</span>
           </div>
         </div>

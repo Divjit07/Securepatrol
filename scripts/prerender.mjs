@@ -90,6 +90,7 @@ const html = `<!doctype html>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${esc(SITE.title)}</title>
     <meta name="description" content="${esc(SITE.description)}" />
+    <meta name="author" content="${esc(SITE.owner)}" />
     <link rel="canonical" href="${url}" />
     <meta name="robots" content="index, follow, max-image-preview:large" />
     <meta name="theme-color" content="#f4f3ec" />
