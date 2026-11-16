@@ -7,6 +7,7 @@ import Login from './pages/Login.jsx'
 import Signup from './pages/Signup.jsx'
 import AppErrorBoundary from './components/AppErrorBoundary.jsx'
 import { LANDING_SLUGS } from './marketing/slugs.js'
+import { isNativeShell } from './lib/native.js'
 
 
 /**
@@ -89,10 +90,6 @@ function PageLoader() {
     </div>
   )
 }
-
-const isNativeShell = () =>
-  typeof window !== 'undefined' &&
-  (window.Capacitor?.isNativePlatform?.() === true || /^capacitor:/.test(window.location.protocol))
 
 /** Supabase persists the session as `sb-<ref>-auth-token`; no key = signed out for sure. */
 function hasStoredSession() {

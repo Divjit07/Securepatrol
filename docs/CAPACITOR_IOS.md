@@ -19,8 +19,10 @@ build and an App Store submission.
    ```bash
    sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
    sudo xcodebuild -license accept
-   xcodebuild -runFirstLaunch
+   sudo xcodebuild -runFirstLaunch
+   xcodebuild -downloadPlatform iOS     # simulator + SDK
    ```
+   ✅ Done Nov 16 2026 (Xcode 27.2, macOS 27.2.1).
    Then in Xcode → **Settings → Accounts → +**, sign in with your Apple ID.
 3. **CocoaPods is NOT needed** — Capacitor 8 uses Swift Package Manager
    (`ios/App/CapApp-SPM/Package.swift`); Xcode resolves packages itself.
@@ -36,7 +38,19 @@ build and an App Store submission.
   export-compliance prompt on every upload).
 - App icon: `resources/icon-1024.png` → `Assets.xcassets/AppIcon` (single 1024
   asset; Xcode derives all sizes).
-- Splash: solid `#0d110c` for ~0.6s.
+- Splash: Kronus rider centred on `#0d110c` (`Assets.xcassets/Splash`, same
+  colour on the LaunchScreen storyboard). It stays up until the web app has
+  painted its first frame — `src/main.jsx` calls `SplashScreen.hide()` —
+  with a 3s cap in `capacitor.config.json` so a JS failure can't strand it.
+- **UIScene lifecycle (required on iOS 27):** apps built with the iOS 27 SDK
+  that don't adopt scenes crash on launch (`EXC_BREAKPOINT` in
+  `_UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`). Capacitor
+  8's template predates this, so `SceneDelegate.swift` + the
+  `UIApplicationSceneManifest` in Info.plist (storyboard `Main`) were added by
+  hand; URL / universal-link opens are forwarded to `ApplicationDelegateProxy`
+  there. Keep them if `ios/` is ever regenerated.
+- Inside the app (`isNativeShell()` in `src/lib/native.js`) the sign-in
+  screen drops "Back to kronus.space" — there is no marketing site in the wrap.
 
 Any time the web code changes, re-bundle it into the app with:
 ```bash

@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react'
 import RiderMark from './home/RiderMark.jsx'
 import { gsap } from 'gsap'
 import { BRAND } from '../lib/brand.js'
+import { isNativeShell } from '../lib/native.js'
 import AuthBackground from './AuthBackground.jsx'
 import ShineBorder from './auth/ShineBorder.jsx'
 import Spotlight from './auth/Spotlight.jsx'
@@ -25,6 +26,7 @@ function prefersReduced() {
  * if the plinth is ever wanted back. */
 export default function AuthShell({ children, mode = 'signin' }) {
   const rootRef = useRef(null)
+  const native = isNativeShell()
 
   useLayoutEffect(() => {
     const root = rootRef.current
@@ -51,18 +53,31 @@ export default function AuthShell({ children, mode = 'signin' }) {
       <div className="kratos-auth-layout">
         <section className="kratos-auth-hero-panel" data-auth-reveal>
           {/* The lockup is the way back out. Sign-in was a dead end — a visitor
-              who landed here from the marketing page had no route home. */}
-          <Link to="/" className="kratos-auth-brand" aria-label={`${BRAND.nameUpper} — back to site`}>
-            <span className="kratos-auth-brand-mark" aria-hidden>
-              <RiderMark className="h-6 w-6" />
-            </span>
-            <p className="kratos-auth-brand-name">{BRAND.nameUpper}</p>
-          </Link>
+              who landed here from the marketing page had no route home.
+              The iOS app has no marketing site to go back to, so there the
+              lockup is just a mark and the back link is dropped. */}
+          {native ? (
+            <div className="kratos-auth-brand">
+              <span className="kratos-auth-brand-mark" aria-hidden>
+                <RiderMark className="h-6 w-6" />
+              </span>
+              <p className="kratos-auth-brand-name">{BRAND.nameUpper}</p>
+            </div>
+          ) : (
+            <>
+              <Link to="/" className="kratos-auth-brand" aria-label={`${BRAND.nameUpper} — back to site`}>
+                <span className="kratos-auth-brand-mark" aria-hidden>
+                  <RiderMark className="h-6 w-6" />
+                </span>
+                <p className="kratos-auth-brand-name">{BRAND.nameUpper}</p>
+              </Link>
 
-          <Link to="/" className="kratos-auth-back">
-            <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
-            Back to kronus.space
-          </Link>
+              <Link to="/" className="kratos-auth-back">
+                <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
+                Back to kronus.space
+              </Link>
+            </>
+          )}
 
           <DecryptedText text={BRAND.heroLine} className="kratos-auth-headline" />
           <p className="kratos-auth-lead">{BRAND.tagline}</p>

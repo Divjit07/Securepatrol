@@ -5,15 +5,13 @@ import App from './App.jsx'
 import './index.css'
 import { AuthProvider } from './hooks/useAuth.jsx'
 import { flushOfflineQueue } from './lib/offlineQueue.js'
+import { isNativeShell as detectNativeShell } from './lib/native.js'
 
 // The service worker is for the web PWA only. Inside the Capacitor wrap the app
 // is served from capacitor://localhost off the bundled dist, so a SW caching
 // that shell would keep serving the OLD build after an App Store update — the
 // user installs 1.1 and still runs 1.0. Native gets its assets from the binary.
-const isNativeShell =
-  typeof window !== 'undefined' &&
-  (window.Capacitor?.isNativePlatform?.() === true ||
-    /^capacitor:/.test(window.location.protocol))
+const isNativeShell = detectNativeShell()
 
 if ('serviceWorker' in navigator && !isNativeShell) {
   window.addEventListener('load', () => {
@@ -40,3 +38,16 @@ createRoot(document.getElementById('root')).render(
     </BrowserRouter>
   </StrictMode>,
 )
+
+// Native: the launch splash stays up (capacitor.config caps it at 3s) until the
+// first frame of the app has painted, so there is no blank gap between the two.
+// Imported lazily so the web bundle never carries the plugin.
+if (isNativeShell) {
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      import('@capacitor/splash-screen')
+        .then(({ SplashScreen }) => SplashScreen.hide())
+        .catch(() => {})
+    }),
+  )
+}
