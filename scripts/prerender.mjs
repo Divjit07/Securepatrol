@@ -11,12 +11,13 @@
  *   dist/index.html  → the static marketing page (served for "/")
  *   dist/app.html    → the untouched SPA shell (vercel.json rewrites every other
  *                      route here; marked noindex)
+ *   dist/<slug>/index.html → one static page per keyword landing page (pages.js)
  *   dist/sitemap.xml
  *
  * The Capacitor build (`npm run build:app`) skips this step, so the native app's
  * index.html stays the SPA shell.
  */
-import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
@@ -30,7 +31,9 @@ if (!existsSync(ssrEntry)) {
   process.exit(1)
 }
 
-const { render, SITE, structuredData } = await import(pathToFileURL(ssrEntry).href)
+const { render, renderLanding, PAGES, SITE, structuredData, pageStructuredData } = await import(
+  pathToFileURL(ssrEntry).href
+)
 
 // ---- Assets for the marketing entry, from the Vite manifest ---------------
 const manifest = JSON.parse(readFileSync(resolve(dist, '.vite/manifest.json'), 'utf8'))
@@ -58,27 +61,29 @@ const appShell = shell.replace(
 )
 writeFileSync(resolve(dist, 'app.html'), appShell)
 
-// ---- The page --------------------------------------------------------------
+// ---- Pages -----------------------------------------------------------------
 const esc = (s) =>
   String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
-const url = `${SITE.url}/`
 const ogImage = `${SITE.url}${SITE.ogImage}`
-const jsonLd = JSON.stringify(structuredData()).replace(/</g, '\\u003c')
-// React 19 hoists its own preload for the hero image into the markup; the head
-// already declares it, so drop the duplicate.
-const body = render().replace(/<link rel="preload" as="image"[^>]*\/>/g, '')
+// React 19 hoists its own preload for the hero image into the markup; drop it.
+const clean = (html) => html.replace(/<link rel="preload" as="image"[^>]*\/>/g, '')
 
-const html = `<!doctype html>
-<html lang="en-CA">
-  <head>
-    <meta charset="UTF-8" />
-    <script>
-      // Signed-in users skip the marketing page and land in their portal.
+// Signed-in users skip the homepage and land in their portal. Landing pages are
+// pure marketing and never redirect.
+const SIGNED_IN_HOP = `
       try {
         if (Object.keys(localStorage).some(function (k) { return /^sb-.+-auth-token$/.test(k) })) {
           location.replace('/app')
         }
-      } catch (e) {}
+      } catch (e) {}`
+
+function pageHtml({ url, title, description, ogTitle, ogDescription, jsonLd, body, hop }) {
+  const ld = JSON.stringify(jsonLd).replace(/</g, '\\u003c')
+  return `<!doctype html>
+<html lang="en-CA">
+  <head>
+    <meta charset="UTF-8" />
+    <script>${hop ? SIGNED_IN_HOP : ''}
       // Hold the headline highlighter back until the page script draws it in.
       // Safety valve: it always appears within 3s even if that script never runs.
       if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -88,11 +93,13 @@ const html = `<!doctype html>
       }
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>${esc(SITE.title)}</title>
-    <meta name="description" content="${esc(SITE.description)}" />
+    <title>${esc(title)}</title>
+    <meta name="description" content="${esc(description)}" />
     <meta name="author" content="${esc(SITE.owner)}" />
     <link rel="canonical" href="${url}" />
-    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <link rel="alternate" hreflang="en-ca" href="${url}" />
+    <link rel="alternate" hreflang="x-default" href="${url}" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
     <meta name="theme-color" content="#f4f3ec" />
     <meta name="geo.region" content="CA-ON" />
     <meta name="geo.placename" content="${esc(SITE.city)}" />
@@ -106,15 +113,15 @@ const html = `<!doctype html>
     <meta property="og:site_name" content="Kronus" />
     <meta property="og:locale" content="en_CA" />
     <meta property="og:url" content="${url}" />
-    <meta property="og:title" content="${esc(SITE.ogTitle)}" />
-    <meta property="og:description" content="${esc(SITE.ogDescription)}" />
+    <meta property="og:title" content="${esc(ogTitle)}" />
+    <meta property="og:description" content="${esc(ogDescription)}" />
     <meta property="og:image" content="${ogImage}" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="Kronus security guard management software dashboard" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="${esc(SITE.ogTitle)}" />
-    <meta name="twitter:description" content="${esc(SITE.ogDescription)}" />
+    <meta name="twitter:title" content="${esc(ogTitle)}" />
+    <meta name="twitter:description" content="${esc(ogDescription)}" />
     <meta name="twitter:image" content="${ogImage}" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -125,7 +132,7 @@ const html = `<!doctype html>
     />
 ${[...css].map((c) => `    <link rel="stylesheet" href="/${c}" />`).join('\n')}
     <script type="module" src="/${entry.file}"></script>
-    <script type="application/ld+json">${jsonLd}</script>
+    <script type="application/ld+json">${ld}</script>
     <style>html,body{margin:0;background:#f4f3ec}</style>
   </head>
   <body>
@@ -133,7 +140,40 @@ ${[...css].map((c) => `    <link rel="stylesheet" href="/${c}" />`).join('\n')}
   </body>
 </html>
 `
-writeFileSync(resolve(dist, 'index.html'), html)
+}
+
+const written = []
+
+// The homepage.
+const home = pageHtml({
+  url: `${SITE.url}/`,
+  title: SITE.title,
+  description: SITE.description,
+  ogTitle: SITE.ogTitle,
+  ogDescription: SITE.ogDescription,
+  jsonLd: structuredData(),
+  body: clean(render()),
+  hop: true,
+})
+writeFileSync(resolve(dist, 'index.html'), home)
+written.push({ path: '/', bytes: home.length, priority: '1.0' })
+
+// One page per keyword, at /<slug> (served from dist/<slug>/index.html).
+for (const page of PAGES) {
+  const html = pageHtml({
+    url: `${SITE.url}/${page.slug}`,
+    title: page.title,
+    description: page.description,
+    ogTitle: page.title.replace(' | Kronus', ' — Kronus'),
+    ogDescription: page.description,
+    jsonLd: pageStructuredData(page),
+    body: clean(renderLanding(page.slug)),
+    hop: false,
+  })
+  mkdirSync(resolve(dist, page.slug), { recursive: true })
+  writeFileSync(resolve(dist, page.slug, 'index.html'), html)
+  written.push({ path: `/${page.slug}`, bytes: html.length, priority: '0.9' })
+}
 
 // ---- Sitemap ---------------------------------------------------------------
 const today = new Date().toISOString().slice(0, 10)
@@ -141,12 +181,19 @@ writeFileSync(
   resolve(dist, 'sitemap.xml'),
   `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>${url}</loc><lastmod>${today}</lastmod><changefreq>weekly</changefreq><priority>1.0</priority></url>
+${written
+  .map(
+    (w) =>
+      `  <url><loc>${SITE.url}${w.path === '/' ? '/' : w.path}</loc><lastmod>${today}</lastmod><changefreq>weekly</changefreq><priority>${w.priority}</priority></url>`,
+  )
+  .join('\n')}
 </urlset>
 `,
 )
+// The URL list IndexNow pings after a deploy (scripts/indexnow.mjs).
+writeFileSync(resolve(dist, '.indexnow-urls.json'), JSON.stringify(written.map((w) => `${SITE.url}${w.path}`)))
 
 rmSync(ssrDir, { recursive: true, force: true })
 console.log(
-  `prerender: dist/index.html (${(html.length / 1024).toFixed(1)} kB, ${css.size} css), dist/app.html, dist/sitemap.xml`,
+  `prerender: ${written.map((w) => `${w.path} (${(w.bytes / 1024).toFixed(1)} kB)`).join(', ')}; ${css.size} css; app.html; sitemap.xml`,
 )

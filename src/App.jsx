@@ -6,6 +6,7 @@ import ClockGate from './components/ClockGate.jsx'
 import Login from './pages/Login.jsx'
 import Signup from './pages/Signup.jsx'
 import AppErrorBoundary from './components/AppErrorBoundary.jsx'
+import { LANDING_SLUGS } from './marketing/slugs.js'
 
 
 /**
@@ -38,6 +39,7 @@ function lazyRetry(importer) {
 }
 
 const Home = lazyRetry(() => import('./pages/Home.jsx'))
+const Landing = lazyRetry(() => import('./pages/Landing.jsx'))
 const Shop = lazyRetry(() => import('./pages/Shop.jsx'))
 const GuardDashboard = lazyRetry(() => import('./pages/GuardDashboard.jsx'))
 const ScanScreen = lazyRetry(() => import('./pages/ScanScreen.jsx'))
@@ -139,6 +141,9 @@ export default function App() {
         {/* PWA start_url + the static homepage's signed-in hop land here. */}
         <Route path="/app" element={<PortalRedirect />} />
         <Route path="/shop" element={<Shop />} />
+        {LANDING_SLUGS.map((slug) => (
+          <Route key={slug} path={`/${slug}`} element={<Landing slug={slug} />} />
+        ))}
 
         <Route
           path="/guard"

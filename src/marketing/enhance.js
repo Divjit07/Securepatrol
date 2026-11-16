@@ -58,7 +58,9 @@ export function enhance(root) {
 /* ---------- Header, nav position, mobile menu ----------------------------- */
 function header(root, on, observe) {
   const head = root.querySelector('[data-mk-header]')
-  const links = [...root.querySelectorAll('[data-mk-navlink]')]
+  const links = [...root.querySelectorAll('[data-mk-navlink]')].filter((a) =>
+    a.getAttribute('href').startsWith('#'),
+  )
   const onScroll = () => {
     head?.classList.toggle('is-scrolled', window.scrollY > 8)
     // Back at the top, nothing is "current" any more.

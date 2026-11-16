@@ -317,6 +317,19 @@ tracking** replay map (light; geofence on clock-in/out only, tap proves the patr
 - Screenshots in `public/marketing/` come from the `/dev/*` harnesses with sample names swapped
   in; `public/og-image.png` is the 1200×630 share card. `public/robots.txt` blocks the portals.
 
+**Keyword landing pages — Landing.jsx (prerendered).** `/guard-tour-app`, `/gps-guard-tracking`,
+`/security-guard-scheduling-software`, `/incident-reporting-software`,
+`/security-guard-software-toronto`. One search intent each: keyword title/H1/description,
+breadcrumbs, a "what is it" answer (featured-snippet bait), six benefits, one hands-on demo
+(simulator / flashlight patrol / calculator / client chat / product tour), price band, own FAQ,
+related-page links, demo form. Copy in `src/marketing/pages.js`; shared sections in
+`src/marketing/sections.jsx` (Home uses them too). Built to `dist/<slug>/index.html` with
+WebPage + BreadcrumbList + FAQPage + SoftwareApplication + Organization JSON-LD, hreflang
+en-CA, and listed in `sitemap.xml`. **Adding a page = add it to `pages.js`, `slugs.js`,
+`vercel.json` rewrites and `MARKETING_PATHS` in `public/sw.js`.**
+- **IndexNow:** key file `public/<key>.txt`; after a deploy is live run `npm run indexnow`
+  to tell Bing/DuckDuckGo/Yahoo/Copilot every page changed.
+
 **`/login` — Login.jsx.** Split screen: left navy panel (hero logo, product pitch, three
 feature bullets, gold "PRODUCTIVE SECURITY INC." accent), right form card — EMAIL/PASSWORD
 (`sp-label`+`sp-input`), full-width `sp-btn-primary` **"Sign in to SecurePatrol"**. On auth →

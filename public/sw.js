@@ -11,7 +11,11 @@
 //    the SPA shell (app.html, see scripts/prerender.mjs + vercel.json).
 //  - Everything else same-origin is network-first, cache fallback, and a failed
 //    non-navigation request NEVER falls back to index.html.
-const CACHE_NAME = 'securepatrol-v21'
+const CACHE_NAME = 'securepatrol-v22'
+// Static marketing pages (scripts/prerender.mjs). Served from the network and
+// never stored as the SPA shell — otherwise an offline guard opening /admin
+// could get a landing page instead of the app.
+const MARKETING_PATHS = new Set(["/guard-tour-app", "/gps-guard-tracking", "/security-guard-scheduling-software", "/incident-reporting-software", "/security-guard-software-toronto"])
 const SHELL_URLS = [
   '/',
   '/index.html',
@@ -70,18 +74,19 @@ self.addEventListener('fetch', (event) => {
 
   // Navigations — fresh page when online, the matching cached shell offline.
   if (request.mode === 'navigate') {
-    const shellKey = url.pathname === '/' ? '/index.html' : '/app.html'
+    const path = url.pathname.replace(/\/$/, '') || '/'
+    const shellKey = path === '/' ? '/index.html' : MARKETING_PATHS.has(path) ? null : '/app.html'
     event.respondWith(
       fetch(request)
         .then((response) => {
-          if (response.ok) {
+          if (response.ok && shellKey) {
             const clone = response.clone()
             caches.open(CACHE_NAME).then((cache) => cache.put(shellKey, clone))
           }
           return response
         })
         .catch(() =>
-          caches.match(shellKey).then((hit) => hit || caches.match('/index.html')),
+          caches.match(shellKey || '/index.html').then((hit) => hit || caches.match('/index.html')),
         ),
     )
     return

@@ -57,15 +57,24 @@ export const HERO = {
   assurances: ['Free 7-day trial', 'No credit card', 'Set up the same day'],
 }
 
-/** The keyword strip under the hero — every item jumps to where it's shown. */
+/** The keyword strip under the hero — each item opens its own page. */
 export const MODULES = [
-  { label: 'Guard tour app', href: '#how-it-works' },
-  { label: 'GPS tracking', href: '#gps' },
+  { label: 'Guard tour app', href: '/guard-tour-app' },
+  { label: 'GPS guard tracking', href: '/gps-guard-tracking' },
   { label: 'Smart alerts', href: '#tour' },
   { label: 'Client portal', href: '#tour' },
-  { label: 'Incident reports', href: '#tour' },
-  { label: 'Scheduling', href: '#tour' },
-  { label: 'Timesheets & payroll', href: '#tour' },
+  { label: 'Incident reports', href: '/incident-reporting-software' },
+  { label: 'Guard scheduling', href: '/security-guard-scheduling-software' },
+  { label: 'Timesheets & payroll', href: '/security-guard-scheduling-software' },
+]
+
+/** The keyword landing pages, linked from every footer. Slugs match pages.js. */
+export const SOLUTIONS = [
+  { label: 'Guard tour app', href: '/guard-tour-app' },
+  { label: 'GPS guard tracking', href: '/gps-guard-tracking' },
+  { label: 'Guard scheduling & payroll', href: '/security-guard-scheduling-software' },
+  { label: 'Incident reporting', href: '/incident-reporting-software' },
+  { label: 'Security guard software Toronto', href: '/security-guard-software-toronto' },
 ]
 
 /** The live demo in the hero: one night at one building. Sample data. */
@@ -391,7 +400,7 @@ export const PLANS = [
       'Guard hours log, to the minute',
       'No-show alerts',
       'Automated morning summary email',
-      'Incident categories with photos and notes',
+      'Client portal access for every property manager',
       'Phone and email support',
     ],
   },

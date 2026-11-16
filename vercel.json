@@ -3,6 +3,26 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
+      "source": "/guard-tour-app",
+      "destination": "/guard-tour-app/index.html"
+    },
+    {
+      "source": "/gps-guard-tracking",
+      "destination": "/gps-guard-tracking/index.html"
+    },
+    {
+      "source": "/security-guard-scheduling-software",
+      "destination": "/security-guard-scheduling-software/index.html"
+    },
+    {
+      "source": "/incident-reporting-software",
+      "destination": "/incident-reporting-software/index.html"
+    },
+    {
+      "source": "/security-guard-software-toronto",
+      "destination": "/security-guard-software-toronto/index.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/app.html"
     }

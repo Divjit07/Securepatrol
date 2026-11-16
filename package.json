@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build && vite build --ssr src/marketing/entry-server.jsx --outDir dist-ssr && node scripts/prerender.mjs",
     "build:app": "vite build",
+    "indexnow": "node scripts/indexnow.mjs",
     "preview": "vite preview",
     "cap:copy": "npm run build:app && npx cap copy ios",
     "cap:sync": "npm run build:app && npx cap sync ios",
